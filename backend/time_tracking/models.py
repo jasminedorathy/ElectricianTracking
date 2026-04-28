@@ -1,12 +1,10 @@
 from django.db import models
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 from employees.models import Employee
 
 
 class JobSite(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
-    organization = models.ForeignKey('accounts.Organization', on_delete=models.CASCADE, related_name="job_sites")
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="job_sites", null=True, blank=True)
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True)
     lat = models.DecimalField(max_digits=9, decimal_places=6)
@@ -21,7 +19,6 @@ class JobSite(models.Model):
 
 
 class TimeLog(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="time_logs")
     work_date = models.DateField(db_index=True)
     clock_in = models.DateTimeField()
@@ -95,7 +92,6 @@ class TimeLog(models.Model):
 
 
 class Break(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     time_log = models.ForeignKey(TimeLog, on_delete=models.CASCADE, related_name="breaks")
     break_start = models.DateTimeField()
     break_end = models.DateTimeField(null=True, blank=True)
@@ -115,7 +111,6 @@ class Break(models.Model):
 
 
 class TimeLogPhoto(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     time_log = models.ForeignKey(TimeLog, on_delete=models.CASCADE, related_name="photos")
     photo = models.ImageField(upload_to="job_photos/")
     photo_type = models.CharField(max_length=20, choices=[
@@ -129,9 +124,8 @@ class TimeLogPhoto(models.Model):
 
 class Location(models.Model):
     """Saved locations from Settings > Locations (separate collection from JobSite)."""
-    id = ObjectIdAutoField(primary_key=True)
-    organization = models.ForeignKey(
-        'accounts.Organization', on_delete=models.CASCADE,
+    company = models.ForeignKey(
+        'companies.Company', on_delete=models.CASCADE,
         related_name="saved_locations", null=True, blank=True
     )
     name = models.CharField(max_length=255)

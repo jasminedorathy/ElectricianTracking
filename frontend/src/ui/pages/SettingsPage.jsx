@@ -54,7 +54,7 @@ const TABS = [
     id: "general", label: "General",
     subs: [
       { id: "profile", label: "Profile", icon: <User size={14} /> },
-      { id: "organization", label: "Organization", icon: <Building2 size={14} /> },
+      { id: "company", label: "Company Settings", icon: <Building2 size={14} /> },
       { id: "logo", label: "Company Logo", icon: <ImageIcon size={14} /> },
       { id: "localization", label: "Localization", icon: <Globe size={14} /> },
       { id: "pace", label: "Operational Pace", icon: <TrendingUp size={14} /> },
@@ -217,7 +217,7 @@ export function SettingsPage({ section: sectionProp }) {
         {/* Right Content */}
         <main className="stMain">
           {activeSection === "profile" && <ProfileSection markDirty={markDirty} showToast={showToast} />}
-          {activeSection === "organization" && <OrganizationSection markDirty={markDirty} />}
+          {activeSection === "company" && <CompanySettingsSection markDirty={markDirty} showToast={showToast} />}
           {activeSection === "logo" && <LogoSection markDirty={markDirty} />}
           {activeSection === "localization" && <LocalizationSection markDirty={markDirty} />}
           {activeSection === "fiscal" && <LocalizationSection markDirty={markDirty} />}
@@ -413,50 +413,130 @@ function ProfileSection({ markDirty, showToast }) {
   )
 }
 
-/* ═══ ORGANIZATION ═══════════════════════════════════════════════ */
-function OrganizationSection({ markDirty }) {
-  const [name, setName] = useState("CALTIMS")
-  const [addr, setAddr] = useState("123 Enterprise Way, Tech City, Tamil Nadu 600001")
-  const [country, setCountry] = useState("India")
-  const [currency, setCurrency] = useState("INR (₹)")
-  const [editName, setEditName] = useState(false)
+/* ═══ COMPANY SETTINGS ═══════════════════════════════════════════════ */
+function CompanySettingsSection({ markDirty, showToast }) {
+  const [loading, setLoading] = useState(true)
+  const [company, setCompany] = useState({
+    company_name: "",
+    primary_country: "US",
+    default_state: "",
+    compliance_mode: "strict"
+  })
+
+  useEffect(() => {
+    fetch("/api/company/me", {
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) setCompany(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const handleChange = (field, value) => {
+    setCompany(prev => ({ ...prev, [field]: value }))
+    markDirty()
+  }
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch("/api/company/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
+        body: JSON.stringify(company)
+      })
+      const data = await res.json()
+      if (res.ok) {
+        showToast("Company settings updated!")
+      } else {
+        showToast(data.default_state || "Failed to update settings", "error")
+      }
+    } catch (e) {
+      showToast("Network error", "error")
+    }
+  }
+
+  if (loading) return <div className="stPanel"><p>Loading...</p></div>
+
   return (
     <div className="stPanel">
-      <SectionHeader title="Organization" subtitle="Core company identity information displayed across the system." />
+      <SectionHeader title="Company Settings" subtitle="Configure your multi-tenant SaaS foundation and compliance rules." />
       <div className="stCard">
-        {/* Inline editable company name */}
-        <div className="stIdentityRow">
-          <div className="stIdentityAvatar">{name.charAt(0)}</div>
-          <div style={{ flex: 1 }}>
-            {editName
-              ? <input autoFocus className="stInput stInlineLarge" value={name}
-                onChange={e => { setName(e.target.value); markDirty() }}
-                onBlur={() => setEditName(false)} onKeyDown={e => e.key === "Enter" && setEditName(false)} />
-              : <div className="stInlineView" onClick={() => setEditName(true)}>
-                <span className="stInlineViewName">{name}</span>
-                <Edit3 size={13} color="var(--muted)" />
-              </div>
-            }
-            <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--muted)" }}>Click to rename your organization</p>
-          </div>
-        </div>
-        <div style={{ height: 1, background: "var(--stroke)", margin: "20px 0" }} />
         <div className="stFormGrid">
-          <Field label="Headquarters Address">
-            <textarea className="stInput stTextarea" value={addr}
-              onChange={e => { setAddr(e.target.value); markDirty() }} rows={2} style={{ resize: "none" }} />
+          <Field label="Company Name" half>
+            <input 
+              className="stInput" 
+              value={company.company_name} 
+              onChange={e => handleChange("company_name", e.target.value)} 
+              placeholder="Enter company name"
+            />
           </Field>
-          <Field label="Operational Country" half>
-            <input className="stInput" value={country} onChange={e => { setCountry(e.target.value); markDirty() }} />
+
+          <Field label="Organization ID (Read-only)" half>
+            <input 
+              className="stInput" 
+              value={company.display_id || "Generating..."} 
+              readOnly 
+              style={{ background: "rgba(243, 244, 246, 0.5)", cursor: "not-allowed", borderStyle: "dashed" }}
+            />
           </Field>
-          <Field label="Base Currency" half>
-            <select className="stInput stSelect" value={currency} onChange={e => { setCurrency(e.target.value); markDirty() }}>
-              <option>USD ($)</option><option>INR (₹)</option><option>EUR (€)</option><option>GBP (£)</option>
+          
+          <Field label="Primary Country" half>
+            <select 
+              className="stInput stSelect" 
+              value={company.primary_country} 
+              onChange={e => handleChange("primary_country", e.target.value)}
+            >
+              <option value="US">United States (US)</option>
+              <option value="UK">United Kingdom (UK)</option>
+            </select>
+          </Field>
+
+          {company.primary_country === "US" && (
+            <Field label="Default State (US Only)" half>
+              <input 
+                className="stInput" 
+                value={company.default_state} 
+                onChange={e => handleChange("default_state", e.target.value)} 
+                placeholder="e.g. Florida"
+              />
+            </Field>
+          )}
+
+          <Field label="Compliance Mode" half={company.primary_country !== "US"}>
+            <select 
+              className="stInput stSelect" 
+              value={company.compliance_mode} 
+              onChange={e => handleChange("compliance_mode", e.target.value)}
+            >
+              <option value="strict">Strict (Requested)</option>
+              <option value="flexible">Flexible</option>
             </select>
           </Field>
         </div>
+        
         <div className="stCardActions">
-          <button className="stPrimaryBtn"><Save size={14} /> Save Organization</button>
+          <button className="stPrimaryBtn" onClick={handleSave}>
+            <Save size={14} /> Save Settings
+          </button>
+        </div>
+      </div>
+      
+      <div className="stInfoBox" style={{ marginTop: 24, background: "rgba(26, 86, 219, 0.05)", border: "1px solid rgba(26, 86, 219, 0.1)", padding: 16, borderRadius: 12 }}>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Shield size={20} color="#1A56DB" style={{ marginTop: 2 }} />
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1A56DB", marginBottom: 4 }}>Regional Compliance Active</div>
+            <p style={{ fontSize: 12, color: "#6B7280", margin: 0, lineHeight: 1.5 }}>
+              Your system is currently following <strong>{company.primary_country === "US" ? "US FLSA" : "UK WTR"}</strong> regulations. 
+              All payroll and overtime calculations are dynamically adjusted based on this region.
+            </p>
+          </div>
         </div>
       </div>
     </div>

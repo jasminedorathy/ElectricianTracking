@@ -2,7 +2,6 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils import timezone
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 
 class UserManager(BaseUserManager):
@@ -31,23 +30,6 @@ class UserManager(BaseUserManager):
         return self._create_user(username, email, password, **extra_fields)
 
 
-class Organization(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
-    name = models.CharField(max_length=255)
-    
-    # Geofence Config
-    geofence_enabled = models.BooleanField(default=True)
-    geofence_radius_meters = models.PositiveIntegerField(default=200)
-    geofence_strict_mode = models.BooleanField(default=True)  # true = block, false = warn only
-    geofence_admin_override = models.BooleanField(default=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-
-
 class User(AbstractBaseUser):
     """
     Custom user model for QuickTIMS using MongoDB ObjectId as primary key.
@@ -55,8 +37,7 @@ class User(AbstractBaseUser):
     which requires contenttypes and complex M2M tables not needed in a JWT API.
     """
 
-    id = ObjectIdAutoField(primary_key=True)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True, related_name="users")
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, null=True, blank=True, related_name="users")
 
     username_validator = UnicodeUsernameValidator()
 
@@ -76,7 +57,9 @@ class User(AbstractBaseUser):
 
     class Role(models.TextChoices):
         ADMIN = "admin", "Admin"
+        MANAGER = "manager", "Manager"
         EMPLOYEE = "employee", "Employee"
+        KIOSK = "kiosk", "Kiosk"
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.EMPLOYEE)
 

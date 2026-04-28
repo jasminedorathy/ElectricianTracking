@@ -7,8 +7,8 @@ class JobSiteSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     class Meta:
         model = JobSite
-        fields = ("id", "name", "address", "lat", "lng", "geofence_radius", "organization")
-        read_only_fields = ("id", "organization")
+        fields = ("id", "name", "address", "lat", "lng", "geofence_radius", "company")
+        read_only_fields = ("id", "company")
 
 
 class BreakSerializer(serializers.ModelSerializer):
@@ -132,5 +132,5 @@ class LocationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Location
-        fields = ("id", "name", "address", "lat", "lng", "geofence_radius", "organization", "created_at", "updated_at")
-        read_only_fields = ("id", "organization", "created_at", "updated_at")
+        fields = ("id", "name", "address", "lat", "lng", "geofence_radius", "company", "created_at", "updated_at")
+        read_only_fields = ("id", "company", "created_at", "updated_at")

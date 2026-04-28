@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 
 class Task(models.Model):
@@ -11,7 +10,6 @@ class Task(models.Model):
     who complete multiple tasks at different locations in a day.
     """
 
-    id = ObjectIdAutoField(primary_key=True)
 
     class Priority(models.TextChoices):
         LOW    = "low",    "Low"
@@ -43,6 +41,9 @@ class Task(models.Model):
     category         = models.CharField(max_length=50, choices=Category.choices, default=Category.OTHER)
     priority         = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
     status           = models.CharField(max_length=20, choices=Status.choices,   default=Status.PENDING)
+    
+    # Multi-tenant
+    company          = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="tasks", null=True, blank=True)
 
     # Assignment
     assigned_to      = models.ForeignKey(
@@ -116,7 +117,6 @@ class Task(models.Model):
 
 
 class TaskAttachment(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     file = models.FileField(upload_to="tasks/attachments/")

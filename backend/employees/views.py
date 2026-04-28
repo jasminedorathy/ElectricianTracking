@@ -9,7 +9,10 @@ from .serializers import EmployeeCreateSerializer, EmployeeSerializer
 
 
 class EmployeeViewSet(viewsets.ModelViewSet):
-    queryset = Employee.objects.select_related("user").all().order_by("employee_id")
+    def get_queryset(self):
+        if not hasattr(self.request, 'company'):
+            return Employee.objects.none()
+        return Employee.objects.select_related("user").filter(company=self.request.company).order_by("employee_id")
 
     def get_permissions(self):
         if self.action in {"list", "create", "update", "partial_update", "destroy"}:

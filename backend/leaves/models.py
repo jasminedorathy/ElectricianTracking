@@ -1,12 +1,10 @@
 from django.conf import settings
 from django.db import models
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 from employees.models import Employee
 
 
 class LeaveRequest(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -19,6 +17,7 @@ class LeaveRequest(models.Model):
         UNPAID = "unpaid", "Unpaid"
 
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="leave_requests")
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="leave_requests", null=True, blank=True)
     leave_type = models.CharField(max_length=20, choices=LeaveType.choices)
     start_date = models.DateField()
     end_date = models.DateField()

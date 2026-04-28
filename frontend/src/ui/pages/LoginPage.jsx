@@ -5,6 +5,7 @@ import { apiRequest } from "../../api/client.js"
 import { routes } from "../routes.js"
 import { useGoogleLogin } from "@react-oauth/google"
 import { CalTrackLogo } from "../components/CalTrackLogo.jsx"
+import { Check, ArrowRight, Building2, Users2, Workflow, Clock, Banknote, CalendarDays, Sparkles, RefreshCcw, ShieldCheck } from "lucide-react"
 
 /* ──────────────────────────────────────────────
    REVIEW DATA
@@ -141,29 +142,60 @@ function ReviewCarousel() {
   )
 }
 
+function GoogleConnectButton({ onLoginWithGoogle, onError, onDone, onNavigate, postLoginRoute }) {
+  const googleLoginHandler = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      onDone(false)
+      try {
+        await onLoginWithGoogle(tokenResponse.access_token)
+        onNavigate(postLoginRoute())
+      } catch (err) {
+        onError(err?.body?.detail || "Google login failed.")
+      } finally {
+        onDone(true)
+      }
+    },
+    onError: () => onError("Google login failed.")
+  })
+
+  return (
+    <button className="qt-social-btn" id="btn-google" type="button" onClick={() => googleLoginHandler()}>
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.7-6.7C35.4 2.2 30.1 0 24 0 14.8 0 6.9 5.4 3.1 13.3l7.8 6.1C13 13.1 18 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.6 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3.1-2.4 5.7-5 7.4l7.7 6c4.5-4.1 7.2-10.2 7.2-17.7z" />
+        <path fill="#FBBC05" d="M10.9 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.5 13.3A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l8.4-6.1z" />
+        <path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.5l-7.7-6c-2 1.4-4.6 2.2-7.2 2.2-5.9 0-11-4-12.8-9.4l-8 6.1C6.9 42.6 14.8 48 24 48z" />
+      </svg>
+      Google
+    </button>
+  )
+}
+
+function GooglePlaceholderButton({ onClick }) {
+  return (
+    <button className="qt-social-btn" id="btn-google" type="button" onClick={onClick} aria-disabled="true">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.7-6.7C35.4 2.2 30.1 0 24 0 14.8 0 6.9 5.4 3.1 13.3l7.8 6.1C13 13.1 18 9.5 24 9.5z" />
+        <path fill="#4285F4" d="M46.6 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3.1-2.4 5.7-5 7.4l7.7 6c4.5-4.1 7.2-10.2 7.2-17.7z" />
+        <path fill="#FBBC05" d="M10.9 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.5 13.3A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l8.4-6.1z" />
+        <path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.5l-7.7-6c-2 1.4-4.6 2.2-7.2 2.2-5.9 0-11-4-12.8-9.4l-8 6.1C6.9 42.6 14.8 48 24 48z" />
+      </svg>
+      Google
+    </button>
+  )
+}
+
 /* ──────────────────────────────────────────────
    MAIN LOGIN PAGE
 ────────────────────────────────────────────── */
 export function LoginPage() {
-  const { login, register, loginWithGoogle } = useAuth()
+  const { login, loginWithGoogle, register } = useAuth()
   const navigate = useNavigate()
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
   const postLoginRoute = () => {
     return routes.get_started
   }
-
-  const googleLoginHandler = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true)
-      try {
-        await loginWithGoogle(tokenResponse.access_token)
-        navigate(postLoginRoute())
-      } catch (err) {
-        setError(err?.body?.detail || "Google login failed.")
-      } finally { setLoading(false) }
-    },
-    onError: () => setError("Google login failed.")
-  })
 
   // modes: signin, register
   const [mode, setMode] = useState("signin")
@@ -178,6 +210,7 @@ export function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [organizationName, setOrganizationName] = useState("")
 
   // Registration specific
   const [tab, setTab] = useState("email")
@@ -186,6 +219,11 @@ export function LoginPage() {
   const [agree1, setAgree1] = useState(true) // Offers
   const [agree2, setAgree2] = useState(false) // Terms
 
+  // Registration Multi-step
+  const [regStep, setRegStep] = useState(1)
+  const [teamSize, setTeamSize] = useState("1 - 10 employees")
+  const [selectedModules, setSelectedModules] = useState(["time"])
+
   function changeMode(m) {
     setMode(m)
     setError("")
@@ -193,7 +231,7 @@ export function LoginPage() {
   }
 
   async function onSubmit(e) {
-    e.preventDefault()
+    if (e) e.preventDefault()
     setError("")
     setSuccess("")
 
@@ -207,36 +245,41 @@ export function LoginPage() {
         setError(err?.body?.detail || "Login failed.")
       } finally { setLoading(false) }
     } else {
-      // REGISTER
-      if (!fullName.trim() || !username.trim() || !password) return setError("All fields required.")
+      // REGISTER SUBMIT (Step 4)
       if (!robot) return setError("Please confirm you are not a robot.")
       if (!agree2) return setError("Please agree to terms.")
 
       setLoading(true)
       try {
         const [first, ...rest] = fullName.split(" ")
-        // Register but do NOT log in yet
-        await apiRequest("/auth/register/", {
-          method: "POST",
-          json: {
-            username: username.trim(),
-            password,
-            email,
-            first_name: first,
-            last_name: rest.join(" "),
-            role
-          }
+        await register({
+          username: username.trim(),
+          password,
+          email,
+          first_name: first,
+          last_name: rest.join(" "),
+          organization_name: organizationName.trim(),
+          team_size: teamSize,
+          selected_modules: selectedModules
         })
 
-        // Success! Redirect to login mode
-        setMode("signin")
-        setSuccess("Account created successfully! Please sign in with your credentials.")
-        setError("")
-        // Keep the username filled for convenience
+        // Success! Redirect will happen automatically via AuthProvider/App.jsx
       } catch (err) {
-        setError(err?.body?.detail || "Registration failed.")
+        console.error("Registration Error:", err);
+        const msg = err?.body?.detail || 
+                    (err?.body && typeof err.body === 'object' ? JSON.stringify(err.body) : null) || 
+                    (err?.body && typeof err.body === 'string' ? "Server Error: 500" : null) ||
+                    "Registration failed.";
+        setError(msg)
       } finally { setLoading(false) }
     }
+  }
+
+  const canGoNext = () => {
+    if (regStep === 1) return fullName.trim() && username.trim() && password.length >= 6 && email.includes("@")
+    if (regStep === 2) return organizationName.trim()
+    if (regStep === 3) return selectedModules.length > 0
+    return true
   }
 
   return (
@@ -334,15 +377,17 @@ export function LoginPage() {
           {/* Social Connect */}
           <div className="qt-connect-label">Connect with</div>
           <div className="qt-social-row">
-            <button className="qt-social-btn" id="btn-google" type="button" onClick={() => googleLoginHandler()}>
-              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                <path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.7-6.7C35.4 2.2 30.1 0 24 0 14.8 0 6.9 5.4 3.1 13.3l7.8 6.1C13 13.1 18 9.5 24 9.5z" />
-                <path fill="#4285F4" d="M46.6 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3.1-2.4 5.7-5 7.4l7.7 6c4.5-4.1 7.2-10.2 7.2-17.7z" />
-                <path fill="#FBBC05" d="M10.9 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.5 13.3A24 24 0 0 0 0 24c0 3.8.9 7.4 2.5 10.7l8.4-6.1z" />
-                <path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.5l-7.7-6c-2 1.4-4.6 2.2-7.2 2.2-5.9 0-11-4-12.8-9.4l-8 6.1C6.9 42.6 14.8 48 24 48z" />
-              </svg>
-              Google
-            </button>
+            {googleClientId ? (
+              <GoogleConnectButton
+                onLoginWithGoogle={loginWithGoogle}
+                onError={setError}
+                onDone={(done) => setLoading(!done)}
+                onNavigate={navigate}
+                postLoginRoute={postLoginRoute}
+              />
+            ) : (
+              <GooglePlaceholderButton onClick={() => setError("Google login is not configured. Add VITE_GOOGLE_CLIENT_ID in frontend/.env and restart the frontend.")} />
+            )}
             <button className="qt-social-btn" id="btn-microsoft" type="button">
               <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
                 <rect x="1" y="1" width="9" height="9" fill="#F25022" />
@@ -419,168 +464,167 @@ export function LoginPage() {
             </form>
           )}
 
-          {/* ── REGISTER FORM ── */}
+          {/* ── REGISTER FORM (Wizard) ── */}
           {mode === "register" && (
-            <form className="qt-form" onSubmit={onSubmit} noValidate>
-              {/* Full Name */}
-              <div className="qt-field-wrap">
-                <input
-                  id="inp-fullname"
-                  className="qt-input"
-                  placeholder="Full name"
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                  autoComplete="name"
-                  autoFocus
-                />
-              </div>
-
-              {/* Tabs: Email / Phone */}
-              <div className="qt-tab-row">
-                <button
-                  type="button"
-                  className={`qt-tab-btn${tab === "email" ? " qt-tab-active" : ""}`}
-                  onClick={() => setTab("email")}
-                >Email</button>
-                <button
-                  type="button"
-                  className={`qt-tab-btn${tab === "phone" ? " qt-tab-active" : ""}`}
-                  onClick={() => setTab("phone")}
-                >Phone Number</button>
-              </div>
-
-              {tab === "email" ? (
-                <div className="qt-field-wrap">
-                  <input
-                    id="inp-email-reg"
-                    className="qt-input"
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                  />
-                </div>
-              ) : (
-                <div className="qt-phone-row">
-                  <div className="qt-phone-prefix">
-                    <span className="qt-flag">🇮🇳</span>
-                    <span>+91</span>
+            <div className="qt-form">
+              {/* Progress Bar */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+                {[1, 2, 3, 4].map(s => (
+                  <div key={s} style={{ display: "flex", alignItems: "center", gap: 10, flex: s !== 4 ? 1 : 0 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, fontWeight: 800,
+                      background: regStep > s ? "#10B981" : regStep === s ? "#4F46E5" : "var(--bg)",
+                      color: regStep >= s ? "#fff" : "var(--muted)",
+                      transition: "all 0.3s ease"
+                    }}>
+                      {regStep > s ? <Check size={14} /> : s}
+                    </div>
+                    {s !== 4 && <div style={{ flex: 1, height: 2, background: regStep > s ? "#10B981" : "var(--stroke2)", borderRadius: 2 }} />}
                   </div>
-                  <input
-                    id="inp-phone"
-                    className="qt-input qt-phone-input"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                  />
+                ))}
+              </div>
+
+              {/* Step 1: User Account */}
+              {regStep === 1 && (
+                <div style={{ animation: "fadeUp 0.3s ease both" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#4F46E5", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <ShieldCheck size={16} /> USER ACCOUNT
+                  </div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--fg)", marginBottom: 24 }}>Set up your admin profile</h2>
+                  
+                  <div className="qt-field-wrap">
+                    <input className="qt-input" placeholder="Full name" value={fullName} onChange={e => setFullName(e.target.value)} />
+                  </div>
+                  <div className="qt-field-wrap">
+                    <input className="qt-input" type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} />
+                  </div>
+                  <div className="qt-field-wrap">
+                    <input className="qt-input" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+                  </div>
+                  <div className="qt-field-wrap qt-pass-wrap">
+                    <input className="qt-input" type={showPass ? "text" : "password"} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+                    <button type="button" className="qt-pass-eye" onClick={() => setShowPass(p => !p)}>{showPass ? "🙈" : "👁"}</button>
+                  </div>
+                  
+                  <button type="button" className={`qt-submit-btn ${canGoNext() ? "qt-submit-active" : ""}`} onClick={() => setRegStep(2)} disabled={!canGoNext()}>
+                    NEXT: ORGANIZATION <ArrowRight size={18} />
+                  </button>
                 </div>
               )}
 
-              {/* Username field (shown as 'employee' in screenshot) */}
-              <div className="qt-field-wrap">
-                <input
-                  id="inp-username-reg"
-                  className="qt-input"
-                  placeholder="Username (e.g. employee)"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                />
-              </div>
-
-              {/* Password */}
-              <div className="qt-field-wrap qt-pass-wrap">
-                <input
-                  id="inp-password"
-                  className="qt-input"
-                  type={showPass ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  className="qt-pass-eye"
-                  onClick={() => setShowPass(p => !p)}
-                  aria-label={showPass ? "Hide password" : "Show password"}
-                >
-                  {showPass ? "🙈" : "👁"}
-                </button>
-              </div>
-
-              {/* Agree checkboxes */}
-              <label className="qt-check-row">
-                <input
-                  type="checkbox"
-                  checked={agree1}
-                  onChange={e => setAgree1(e.target.checked)}
-                  className="qt-checkbox"
-                />
-                <span className="qt-check-label">
-                  I agree to receive offers, tips and product updates sent by QuickTIMS. Unsubscribe anytime.
-                </span>
-              </label>
-
-              <label className="qt-check-row">
-                <input
-                  type="checkbox"
-                  checked={agree2}
-                  onChange={e => setAgree2(e.target.checked)}
-                  className="qt-checkbox"
-                />
-                <span className="qt-check-label">
-                  I agree to QuickTIMS's <a href="#" className="qt-link">Terms of Service</a> &amp; <a href="#" className="qt-link">Privacy Policy</a>.
-                </span>
-              </label>
-
-              {/* reCAPTCHA robot check */}
-              <div className="qt-captcha-box">
-                <label className="qt-captcha-inner" htmlFor="chk-robot">
-                  <input
-                    id="chk-robot"
-                    type="checkbox"
-                    checked={robot}
-                    onChange={e => setRobot(e.target.checked)}
-                    className="qt-checkbox"
-                  />
-                  <span className="qt-captcha-text">I'm not a robot</span>
-                </label>
-                <div className="qt-captcha-logo">
-                  <div className="qt-recaptcha-icon">
-                    <svg viewBox="0 0 64 64" width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="32" cy="32" r="30" stroke="#4A90D9" strokeWidth="3" fill="white" />
-                      <path d="M32 12 A20 20 0 0 1 52 32" stroke="#4A90D9" strokeWidth="3" fill="none" strokeLinecap="round" />
-                      <path d="M32 12 A20 20 0 0 0 12 32" stroke="#34A853" strokeWidth="3" fill="none" strokeLinecap="round" />
-                      <path d="M12 32 A20 20 0 0 0 32 52" stroke="#EA4335" strokeWidth="3" fill="none" strokeLinecap="round" />
-                      <path d="M32 52 A20 20 0 0 0 52 32" stroke="#FBBC05" strokeWidth="3" fill="none" strokeLinecap="round" />
-                    </svg>
+              {/* Step 2: Organization */}
+              {regStep === 2 && (
+                <div style={{ animation: "fadeUp 0.3s ease both" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#4F46E5", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Building2 size={16} /> ORGANIZATION
                   </div>
-                  <div className="qt-captcha-brand">
-                    <span className="qt-captcha-rc">reCAPTCHA</span>
-                    <span className="qt-captcha-rc-sub">Privacy · Terms</span>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--fg)", marginBottom: 24 }}>Tell us about your team</h2>
+                  
+                  <div className="qt-field-wrap">
+                    <input className="qt-input" placeholder="Organization / Company Name" value={organizationName} onChange={e => setOrganizationName(e.target.value)} />
+                  </div>
+                  <div className="qt-field-wrap">
+                    <select className="qt-input" value={teamSize} onChange={e => setTeamSize(e.target.value)}>
+                      <option>1 - 10 employees</option>
+                      <option>11 - 50 employees</option>
+                      <option>51 - 200 employees</option>
+                      <option>201+ employees</option>
+                    </select>
+                  </div>
+                  
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button type="button" className="qt-social-btn" style={{ flex: 1 }} onClick={() => setRegStep(1)}>BACK</button>
+                    <button type="button" className={`qt-submit-btn ${canGoNext() ? "qt-submit-active" : ""}`} style={{ flex: 2 }} onClick={() => setRegStep(3)} disabled={!canGoNext()}>
+                      NEXT: MODULES <ArrowRight size={18} />
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {error && <div className="qt-error-box">{error}</div>}
+              {/* Step 3: Modules */}
+              {regStep === 3 && (
+                <div style={{ animation: "fadeUp 0.3s ease both" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#4F46E5", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Workflow size={16} /> MODULES
+                  </div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--fg)", marginBottom: 12 }}>What will you track?</h2>
+                  <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 24 }}>Select at least one module to start.</p>
 
-              <button
-                id="btn-create-account"
-                type="submit"
-                className="qt-submit-btn qt-submit-active"
-                disabled={loading}
-              >
-                {loading ? "Creating account…" : "Create Account"}
-              </button>
+                  <div style={{ display: "grid", gap: 12, marginBottom: 24 }}>
+                    {[
+                      { id: "time", label: "Time Tracking", icon: <Clock size={18} /> },
+                      { id: "leaves", label: "Leaves", icon: <CalendarDays size={18} /> },
+                      { id: "payroll", label: "Payroll", icon: <Banknote size={18} /> }
+                    ].map(mod => {
+                      const isSel = selectedModules.includes(mod.id)
+                      return (
+                        <div key={mod.id} onClick={() => isSel ? setSelectedModules(selectedModules.filter(m => m !== mod.id)) : setSelectedModules([...selectedModules, mod.id])}
+                          style={{
+                            padding: "14px 16px", borderRadius: 12, border: isSel ? "2px solid #4F46E5" : "1px solid var(--stroke2)",
+                            background: isSel ? "rgba(79, 70, 229, 0.05)" : "transparent",
+                            display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "all 0.2s"
+                          }}>
+                          <div style={{ color: isSel ? "#4F46E5" : "var(--muted)" }}>{mod.icon}</div>
+                          <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: isSel ? "#4F46E5" : "var(--fg)" }}>{mod.label}</div>
+                          <div style={{ width: 18, height: 18, borderRadius: "50%", border: isSel ? "none" : "2px solid var(--stroke)", background: isSel ? "#4F46E5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {isSel && <Check size={12} color="#fff" strokeWidth={3} />}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button type="button" className="qt-social-btn" style={{ flex: 1 }} onClick={() => setRegStep(2)}>BACK</button>
+                    <button type="button" className={`qt-submit-btn ${canGoNext() ? "qt-submit-active" : ""}`} style={{ flex: 2 }} onClick={() => setRegStep(4)} disabled={!canGoNext()}>
+                      NEXT: FINISH <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Finish */}
+              {regStep === 4 && (
+                <div style={{ animation: "fadeUp 0.3s ease both" }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#4F46E5", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Sparkles size={16} /> FINALIZE
+                  </div>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--fg)", marginBottom: 24 }}>Almost there!</h2>
+
+                  <label className="qt-check-row">
+                    <input type="checkbox" checked={agree1} onChange={e => setAgree1(e.target.checked)} className="qt-checkbox" />
+                    <span className="qt-check-label">Receive updates and tips from Caltrack.</span>
+                  </label>
+                  <label className="qt-check-row">
+                    <input type="checkbox" checked={agree2} onChange={e => setAgree2(e.target.checked)} className="qt-checkbox" />
+                    <span className="qt-check-label">Agree to <a href="#" className="qt-link">Terms</a> &amp; <a href="#" className="qt-link">Privacy</a>.</span>
+                  </label>
+
+                  <div className="qt-captcha-box" style={{ marginBottom: 24 }}>
+                    <label className="qt-captcha-inner">
+                      <input type="checkbox" checked={robot} onChange={e => setRobot(e.target.checked)} className="qt-checkbox" />
+                      <span className="qt-captcha-text">I'm not a robot</span>
+                    </label>
+                  </div>
+
+                  {error && <div className="qt-error-box">{error}</div>}
+
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button type="button" className="qt-social-btn" style={{ flex: 1 }} onClick={() => setRegStep(3)}>BACK</button>
+                    <button type="button" className={`qt-submit-btn qt-submit-active`} style={{ flex: 2 }} onClick={onSubmit} disabled={loading}>
+                      {loading ? <RefreshCcw className="qt-spin" size={18} /> : "CREATE ACCOUNT"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="qt-signin-link">
                 Already have an account?{" "}
-                <a href="#" className="qt-link" onClick={e => { e.preventDefault(); changeMode("signin") }}>
-                  Sign in
-                </a>
+                <a href="#" className="qt-link" onClick={e => { e.preventDefault(); changeMode("signin") }}>Sign in</a>
               </div>
-            </form>
+            </div>
           )}
         </div>
       </div>

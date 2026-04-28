@@ -17,6 +17,6 @@ class BreakAdmin(admin.ModelAdmin):
 
 @admin.register(JobSite)
 class JobSiteAdmin(admin.ModelAdmin):
-    list_display = ("name", "organization", "lat", "lng", "geofence_radius")
-    list_filter = ("organization",)
+    list_display = ("name", "company", "lat", "lng", "geofence_radius")
+    list_filter = ("company",)
     search_fields = ("name", "address")

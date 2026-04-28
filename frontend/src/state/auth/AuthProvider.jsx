@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { apiRequest } from "../../api/client.js"
 import { AuthContext } from "./AuthContext.js"
-import { getJwtRole, getJwtUsername } from "./jwt.js"
+import { getJwtCompanyId, getJwtRole, getJwtUsername } from "./jwt.js"
 import { getTokens, setTokens } from "./tokens.js"
 
 /* ─── Demo / offline login ──────────────────────────────────────────────
@@ -42,16 +42,29 @@ export function AuthProvider({ children }) {
     const tokens = getTokens()
     if (!tokens?.access) { setUser(null); return }
 
-    const username = getJwtUsername(tokens.access)
-    const role     = getJwtRole(tokens.access)
-    if (username && role) { setUser({ username, role }); return }
-
     try {
       const me = await apiRequest("/auth/me/")
-      if (me?.username && me?.role) setUser({ username: me.username, role: me.role })
-      else setUser(null)
+      if (me?.username && me?.role) {
+        // The UserSerializer in backend maps company_id to the 'company' field
+        setUser({ 
+          username: me.username, 
+          email: me.email, 
+          role: me.role, 
+          companyId: me.company 
+        })
+      } else {
+        setUser(null)
+      }
     } catch {
-      setUser(null)
+      // Fallback to JWT if API fails (useful for offline demo)
+      const username  = getJwtUsername(tokens.access)
+      const role      = getJwtRole(tokens.access)
+      const companyId = getJwtCompanyId(tokens.access)
+      if (username && role) {
+        setUser({ username, role, companyId })
+      } else {
+        setUser(null)
+      }
     }
   }, [])
 

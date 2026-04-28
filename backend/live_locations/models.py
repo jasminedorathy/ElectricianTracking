@@ -1,10 +1,8 @@
 from django.db import models
-from django_mongodb_backend.fields import ObjectIdAutoField
 from employees.models import Employee
 from time_tracking.models import TimeLog
 
 class EmployeeLocation(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="locations")
     time_log = models.ForeignKey(TimeLog, on_delete=models.SET_NULL, null=True, blank=True, related_name="locations")
     

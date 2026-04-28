@@ -17,7 +17,8 @@ class LiveLocationUpdateView(APIView):
 
     def post(self, request):
         try:
-            employee = Employee.objects.filter(user=request.user).first()
+            company = getattr(request, 'company', None)
+            employee = Employee.objects.filter(user=request.user, company=company).first()
             if not employee:
                 return Response({"detail": "Employee profile not found."}, status=status.HTTP_404_NOT_FOUND)
             
@@ -60,7 +61,8 @@ class CurrentLocationsListView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def get(self, request):
-        open_logs = TimeLog.objects.filter(clock_out__isnull=True).select_related('employee', 'employee__user')
+        company = getattr(request, 'company', None)
+        open_logs = TimeLog.objects.filter(clock_out__isnull=True, employee__company=company).select_related('employee', 'employee__user')
         
         results = []
         for log in open_logs:
@@ -104,7 +106,8 @@ class EmployeeLocationHistoryView(APIView):
     def get(self, request, employee_id):
         time_log_id = request.query_params.get('time_log_id')
         
-        qs = EmployeeLocation.objects.filter(employee_id=employee_id)
+        company = getattr(request, 'company', None)
+        qs = EmployeeLocation.objects.filter(employee_id=employee_id, employee__company=company)
         
         if time_log_id:
             qs = qs.filter(time_log_id=time_log_id)
@@ -126,7 +129,8 @@ class EmployeeLiveSessionDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def get(self, request, time_log_id):
-        log = TimeLog.objects.filter(id=time_log_id).select_related('employee', 'employee__user').first()
+        company = getattr(request, 'company', None)
+        log = TimeLog.objects.filter(id=time_log_id, employee__company=company).select_related('employee', 'employee__user').first()
         if not log:
             return Response({"detail": "Time log not found."}, status=status.HTTP_404_NOT_FOUND)
         

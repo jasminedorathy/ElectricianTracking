@@ -13,13 +13,15 @@ from .serializers import LeaveRequestCreateSerializer, LeaveRequestSerializer
 
 class LeaveRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = LeaveRequest.objects.select_related("employee", "employee__user", "approved_by").all().order_by("-created_at")
+    # Removed global queryset to force company filtering in get_queryset
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        if not hasattr(self.request, 'company'):
+            return LeaveRequest.objects.none()
+        qs = LeaveRequest.objects.filter(company=self.request.company).select_related("employee", "employee__user", "approved_by").order_by("-created_at")
         if self.request.user.role == "admin":
             return qs
-        employee = Employee.objects.filter(user=self.request.user).first()
+        employee = Employee.objects.filter(user=self.request.user, company=self.request.company).first()
         if not employee:
             return qs.none()
         return qs.filter(employee=employee)
@@ -30,10 +32,10 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         return LeaveRequestSerializer
 
     def perform_create(self, serializer):
-        employee = Employee.objects.filter(user=self.request.user).first()
+        employee = Employee.objects.filter(user=self.request.user, company=self.request.company).first()
         if not employee:
             raise ValidationError({"detail": "Employee profile not found."})
-        serializer.save(employee=employee)
+        serializer.save(employee=employee, company=self.request.company)
 
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsAdminRole])
     def approve(self, request, pk=None):

@@ -1,20 +1,22 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 from employees.models import Employee
 
 
 class PayrollPeriod(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="payroll_periods", null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
         # Enforce uniqueness at the application level (MongoDB doesn't support DB-level constraints)
-        qs = PayrollPeriod.objects.filter(start_date=self.start_date, end_date=self.end_date)
+        filters = {"start_date": self.start_date, "end_date": self.end_date}
+        if self.company_id:
+            filters["company"] = self.company
+        qs = PayrollPeriod.objects.filter(**filters)
         if self.pk:
             qs = qs.exclude(pk=self.pk)
         if qs.exists():
@@ -29,9 +31,9 @@ class PayrollPeriod(models.Model):
 
 
 class PayrollRecord(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name="records")
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="payroll_records")
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="payroll_records", null=True, blank=True)
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2)
 
     regular_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)

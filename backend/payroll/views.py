@@ -10,6 +10,7 @@ from employees.models import Employee
 from leaves.models import LeaveRequest
 from time_tracking.models import TimeLog
 
+from companies.utils import resolve_region, get_compliance_rules
 from .models import PayrollPeriod, PayrollRecord
 from .serializers import PayrollGenerateSerializer, PayrollRecordSerializer
 
@@ -35,7 +36,7 @@ def _calc_leave_hours(employee, start, end):
     return paid, unpaid
 
 
-def _calc_work_hours(employee, start, end):
+def _calc_work_hours(employee, start, end, compliance_rules):
     qs = TimeLog.objects.filter(employee=employee, work_date__gte=start, work_date__lte=end).prefetch_related("breaks")
     daily = {}
     total = Decimal("0")
@@ -49,7 +50,9 @@ def _calc_work_hours(employee, start, end):
         y, w, _ = d.isocalendar()
         weekly.setdefault((y, w), Decimal("0"))
         weekly[(y, w)] += hours
-    weekly_ot = sum((hours - Decimal("40")) for hours in weekly.values() if hours > Decimal("40"))
+
+    threshold = Decimal(str(compliance_rules["overtime_threshold"]))
+    weekly_ot = sum((hours - threshold) for hours in weekly.values() if hours > threshold)
     overtime = max(Decimal("0"), weekly_ot)
     regular = max(Decimal("0"), total - overtime)
     return regular.quantize(Decimal("0.01")), overtime.quantize(Decimal("0.01"))
@@ -60,10 +63,12 @@ class PayrollRecordViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = PayrollRecord.objects.select_related("employee", "employee__user", "period").order_by("-generated_at")
+        if not hasattr(self.request, 'company'):
+            return PayrollRecord.objects.none()
+        qs = PayrollRecord.objects.filter(company=self.request.company).select_related("employee", "employee__user", "period").order_by("-generated_at")
         if self.request.user.role == "admin":
             return qs
-        employee = Employee.objects.filter(user=self.request.user).first()
+        employee = Employee.objects.filter(user=self.request.user, company=self.request.company).first()
         if not employee:
             return qs.none()
         return qs.filter(employee=employee)
@@ -76,7 +81,7 @@ class PayrollGenerateView(APIView):
     def post(self, request):
         serializer = PayrollGenerateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        employee = Employee.objects.select_related("user").filter(id=serializer.validated_data["employee"]).first()
+        employee = Employee.objects.select_related("user").filter(id=serializer.validated_data["employee"], company=request.company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
 
@@ -85,19 +90,24 @@ class PayrollGenerateView(APIView):
         if end < start:
             return Response({"detail": "End date must be after start date."}, status=400)
 
-        period, _ = PayrollPeriod.objects.get_or_create(start_date=start, end_date=end)
+        period, _ = PayrollPeriod.objects.get_or_create(start_date=start, end_date=end, company=request.company)
+
+        # Resolve region and compliance rules
+        region = resolve_region(employee, employee.company)
+        compliance_rules = get_compliance_rules(region)
 
         hourly_rate = employee.hourly_rate
-        regular_hours, overtime_hours = _calc_work_hours(employee, start, end)
+        regular_hours, overtime_hours = _calc_work_hours(employee, start, end, compliance_rules)
         paid_leave_hours, unpaid_leave_hours = _calc_leave_hours(employee, start, end)
 
-        overtime_multiplier = Decimal("1.5")
+        overtime_multiplier = Decimal(str(compliance_rules["overtime_multiplier"]))
         gross = (regular_hours + paid_leave_hours) * hourly_rate + overtime_hours * hourly_rate * overtime_multiplier
         net = gross
 
         record, _ = PayrollRecord.objects.update_or_create(
             period=period,
             employee=employee,
+            company=request.company,
             defaults={
                 "hourly_rate": hourly_rate,
                 "regular_hours": regular_hours,

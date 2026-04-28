@@ -1,12 +1,11 @@
 from django.db import models
-from django_mongodb_backend.fields import ObjectIdAutoField
 
 from employees.models import Employee
 
 
 class Shift(models.Model):
-    id = ObjectIdAutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="shifts")
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="shifts", null=True, blank=True)
     shift_start = models.DateTimeField()
     shift_end = models.DateTimeField()
     title = models.CharField(max_length=100, blank=True)

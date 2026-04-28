@@ -24,15 +24,15 @@ class JobSiteViewSet(viewsets.ModelViewSet):
         return [IsAdminRole()]
 
     def get_queryset(self):
-        # Admins can see all, employees can see all for now to show on map
-        return JobSite.objects.all().order_by("name")
+        if not hasattr(self.request, 'company'):
+            return JobSite.objects.none()
+        # Filter by company instead of organization
+        return JobSite.objects.filter(company=self.request.company).order_by("name")
 
     def perform_create(self, serializer):
-        # Auto-assign organization from current admin's employee profile
-        try:
-            employee = self.request.user.employee_profile
-            serializer.save(organization=employee.organization)
-        except Exception:
+        if hasattr(self.request, 'company'):
+            serializer.save(company=self.request.company)
+        else:
             serializer.save()
 
 
@@ -44,22 +44,13 @@ class LocationViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        return Location.objects.all().order_by("-created_at")
+        if not hasattr(self.request, 'company'):
+            return Location.objects.none()
+        return Location.objects.filter(company=self.request.company).order_by("-created_at")
 
     def perform_create(self, serializer):
-        org = None
-        try:
-            org = getattr(self.request.user, 'organization', None)
-        except Exception:
-            pass
-        if not org:
-            try:
-                emp = self.request.user.employee_profile
-                org = emp.organization
-            except Exception:
-                pass
-        if org:
-            serializer.save(organization=org)
+        if hasattr(self.request, 'company'):
+            serializer.save(company=self.request.company)
         else:
             serializer.save()
 
@@ -71,9 +62,10 @@ def _parse_date(value: str | None) -> date | None:
 
 
 def _get_employee_for_request(request, employee_id: str | None) -> Employee | None:
+    company = getattr(request, 'company', None)
     if request.user.role == "admin" and employee_id:
-        return Employee.objects.filter(id=employee_id).first()
-    return Employee.objects.filter(user=request.user).first()
+        return Employee.objects.filter(id=employee_id, company=company).first()
+    return Employee.objects.filter(user=request.user, company=company).first()
 
 
 class TimeLogViewSet(viewsets.ReadOnlyModelViewSet):
@@ -90,7 +82,11 @@ class TimeLogViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
     def get_queryset(self):
-        qs = TimeLog.objects.select_related("employee", "employee__user").prefetch_related("breaks")
+        if not hasattr(self.request, 'company'):
+            return TimeLog.objects.none()
+            
+        # Filter through employee__company to isolate data
+        qs = TimeLog.objects.filter(employee__company=self.request.company).select_related("employee", "employee__user").prefetch_related("breaks")
 
         # Date range filters (work_date)
         date_from = _parse_date(self.request.query_params.get("date_from"))
@@ -102,7 +98,8 @@ class TimeLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         if self.request.user.role == "admin":
             return qs.order_by("-clock_in")
-        employee = Employee.objects.filter(user=self.request.user).first()
+            
+        employee = Employee.objects.filter(user=self.request.user, company=self.request.company).first()
         if not employee:
             return qs.none()
         return qs.filter(employee=employee).order_by("-clock_in")
@@ -113,7 +110,8 @@ class ClockInView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         open_log = TimeLog.objects.filter(employee=employee, clock_out__isnull=True).first()
@@ -128,22 +126,22 @@ class ClockInView(APIView):
 
         # Geofence check
         job_site = employee.assigned_job_site
-        organization = request.user.organization
+        company = getattr(request, 'company', None)
         
         distance = None
         passed = True
         override_used = False
         
-        if job_site and organization and organization.geofence_enabled:
+        if job_site and company and company.geofence_enabled:
             if lat and lon:
                 distance = calculate_distance(lat, lon, job_site.lat, job_site.lng)
-                radius = job_site.geofence_radius or organization.geofence_radius_meters
+                radius = job_site.geofence_radius or company.geofence_radius_meters
                 
                 if distance > radius:
                     passed = False
-                    if organization.geofence_strict_mode:
+                    if company.geofence_strict_mode:
                         # Allow admin override if enabled
-                        if organization.geofence_admin_override and request.user.role == "admin":
+                        if company.geofence_admin_override and request.user.role == "admin":
                             override_used = True
                             passed = True # Override means it passes
                         else:
@@ -176,7 +174,8 @@ class ClockOutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         time_log = TimeLog.objects.filter(employee=employee, clock_out__isnull=True).order_by("-clock_in").first()
@@ -231,7 +230,8 @@ class BreakStartView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         time_log = TimeLog.objects.filter(employee=employee, clock_out__isnull=True).order_by("-clock_in").first()
@@ -253,7 +253,8 @@ class BreakEndView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         time_log = TimeLog.objects.filter(employee=employee, clock_out__isnull=True).order_by("-clock_in").first()
@@ -272,19 +273,7 @@ class TimesheetView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        print("DEBUG: TimesheetView.get called")
-        try:
-            res = self._handle_get(request)
-            print("DEBUG: TimesheetView.get success")
-            return res
-        except Exception as e:
-            print(f"DEBUG: TimesheetView.get ERROR: {e}")
-            import traceback
-            tb = traceback.format_exc()
-            print(tb)
-            with open("traceback_debug_v2.txt", "w") as f:
-                f.write(tb)
-            raise
+        return self._handle_get(request)
 
     def _handle_get(self, request):
         employee = _get_employee_for_request(request, request.query_params.get("employee"))
@@ -390,7 +379,8 @@ class AdminEmployeeTimeLogsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminRole]
 
     def get(self, request, employee_id: str):
-        employee = Employee.objects.filter(id=employee_id).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(id=employee_id, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         qs = TimeLog.objects.filter(employee=employee).prefetch_related("breaks").order_by("-clock_in")
@@ -401,18 +391,19 @@ class TimeGeofenceStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         
         job_site = employee.assigned_job_site
-        organization = request.user.organization
+        company = getattr(request, 'company', None)
         
         data = {
-            "geofence_enabled": organization.geofence_enabled if organization else False,
-            "strict_mode": organization.geofence_strict_mode if organization else True,
-            "admin_override": organization.geofence_admin_override if organization else True,
-            "org_radius": organization.geofence_radius_meters if organization else 200,
+            "geofence_enabled": company.geofence_enabled if company else False,
+            "strict_mode": company.geofence_strict_mode if company else True,
+            "admin_override": company.geofence_admin_override if company else True,
+            "org_radius": company.geofence_radius_meters if company else 200,
             "job_site": None
         }
         
@@ -432,7 +423,8 @@ class UploadJobPhotoView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         
@@ -463,9 +455,10 @@ class JobSitePhotosView(APIView):
     def get(self, request):
         # Admins see all, employees see their own (or all if needed, but let's stick to related logs)
         if request.user.role == "admin":
-            qs = TimeLogPhoto.objects.select_related("time_log", "time_log__employee", "time_log__employee__user").order_by("-uploaded_at")
+            company = getattr(request, 'company', None)
+            qs = TimeLogPhoto.objects.filter(time_log__employee__company=company).select_related("time_log", "time_log__employee", "time_log__employee__user").order_by("-uploaded_at")
         else:
-            employee = Employee.objects.filter(user=request.user).first()
+            employee = Employee.objects.filter(user=request.user, company=getattr(request, 'company', None)).first()
             if not employee:
                 return Response([])
             qs = TimeLogPhoto.objects.filter(time_log__employee=employee).order_by("-uploaded_at")
@@ -486,7 +479,8 @@ class TimeLogSubmitView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk: str):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         
@@ -512,7 +506,8 @@ class TimeLogApprovalView(APIView):
 
     def post(self, request, pk: str):
         action = request.data.get("action") # "approve", "reject", "edit"
-        time_log = TimeLog.objects.filter(id=pk).first()
+        company = getattr(request, 'company', None)
+        time_log = TimeLog.objects.filter(id=pk, employee__company=company).first()
         if not time_log:
             return Response({"detail": "Time log not found."}, status=404)
         
@@ -560,7 +555,8 @@ class CurrentSessionView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        employee = Employee.objects.filter(user=request.user).first()
+        company = getattr(request, 'company', None)
+        employee = Employee.objects.filter(user=request.user, company=company).first()
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=404)
         

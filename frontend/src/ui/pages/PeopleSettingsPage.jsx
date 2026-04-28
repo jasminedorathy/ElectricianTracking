@@ -310,7 +310,7 @@ function AddMembersModal({ onClose, onSave }) {
         setCopied(true); setTimeout(() => setCopied(false), 2000)
     }
     function addRow() {
-        setRows(p => [...p, { name: "", email: "", phone: "", dialCode: "+91" }])
+        setRows(p => [...p, { name: "", email: "", phone: "", dialCode: "+91", role: "employee" }])
         setErrs(p => [...p, {}])
     }
     function removeRow(i) {
@@ -424,6 +424,19 @@ function AddMembersModal({ onClose, onSave }) {
                                             {errs[i]?.contact && <span className="psFieldError">{errs[i].contact}</span>}
                                         </div>
 
+                                        {/* Role Select */}
+                                        <div className="psMemberField" style={{ maxWidth: 120 }}>
+                                            <select
+                                                className="psMemberInput"
+                                                value={r.role}
+                                                onChange={e => update(i, "role", e.target.value)}
+                                            >
+                                                <option value="employee">Employee</option>
+                                                <option value="admin">Admin</option>
+                                                <option value="manager">Manager</option>
+                                            </select>
+                                        </div>
+
                                         {/* Delete row button */}
                                         <button
                                             type="button"
@@ -459,11 +472,12 @@ function EditMemberModal({ member, onClose, onSave }) {
     const [email, setEmail] = useState(member.user?.email || member.email || "")
     const [phone, setPhone] = useState(member.phone || "")
     const [dialCode, setDialCode] = useState("+91")
+    const [role, setRole] = useState(member.user?.role || "employee")
     const [err, setErr] = useState({})
 
     function save() {
         if (!name.trim()) return setErr({ name: "Name is required" })
-        onSave({ id: member.id, name, email, phone })
+        onSave({ id: member.id, name, email, phone, role })
         onClose()
     }
 
@@ -509,6 +523,20 @@ function EditMemberModal({ member, onClose, onSave }) {
                                 onChange={e => setPhone(e.target.value)}
                             />
                         </div>
+                    </div>
+
+                    <div className="psMemberField" style={{ marginTop: 16 }}>
+                        <label className="psFieldLabel">Access Role</label>
+                        <select
+                            className="psMemberInput"
+                            value={role}
+                            onChange={e => setRole(e.target.value)}
+                        >
+                            <option value="employee">Employee</option>
+                            <option value="admin">Admin</option>
+                            <option value="manager">Manager</option>
+                        </select>
+                        <p className="psFieldHint">Determines what this member can see and do in the system.</p>
                     </div>
                 </div>
                 <div className="psModalFooter">
@@ -575,6 +603,7 @@ export function PeopleSettingsPage() {
                     email: r.email || "",
                     first_name: firstName,
                     last_name: lastName,
+                    role: r.role || "employee",
                     phone: r.phone ? `${r.dialCode} ${r.phone}` : "",
                     is_active: true
                 }
@@ -589,8 +618,11 @@ export function PeopleSettingsPage() {
                 fetchMembers()
             } catch (err) {
                 console.error("Failed to add member:", err)
+                const errorMsg = err?.body?.detail || 
+                               (typeof err?.body === 'object' ? Object.values(err.body)[0] : null) || 
+                               err?.message || "Error"
                 setQueue(prev => prev.map(q =>
-                    (q.email === r.email && q.name === r.name) ? { ...q, status: "Error" } : q
+                    (q.email === r.email && q.name === r.name) ? { ...q, status: errorMsg } : q
                 ))
             }
         }
@@ -616,7 +648,8 @@ export function PeopleSettingsPage() {
                 email: data.email,
                 first_name: firstName,
                 last_name: lastName,
-                phone: data.phone
+                phone: data.phone,
+                role: data.role
             }
 
             await apiRequest(`/employees/${data.id}/`, {

@@ -19,7 +19,6 @@ import { HolidaysSettingsPage } from "./pages/HolidaysSettingsPage.jsx"
 import { WorkSchedulesSettingsPage } from "./pages/WorkSchedulesSettingsPage.jsx"
 import { TimeTrackingSettingsPage } from "./pages/TimeTrackingSettingsPage.jsx"
 import { LocationsSettingsPage } from "./pages/LocationsSettingsPage.jsx"
-import { OnboardingPage } from "./pages/OnboardingPage.jsx"
 import { GetStartedPage } from "./pages/GetStartedPage.jsx"
 import { LiveLocationsPage } from "./pages/LiveLocationsPage.jsx"
 
@@ -30,9 +29,15 @@ export function App() {
 
   return (
     <Routes>
-      <Route path={routes.login} element={user ? <Navigate to={routes.get_started} replace /> : <LoginPage />} />
-      <Route path={routes.onboarding} element={user ? <OnboardingPage /> : <Navigate to={routes.login} replace />} />
-      <Route element={user ? <AppShell /> : <Navigate to={routes.login} replace />}>
+      <Route 
+        path={routes.login} 
+        element={user ? (user.companyId ? <Navigate to={routes.get_started} replace /> : <Navigate to={routes.onboarding} replace />) : <LoginPage />} 
+      />
+      <Route 
+        path={routes.onboarding} 
+        element={<Navigate to={routes.login} replace />} 
+      />
+      <Route element={user ? (user.companyId ? <AppShell /> : <Navigate to={routes.onboarding} replace />) : <Navigate to={routes.login} replace />}>
         <Route path={routes.get_started} element={<GetStartedPage />} />
         <Route path={routes.dashboard} element={<DashboardPage />} />
         <Route path={routes.locations} element={<LocationsPage />} />

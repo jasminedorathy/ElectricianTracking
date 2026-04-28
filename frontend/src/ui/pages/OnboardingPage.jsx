@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Check, ArrowRight, Building2, Users2, Workflow, Clock, Banknote, CalendarDays, Sparkles } from "lucide-react"
+import { apiRequest } from "../../api/client"
+import { Check, ArrowRight, Building2, Users2, Workflow, Clock, Banknote, CalendarDays, Sparkles, RefreshCcw } from "lucide-react"
 import { CalTrackLogo } from "../components/CalTrackLogo.jsx"
 
 import { routes } from "../routes.js"
@@ -8,6 +9,8 @@ import { routes } from "../routes.js"
 export function OnboardingPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   // Step 1: Organization
   const [orgName, setOrgName] = useState("")
@@ -228,15 +231,79 @@ export function OnboardingPage() {
               <button className="btn btnGhost" style={{ fontSize: 13, fontWeight: 800, color: "#5d5fef", marginBottom: 32 }}>+ ADD MORE</button>
 
               <div style={{ display: "flex", gap: 16 }}>
-                <button className="btn btnGhost" onClick={() => navigate(routes.dashboard)} style={{ padding: 16, borderRadius: 12, fontSize: 14, fontWeight: 800 }}>SKIP FOR NOW</button>
+                <button 
+                  className="btn btnGhost" 
+                  onClick={async () => {
+                    // Treat skip as "Create with what we have"
+                    setLoading(true)
+                    setError("")
+                    try {
+                      await apiRequest("/company/create", {
+                        method: "POST",
+                        json: {
+                          company_name: orgName,
+                          primary_country: "US",
+                          default_state: "NY"
+                        }
+                      })
+                      window.location.href = routes.dashboard
+                    } catch (err) {
+                      setLoading(false)
+                      const msg = err?.body?.detail || 
+                                 (err?.body && typeof err.body === 'object' ? Object.values(err.body).flat()[0] : null) || 
+                                 err?.message || "Failed to create organization."
+                      setError(msg)
+                    }
+                  }} 
+                  style={{ padding: 16, borderRadius: 12, fontSize: 14, fontWeight: 800 }}
+                  disabled={loading}
+                >
+                  SKIP FOR NOW
+                </button>
                 <button
                   className="btn btnPrimary"
-                  onClick={() => navigate(routes.dashboard)}
+                  onClick={async () => {
+                    setLoading(true)
+                    setError("")
+                    try {
+                      // 1. Create the company in the backend
+                      await apiRequest("/company/create", {
+                        method: "POST",
+                        json: {
+                          company_name: orgName,
+                          primary_country: "US",
+                          default_state: "NY"
+                        }
+                      })
+                      
+                      // 3. Finish - redirect to dashboard with a full reload to refresh all context/tokens
+                      window.location.href = routes.dashboard
+                    } catch (err) {
+                      setLoading(false)
+                      const msg = err?.body?.detail || 
+                                 (err?.body && typeof err.body === 'object' ? Object.values(err.body).flat()[0] : null) || 
+                                 err?.message || "Failed to create organization."
+                      setError(msg)
+                      console.error("Setup failed:", err)
+                    }
+                  }}
+                  disabled={loading}
                   style={{ flex: 1, padding: 16, background: "#059669", fontSize: 14, fontWeight: 800, borderRadius: 12, border: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
-                  <Sparkles size={18} /> COMPLETE SETUP
+                  {loading ? (
+                    <RefreshCcw size={18} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <>
+                      <Sparkles size={18} /> COMPLETE SETUP
+                    </>
+                  )}
                 </button>
               </div>
+              {error && (
+                <div style={{ marginTop: 16, padding: "12px 16px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", borderRadius: 8, fontSize: 13, textAlign: "center" }}>
+                  {error}
+                </div>
+              )}
             </div>
           )}
 

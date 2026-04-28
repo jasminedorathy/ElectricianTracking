@@ -402,13 +402,13 @@ export function AppShell() {
         const isActive = sessionRes && sessionRes.active
 
         // 2. Get locations
-        let locations = []
+        let locationsFetch = []
         try {
-          locations = await apiRequest("/time/locations/")
+          locationsFetch = unwrapResults(await apiRequest("/time/locations/"))
         } catch (e) { }
 
         // Filter valid auto-locations (radius >= 300)
-        const validLocations = (locations || []).filter(l => l.geofence_radius >= 300)
+        const validLocations = (Array.isArray(locationsFetch) ? locationsFetch : []).filter(l => l.geofence_radius >= 300)
 
         // Reset daily flags
         if (lastReminderDate !== todayStr) {
@@ -528,7 +528,7 @@ export function AppShell() {
   if (!user) return null
 
   const items = NAV.filter((i) => !i.adminOnly || user.role === "admin")
-  const email = `${user.username}@caldim.com`
+  const email = `${user.email}`
 
   function closeAccount() {
     setAccountView(null)

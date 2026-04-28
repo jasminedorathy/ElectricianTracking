@@ -24,7 +24,9 @@ class AdminTaskListCreateView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        qs = Task.objects.select_related("assigned_to", "assigned_by").all()
+        if not hasattr(request, 'company'):
+            return Response([])
+        qs = Task.objects.filter(company=request.company).select_related("assigned_to", "assigned_by")
 
         # Optional filters
         employee_id = request.query_params.get("employee")
@@ -43,7 +45,7 @@ class AdminTaskListCreateView(APIView):
     def post(self, request):
         ser = TaskSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        task = ser.save(assigned_by=request.user)
+        task = ser.save(assigned_by=request.user, company=request.company)
         return Response(TaskSerializer(task).data, status=status.HTTP_201_CREATED)
 
 
@@ -55,20 +57,20 @@ class AdminTaskDetailView(APIView):
     """
     permission_classes = [IsAdmin]
 
-    def get_object(self, pk):
+    def get_object(self, pk, company):
         try:
-            return Task.objects.select_related("assigned_to", "assigned_by").get(pk=pk)
+            return Task.objects.select_related("assigned_to", "assigned_by").get(pk=pk, company=company)
         except Task.DoesNotExist:
             return None
 
     def get(self, request, pk):
-        task = self.get_object(pk)
+        task = self.get_object(pk, request.company)
         if not task:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(TaskSerializer(task).data)
 
     def patch(self, request, pk):
-        task = self.get_object(pk)
+        task = self.get_object(pk, request.company)
         if not task:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         ser = TaskSerializer(task, data=request.data, partial=True)
@@ -77,7 +79,7 @@ class AdminTaskDetailView(APIView):
         return Response(TaskSerializer(task).data)
 
     def delete(self, request, pk):
-        task = self.get_object(pk)
+        task = self.get_object(pk, request.company)
         if not task:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         task.delete()
@@ -90,7 +92,7 @@ class AdminTaskAttachmentCreateView(APIView):
 
     def post(self, request, pk):
         try:
-            task = Task.objects.get(pk=pk)
+            task = Task.objects.get(pk=pk, company=request.company)
         except Task.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -119,7 +121,9 @@ class EmployeeTaskListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        qs = Task.objects.filter(assigned_to=request.user).select_related("assigned_by")
+        if not hasattr(request, 'company'):
+            return Response([])
+        qs = Task.objects.filter(assigned_to=request.user, company=request.company).select_related("assigned_by")
         status_f = request.query_params.get("status")
         if status_f:
             qs = qs.filter(status=status_f)
@@ -135,9 +139,9 @@ class EmployeeTaskActionView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [FormParser, MultiPartParser]
 
-    def get_object(self, pk, user):
+    def get_object(self, pk, user, company):
         try:
-            return Task.objects.get(pk=pk, assigned_to=user)
+            return Task.objects.get(pk=pk, assigned_to=user, company=company)
         except Task.DoesNotExist:
             return None
 
@@ -148,7 +152,8 @@ class EmployeeTaskActionView(APIView):
         return self.handle_action(request, pk, action)
 
     def handle_action(self, request, pk, action):
-        task = self.get_object(pk, request.user)
+        company = getattr(request, 'company', None)
+        task = self.get_object(pk, request.user, company)
         if not task:
             return Response({"detail": "Not found or not assigned to you."}, status=status.HTTP_404_NOT_FOUND)
 

@@ -33,6 +33,11 @@ export function getJwtUsername(token) {
   return null
 }
 
+export function getJwtCompanyId(token) {
+  const payload = decodeJwtPayload(token)
+  return payload?.company_id || null
+}
+
 export function isJwtExpired(token, skewSeconds = 10) {
   const payload = decodeJwtPayload(token)
   const exp = payload?.exp

@@ -45,7 +45,13 @@ export function AuthProvider({ children }) {
     try {
       const me = await apiRequest("/auth/me/")
       if (me?.username && me?.role) {
-        // The UserSerializer in backend maps company_id to the 'company' field
+        if (!me?.company) {
+          // User has no company — cannot use the app, must re-register
+          // Clearing tokens breaks the App.jsx login→onboarding→login loop
+          setTokens(null)
+          setUser(null)
+          return
+        }
         setUser({ 
           username: me.username, 
           email: me.email, 
@@ -65,7 +71,8 @@ export function AuthProvider({ children }) {
       const username  = getJwtUsername(tokens.access)
       const role      = getJwtRole(tokens.access)
       const companyId = getJwtCompanyId(tokens.access)
-      if (username && role) {
+      // Require companyId — token without company cannot access the app
+      if (username && role && companyId) {
         setUser({ username, role, companyId })
       } else {
         setUser(null)

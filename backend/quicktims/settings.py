@@ -46,8 +46,8 @@ TENANT_MODEL = "companies.Company"
 TENANT_DOMAIN_MODEL = "companies.Domain"
 
 MIDDLEWARE = [
-    "django_tenants.middleware.main.TenantMainMiddleware", # must be at the top
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",          # MUST be first to handle CORS preflight
+    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -56,6 +56,9 @@ MIDDLEWARE = [
     "companies.middleware.CompanyMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Fall back to public schema if no tenant matches the domain (needed for localhost)
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
 
 # Note: CompanyMiddleware is replaced by TenantMainMiddleware for DB routing.
 # If you still need specific logic from companies.middleware, keep it after TenantMainMiddleware.

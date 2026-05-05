@@ -243,10 +243,9 @@ export function AppShell() {
     if (flyoutTimerRef.current) clearTimeout(flyoutTimerRef.current)
   }
 
-  useEffect(() => {
-    const name = (localStorage.getItem("quicktims.orgName") || "").trim()
-    if (!name) navigate(routes.onboarding, { replace: true })
-  }, [location.pathname, navigate])
+  // NOTE: orgName redirect removed — App.jsx routing already guards AppShell
+  // with user && user.companyId. Redirecting to /onboarding here caused an
+  // infinite loop because /onboarding immediately redirects back to /login.
 
   const [prefs, setPrefs] = useState(() => {
     try {

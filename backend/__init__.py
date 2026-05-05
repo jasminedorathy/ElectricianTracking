@@ -1,2 +1,1 @@
-import pymysql
-pymysql.install_as_MySQLdb()
+# PostgreSQL backend (Supabase) — no MySQL adapter needed

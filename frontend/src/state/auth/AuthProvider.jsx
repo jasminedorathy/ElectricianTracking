@@ -52,6 +52,11 @@ export function AuthProvider({ children }) {
           role: me.role, 
           companyId: me.company 
         })
+        // Auto-persist company name so AppShell topbar always shows it
+        if (me.company_name) {
+          localStorage.setItem("quicktims.orgName", me.company_name)
+          window.dispatchEvent(new CustomEvent("quicktims:orgName"))
+        }
       } else {
         setUser(null)
       }

@@ -7,9 +7,17 @@ from .models import User
 class UserSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
     company = serializers.CharField(source="company_id", read_only=True)
+    company_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "role", "company")
+        fields = ("id", "username", "email", "first_name", "last_name", "role", "company", "company_name")
+
+    def get_company_name(self, obj):
+        try:
+            return obj.company.company_name if obj.company else ""
+        except Exception:
+            return ""
 
 
 class LoginSerializer(serializers.Serializer):

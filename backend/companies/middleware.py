@@ -5,73 +5,72 @@ from django.db import connection
 
 class CompanyMiddleware(MiddlewareMixin):
     """
-    Middleware to extract company from authenticated user and attach to request.
-    If company is missing for an authenticated user, it rejects the request.
+    Middleware to switch the DB schema to the user's company tenant.
 
-    Resolution order:
-      1. user.company FK (fastest – already on the User row)
-      2. Company M2M lookup (users=request.user)
-      3. company_id claim embedded in the JWT Access Token at login time
-         (avoids querying tenant-only Employee table in the public schema,
-          which causes a 500 ProgrammingError when schema = public)
+    ROOT CAUSE FIX:
+    Django's AuthenticationMiddleware only handles session-based auth.
+    DRF JWT authentication runs INSIDE the view — AFTER all Django middleware.
+    So request.user is always AnonymousUser at middleware time for JWT API calls.
+
+    Solution: Read company_id directly from the JWT Bearer token header
+    BEFORE checking request.user. This ensures the correct schema is set
+    before any view code (or DRF authentication) runs.
     """
 
     def process_request(self, request):
-        # AuthenticationMiddleware must run before this.
-        if not request.user.is_authenticated:
-            return None
+        company = None
 
-        print(f"DEBUG: CompanyMiddleware - Request by user {request.user.username} for {request.path}")
-
-        # 1. Direct FK on User model (fastest path)
-        company = getattr(request.user, 'company', None)
-
-        # 2. M2M reverse lookup on Company (shared/public model – safe to query)
-        if not company:
-            from companies.models import Company
-            company = Company.objects.filter(users=request.user).first()
-
-        # 3. Fallback: read company_id from the JWT Bearer token claim.
-        #    The claim is embedded at login time in CustomTokenObtainPairSerializer.
-        #    This is safe because Company is a shared model (public schema).
-        #    We intentionally do NOT fall back to querying Employee here because
-        #    Employee is a tenant-only model; calling it while the connection is in
-        #    the public schema raises ProgrammingError -> Django 500.
-        if not company:
+        # ── Step 1: Read company_id directly from JWT Bearer token ─────────────
+        # DRF authenticates AFTER middleware, so we decode the token ourselves.
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Bearer '):
             try:
-                auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-                if auth_header.startswith('Bearer '):
-                    from rest_framework_simplejwt.tokens import AccessToken
-                    token = AccessToken(auth_header.split(' ')[1])
-                    company_id = token.get('company_id')
-                    if company_id:
-                        from companies.models import Company
-                        company = Company.objects.filter(id=company_id).first()
-                        if company:
-                            # Sync back so future requests hit path 1 directly
-                            request.user.company = company
-                            request.user.save(update_fields=['company'])
-                            print(
-                                f"DEBUG: CompanyMiddleware - Restored company from JWT claim: "
-                                f"{company.schema_name}"
-                            )
+                from rest_framework_simplejwt.tokens import AccessToken
+                token = AccessToken(auth_header.split(' ')[1])
+                company_id = token.get('company_id')
+                if company_id:
+                    from companies.models import Company
+                    company = Company.objects.filter(id=company_id).first()
+                    if company:
+                        print(f"DEBUG: CompanyMiddleware - Found company via JWT: {company.schema_name}")
             except Exception as e:
-                print(f"DEBUG: CompanyMiddleware - JWT company_id fallback failed: {e}")
+                print(f"DEBUG: CompanyMiddleware - JWT token read failed: {e}")
 
+        # ── Step 2: Fallback for session-based auth (admin panel, etc.) ─────────
+        if not company:
+            user = getattr(request, 'user', None)
+            if user and user.is_authenticated:
+                company = getattr(user, 'company', None)
+                if not company:
+                    try:
+                        from companies.models import Company
+                        company = Company.objects.filter(users=user).first()
+                    except Exception:
+                        pass
+
+        # ── Step 3: Switch the DB schema to this company's tenant ───────────────
         if company:
             request.company = company
             request.tenant = company
-            print(f"DEBUG: CompanyMiddleware - Setting tenant to {company.schema_name}")
             connection.set_tenant(company)
+            print(f"DEBUG: CompanyMiddleware - Schema set to: {company.schema_name}")
+        else:
+            print(f"DEBUG: CompanyMiddleware - No tenant resolved for: {request.path}")
 
-        if not company:
+        # ── Step 4: Block tenant API calls that arrived without a valid company ──
+        # Only applies to requests that provided a Bearer token (i.e., authenticated
+        # API clients). Unauthenticated requests will get a 401 from DRF instead.
+        if not company and auth_header.startswith('Bearer '):
             excluded_paths = [
-                '/api/accounts/',
+                '/api/auth/',
                 '/api/company/create',
             ]
             if request.path.startswith('/api/') and not any(
                 request.path.startswith(p) for p in excluded_paths
             ):
-                return JsonResponse({"error": "No company associated with user"}, status=403)
+                return JsonResponse(
+                    {"error": "No company associated with this account."},
+                    status=403
+                )
 
         return None

@@ -263,7 +263,13 @@ export function LoginPage() {
           selected_modules: selectedModules
         })
 
-        // Success! Redirect will happen automatically via AuthProvider/App.jsx
+        // Store org name so AppShell topbar shows it immediately
+        if (organizationName.trim()) {
+          localStorage.setItem("quicktims.orgName", organizationName.trim())
+          window.dispatchEvent(new CustomEvent("quicktims:orgName"))
+        }
+
+        navigate(postLoginRoute(), { replace: true })
       } catch (err) {
         console.error("Registration Error:", err);
         const msg = err?.body?.detail || 

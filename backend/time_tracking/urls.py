@@ -14,6 +14,9 @@ from .views import (
     JobSitePhotosView,
     JobSiteViewSet,
     LocationViewSet,
+    LocationZoneViewSet,
+    EmployeeLocationViewSet,
+    LocationOverviewView,
     TimeLogSubmitView,
     TimeLogApprovalView,
     CurrentSessionView,
@@ -23,6 +26,8 @@ router = DefaultRouter()
 router.register(r"logs", TimeLogViewSet, basename="time-log")
 router.register(r"sites", JobSiteViewSet, basename="job-site")
 router.register(r"locations", LocationViewSet, basename="saved-location")
+router.register(r"zones", LocationZoneViewSet, basename="location-zone")
+router.register(r"employee-locations", EmployeeLocationViewSet, basename="employee-location")
 
 urlpatterns = [
     path("clock-in/", ClockInView.as_view(), name="clock-in"),
@@ -37,6 +42,8 @@ urlpatterns = [
     path("photos/job-site/", JobSitePhotosView.as_view(), name="job-site-photos"),
     path("logs/<str:pk>/submit/", TimeLogSubmitView.as_view(), name="time-log-submit"),
     path("logs/<str:pk>/approve/", TimeLogApprovalView.as_view(), name="time-log-approve"),
+    # Layer 2 — Admin location overview (live map with employee counts)
+    path("locations/overview/", LocationOverviewView.as_view(), name="location-overview"),
 ]
 
 urlpatterns += router.urls

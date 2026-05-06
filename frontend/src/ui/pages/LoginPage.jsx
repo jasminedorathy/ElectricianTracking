@@ -618,9 +618,14 @@ export function LoginPage() {
                   {error && <div className="qt-error-box">{error}</div>}
 
                   <div style={{ display: "flex", gap: 12 }}>
-                    <button type="button" className="qt-social-btn" style={{ flex: 1 }} onClick={() => setRegStep(3)}>BACK</button>
+                    <button type="button" className="qt-social-btn" style={{ flex: 1 }} onClick={() => setRegStep(3)} disabled={loading}>BACK</button>
                     <button type="button" className={`qt-submit-btn qt-submit-active`} style={{ flex: 2 }} onClick={onSubmit} disabled={loading}>
-                      {loading ? <RefreshCcw className="qt-spin" size={18} /> : "CREATE ACCOUNT"}
+                      {loading
+                        ? <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                            <RefreshCcw className="qt-spin" size={16} />
+                            Setting up workspace…
+                          </span>
+                        : "CREATE ACCOUNT"}
                     </button>
                   </div>
                 </div>

@@ -79,8 +79,9 @@ DATABASES = {
         "OPTIONS": {
             "sslmode": "require",
         },
-        # Keep connections alive to avoid reconnect overhead with django-tenants
-        "CONN_MAX_AGE": 60,
+        # Keep connections alive longer to avoid the 2.5s pooler reconnect overhead.
+        # With Supabase session pooler, longer CONN_MAX_AGE = fewer reconnects.
+        "CONN_MAX_AGE": 300,
     }
 }
 

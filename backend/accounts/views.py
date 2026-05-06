@@ -45,37 +45,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     @classmethod
     def get_token(cls, user):
-        # Resolve company first (User is a shared model)
+        # company is a shared model — no schema switch needed
         company = getattr(user, 'company', None)
-        
-        # If we have a company, switch to its schema to access tenant-specific models (Employee)
-        from django.db import connection
-        if company:
-            connection.set_tenant(company)
-        
-        from employees.models import Employee
-        emp = Employee.objects.filter(user=user).first()
-        
-        # Secondary check via Employee profile if company not on user
-        if not company and emp and emp.company:
-            company = emp.company
-            connection.set_tenant(company)
-            # Re-fetch emp in correct schema if needed, but we already have it if it worked? 
-            # Actually if emp worked, we were already in the right schema or it's public.
-            # But Employee isn't in public, so if it worked, we are lucky or it failed.
 
-        _ensure_pretty_employee_id(emp, company)
-        
         token = super().get_token(user)
         token["role"] = str(user.role)
         token["username"] = str(user.username)
-        
+
         if company:
             token["company_id"] = str(company.id)
-            
-        # Reset to public
-        connection.set_schema_to_public()
-            
+
         return token
 
 
@@ -157,64 +136,56 @@ class RegisterView(APIView):
         if User.objects.filter(username__iexact=username).exists():
             return Response({"detail": "Username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
 
+        from django.db import transaction
+
         try:
-            # 1. Create Company (The Organization)
-            from companies.models import Company
-            from django.utils.text import slugify
-            import uuid
-            
-            display_id = f"ORG-{uuid.uuid4().hex[:6].upper()}"
-            base_slug = slugify(organization_name) or f"org-{uuid.uuid4().hex[:8]}"
-            # We search for existing company via company_name or schema_name if needed
-            existing_company = Company.objects.filter(company_name=organization_name).first()
-            if existing_company and existing_company.users.count() == 0:
-                company = existing_company
-            else:
-                company = Company.objects.create(
-                    company_name=organization_name,
-                    team_size=request.data.get("team_size"),
-                    selected_modules=request.data.get("selected_modules", [])
-                )
-                # Create domain for this company
-                # For local dev, we might use company_name.localhost
-                from companies.models import Domain
-                Domain.objects.create(
-                    domain=f"{company.schema_name}.localhost", # Adjust for production
-                    tenant=company,
-                    is_primary=True
-                )
+            # All shared-schema writes in one transaction (Company, Domain, User)
+            with transaction.atomic():
+                # 1. Create Company (triggers tenant schema creation + migrations)
+                from companies.models import Company
+                from django.utils.text import slugify
 
-            # 2. Create User as Admin for this Company
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                role="admin",  # Onboarding user is the Org Admin
-            )
-            user.company = company
-            user.save()
+                base_slug = slugify(organization_name) or f"org-{uuid.uuid4().hex[:8]}"
+                existing_company = Company.objects.filter(company_name=organization_name).first()
+                if existing_company and existing_company.users.count() == 0:
+                    company = existing_company
+                else:
+                    company = Company.objects.create(
+                        company_name=organization_name,
+                        team_size=request.data.get("team_size"),
+                        selected_modules=request.data.get("selected_modules", [])
+                    )
+                    from companies.models import Domain
+                    Domain.objects.create(
+                        domain=f"{company.schema_name}.localhost",
+                        tenant=company,
+                        is_primary=True
+                    )
 
-            # Switch to tenant context to create tenant-specific models (Employee)
+                # 2. Create User as Org Admin
+                user = User.objects.create_user(
+                    username=username,
+                    password=password,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    role="admin",
+                )
+                user.company = company
+                user.save()
+
+            # 3. Create Employee in tenant schema (must be outside public transaction)
             connection.set_tenant(company)
-            
-            # Create Profile
             from employees.models import Employee
-            emp, _ = Employee.objects.get_or_create(
+            Employee.objects.get_or_create(
                 user=user,
                 company=company,
                 defaults={
                     "employee_id": generate_next_employee_id(company),
                     "title": "Admin",
                     "hourly_rate": 0,
-                    "company": company
                 }
             )
-            _ensure_pretty_employee_id(emp, company)
-            
-            # Reset tenant context if needed, though usually the request finishes here
-            from django_tenants.utils import get_public_schema_name
             connection.set_schema_to_public()
 
         except Exception as e:

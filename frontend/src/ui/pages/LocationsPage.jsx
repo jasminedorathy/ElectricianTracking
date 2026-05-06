@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet"
-import { Search, MapPin, X, ChevronDown, Info, Archive } from "lucide-react"
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet"
+import { Search, MapPin, X, ChevronDown, Info, Archive, Layers, UserCheck, Map } from "lucide-react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 import { apiRequest, unwrapResults } from "../../api/client.js"
+import { ZonesPanel } from "./locations/ZonesPanel.jsx"
+import { AssignmentsPanel } from "./locations/AssignmentsPanel.jsx"
 
 /* ── Fix default Leaflet icons ────────────────────────────────── */
 delete L.Icon.Default.prototype._getIconUrl
@@ -109,6 +111,9 @@ export function LocationsPage() {
 
   /* ── View toggle ───────────────────────────────────────────── */
   const [viewMode, setViewMode] = useState("map")
+
+  /* ── Active tab ────────────────────────────────────────────── */
+  const [activeTab, setActiveTab] = useState("map") // "map" | "zones" | "assignments"
 
   /* ── Map state ─────────────────────────────────────────────── */
   const defaultCenter = [12.9716, 80.0414]
@@ -442,13 +447,51 @@ export function LocationsPage() {
   /* ─────────────────────────── RENDER ─────────────────────────── */
   return (
     <div style={{
-      display: "flex", height: "calc(100vh - 110px)", width: "100%",
+      display: "flex", flexDirection: "column", height: "calc(100vh - 110px)", width: "100%",
       backgroundColor: "var(--bg)", border: "1px solid var(--stroke)",
       borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow)",
     }}>
 
-      {/* ── LEFT: Search + Map Area ───────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
+      {/* ── Tab Bar ──────────────────────────────────────────── */}
+      <div style={{ display: "flex", borderBottom: "1px solid var(--stroke)",
+        background: "var(--surface)", flexShrink: 0 }}>
+        {[
+          { id: "map",         label: "Map & Locations", Icon: Map },
+          { id: "zones",       label: "Zones",           Icon: Layers },
+          { id: "assignments", label: "Assignments",     Icon: UserCheck },
+        ].map(({ id, label, Icon }) => (
+          <button key={id} onClick={() => setActiveTab(id)}
+            style={{
+              padding: "12px 22px", border: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 7,
+              background: activeTab === id ? "var(--bg)" : "transparent",
+              color: activeTab === id ? "#4F46E5" : "var(--fg2)",
+              borderBottom: activeTab === id ? "2px solid #4F46E5" : "2px solid transparent",
+              transition: "all 0.15s",
+            }}>
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab Content ──────────────────────────────────────── */}
+      {activeTab === "zones" && (
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <ZonesPanel locations={savedLocations} />
+        </div>
+      )}
+
+      {activeTab === "assignments" && (
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <AssignmentsPanel locations={savedLocations} />
+        </div>
+      )}
+
+      {activeTab === "map" && (
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+        {/* LEFT: search + map stacked in a column */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
 
         {/* ── Top Search Bar ──────────────────────────────────── */}
         <div style={{
@@ -1179,6 +1222,8 @@ export function LocationsPage() {
           to   { opacity: 1; transform: translateX(0); }
         }
       `}</style>
+        </div>
+      )}
     </div>
   )
 }

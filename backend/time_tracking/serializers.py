@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Break, TimeLog, TimeLogPhoto, JobSite, Location
+from .models import Break, TimeLog, TimeLogPhoto, JobSite, Location, LocationZone, EmployeeLocation
 
 
 class JobSiteSerializer(serializers.ModelSerializer):
@@ -46,6 +46,7 @@ class TimeLogSerializer(serializers.ModelSerializer):
     break_seconds     = serializers.SerializerMethodField()
     approved_by       = serializers.SerializerMethodField()
     task              = serializers.SerializerMethodField()
+    location_name     = serializers.SerializerMethodField()
 
     class Meta:
         model = TimeLog
@@ -67,6 +68,8 @@ class TimeLogSerializer(serializers.ModelSerializer):
             "clock_out_address",
             "clock_out_notes",
             "clock_out_photo",
+            "location",
+            "location_name",
             "distance_from_site_meters",
             "geofence_passed",
             "admin_override_used",
@@ -117,7 +120,6 @@ class TimeLogSerializer(serializers.ModelSerializer):
         return str(obj.approved_by_id)
 
     def get_task(self, obj):
-        # TimeLog is linked from Task via a OneToOneField
         if hasattr(obj, 'task') and obj.task:
             return {
                 "id": str(obj.task.id),
@@ -126,11 +128,86 @@ class TimeLogSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_location_name(self, obj):
+        return obj.location.name if obj.location else None
+
+
+# ── Location (with polygon support) ──────────────────────────────────────────
 
 class LocationSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
+    employee_count = serializers.SerializerMethodField()
+    zone_names = serializers.SerializerMethodField()
 
     class Meta:
         model = Location
-        fields = ("id", "name", "address", "lat", "lng", "geofence_radius", "company", "created_at", "updated_at")
+        fields = (
+            "id", "name", "address", "lat", "lng",
+            "geofence_radius", "geofence_polygon",
+            "location_type", "is_active", "is_archived",
+            "company", "created_at", "updated_at",
+            "employee_count", "zone_names",
+        )
         read_only_fields = ("id", "company", "created_at", "updated_at")
+
+    def get_employee_count(self, obj):
+        return obj.permitted_employees.count()
+
+    def get_zone_names(self, obj):
+        return list(obj.zones.values_list("name", flat=True))
+
+
+# ── Location Zone ─────────────────────────────────────────────────────────────
+
+class LocationZoneSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    location_ids = serializers.PrimaryKeyRelatedField(
+        source="locations", many=True, queryset=Location.objects.all(), required=False
+    )
+    location_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LocationZone
+        fields = (
+            "id", "name", "description", "color",
+            "location_ids", "location_count",
+            "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def get_location_count(self, obj):
+        return obj.locations.count()
+
+    def create(self, validated_data):
+        locations = validated_data.pop("locations", [])
+        zone = LocationZone.objects.create(**validated_data)
+        zone.locations.set(locations)
+        return zone
+
+    def update(self, instance, validated_data):
+        locations = validated_data.pop("locations", None)
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        if locations is not None:
+            instance.locations.set(locations)
+        return instance
+
+
+# ── Employee–Location Assignment ──────────────────────────────────────────────
+
+class EmployeeLocationSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    employee_name = serializers.SerializerMethodField()
+    location_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EmployeeLocation
+        fields = ("id", "employee", "location", "is_primary", "employee_name", "location_name")
+
+    def get_employee_name(self, obj):
+        u = obj.employee.user
+        return f"{u.first_name} {u.last_name}".strip() or u.username
+
+    def get_location_name(self, obj):
+        return obj.location.name

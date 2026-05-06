@@ -108,7 +108,6 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
 
         if not company:
             # Final fallback: check if current user has an employee record
-            from employees.models import Employee
             emp = Employee.objects.filter(user=request.user).first()
             if emp:
                 company = emp.company

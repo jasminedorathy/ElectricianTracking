@@ -18,6 +18,84 @@ class JobSite(models.Model):
         return self.name
 
 
+class Location(models.Model):
+    """Org location — office, job site, client site, etc."""
+
+    LOCATION_TYPES = [
+        ("office", "Office"),
+        ("job_site", "Job Site"),
+        ("client_site", "Client Site"),
+        ("warehouse", "Warehouse"),
+        ("other", "Other"),
+    ]
+
+    company = models.ForeignKey(
+        'companies.Company', on_delete=models.CASCADE,
+        related_name="saved_locations", null=True, blank=True
+    )
+    name = models.CharField(max_length=255)
+    address = models.TextField(blank=True)
+    lat = models.FloatField()
+    lng = models.FloatField()
+
+    # Circle geofence (metres)
+    geofence_radius = models.PositiveIntegerField(default=300)
+
+    # Polygon geofence — GeoJSON geometry object stored as JSON
+    # e.g. {"type":"Polygon","coordinates":[[[lng,lat],...]]}
+    geofence_polygon = models.JSONField(null=True, blank=True)
+
+    location_type = models.CharField(
+        max_length=20, choices=LOCATION_TYPES, default="office"
+    )
+    is_active = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class LocationZone(models.Model):
+    """Group of locations forming a zone (e.g. 'North Sites')."""
+    company = models.ForeignKey(
+        'companies.Company', on_delete=models.CASCADE,
+        related_name="location_zones", null=True, blank=True
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    color = models.CharField(max_length=7, default="#4F46E5")  # hex colour for map
+    locations = models.ManyToManyField(Location, related_name="zones", blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
+class EmployeeLocation(models.Model):
+    """Which locations an employee is permitted to clock in at."""
+    employee = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name="permitted_locations"
+    )
+    location = models.ForeignKey(
+        Location, on_delete=models.CASCADE, related_name="permitted_employees"
+    )
+    is_primary = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("employee", "location")
+
+    def __str__(self):
+        return f"{self.employee} @ {self.location}"
+
+
 class TimeLog(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="time_logs")
     work_date = models.DateField(db_index=True)
@@ -35,6 +113,12 @@ class TimeLog(models.Model):
     clock_out_notes = models.TextField(blank=True)
     clock_out_photo = models.ImageField(upload_to="time_logs/photos/", null=True, blank=True)
 
+    # Which location was matched at clock-in
+    location = models.ForeignKey(
+        Location, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="time_logs"
+    )
+
     # Geofencing
     distance_from_site_meters = models.IntegerField(null=True, blank=True)
     geofence_passed = models.BooleanField(default=False)
@@ -50,9 +134,8 @@ class TimeLog(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     submitted_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_logs")
-    admin_notes = models.TextField(blank=True) # Reason for rejection or manual correction info
-    
-    # Correction fields (if admin edits hours)
+    admin_notes = models.TextField(blank=True)
+
     # Face Verification
     FACE_MATCH_CHOICES = [
         ('pending', 'Pending'),
@@ -115,27 +198,8 @@ class TimeLogPhoto(models.Model):
     photo = models.ImageField(upload_to="job_photos/")
     photo_type = models.CharField(max_length=20, choices=[
         ("before", "Before"),
-        ("after", "After"), 
+        ("after", "After"),
         ("progress", "Progress"),
     ])
     caption = models.TextField(blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-
-
-class Location(models.Model):
-    """Saved locations from Settings > Locations (separate collection from JobSite)."""
-    company = models.ForeignKey(
-        'companies.Company', on_delete=models.CASCADE,
-        related_name="saved_locations", null=True, blank=True
-    )
-    name = models.CharField(max_length=255)
-    address = models.TextField(blank=True)
-    lat = models.FloatField()
-    lng = models.FloatField()
-    geofence_radius = models.PositiveIntegerField(default=300)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-

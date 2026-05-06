@@ -8,8 +8,11 @@ from rest_framework.views import APIView
 from accounts.permissions import IsAdminRole
 from employees.models import Employee
 
-from .models import Break, TimeLog, JobSite, TimeLogPhoto, Location
-from .serializers import TimeLogSerializer, TimeLogPhotoSerializer, JobSiteSerializer, LocationSerializer
+from .models import Break, TimeLog, JobSite, TimeLogPhoto, Location, LocationZone, EmployeeLocation
+from .serializers import (
+    TimeLogSerializer, TimeLogPhotoSerializer, JobSiteSerializer,
+    LocationSerializer, LocationZoneSerializer, EmployeeLocationSerializer,
+)
 from .utils import calculate_distance, generate_shift_summary_pdf, send_shift_summary_email, verify_face_match
 from django.http import HttpResponse
 from rest_framework.decorators import action
@@ -570,3 +573,123 @@ class CurrentSessionView(APIView):
             "clock_in": open_log.clock_in,
             "job_site": employee.assigned_job_site.name if employee.assigned_job_site else "Corporate"
         })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# LAYER 2: Multi-location & Zone Management
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class LocationViewSet(viewsets.ModelViewSet):
+    """CRUD for org locations. Supports circle + polygon geofences."""
+    serializer_class = LocationSerializer
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminRole()]
+
+    def get_queryset(self):
+        company = getattr(self.request, 'company', None)
+        if not company:
+            return Location.objects.none()
+        qs = Location.objects.filter(company=company)
+        archived = self.request.query_params.get("archived", "false").lower()
+        if archived == "true":
+            return qs.filter(is_archived=True)
+        return qs.filter(is_archived=False)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.company)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+
+class LocationZoneViewSet(viewsets.ModelViewSet):
+    """CRUD for location zones (named groups of locations)."""
+    serializer_class = LocationZoneSerializer
+
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated()]
+        return [IsAdminRole()]
+
+    def get_queryset(self):
+        company = getattr(self.request, 'company', None)
+        if not company:
+            return LocationZone.objects.none()
+        return LocationZone.objects.filter(company=company).prefetch_related("locations")
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.company)
+
+
+class EmployeeLocationViewSet(viewsets.ModelViewSet):
+    """Manage which locations an employee is permitted to clock in at."""
+    serializer_class = EmployeeLocationSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        company = getattr(self.request, 'company', None)
+        if not company:
+            return EmployeeLocation.objects.none()
+        qs = EmployeeLocation.objects.filter(
+            employee__company=company
+        ).select_related("employee__user", "location")
+        employee_id = self.request.query_params.get("employee")
+        location_id = self.request.query_params.get("location")
+        if employee_id:
+            qs = qs.filter(employee_id=employee_id)
+        if location_id:
+            qs = qs.filter(location_id=location_id)
+        return qs
+
+
+class LocationOverviewView(APIView):
+    """
+    Admin map overview — each location with live employee-on-site count.
+    Used by the admin map to show colour-coded markers.
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        company = getattr(request, 'company', None)
+        if not company:
+            return Response([])
+
+        locations = Location.objects.filter(company=company, is_archived=False)
+        # Employees currently clocked in (open time log)
+        active_logs = (
+            TimeLog.objects
+            .filter(employee__company=company, clock_out__isnull=True)
+            .select_related("location", "employee__user")
+        )
+        # Map: location_id -> list of employee names
+        on_site: dict = {}
+        for log in active_logs:
+            lid = log.location_id
+            if lid:
+                on_site.setdefault(lid, []).append(
+                    log.employee.user.get_full_name() or log.employee.user.username
+                )
+
+        result = []
+        for loc in locations:
+            employees_on_site = on_site.get(loc.id, [])
+            result.append({
+                "id": str(loc.id),
+                "name": loc.name,
+                "address": loc.address,
+                "lat": loc.lat,
+                "lng": loc.lng,
+                "geofence_radius": loc.geofence_radius,
+                "geofence_polygon": loc.geofence_polygon,
+                "location_type": loc.location_type,
+                "is_active": loc.is_active,
+                "employee_count": loc.permitted_employees.count(),
+                "on_site_count": len(employees_on_site),
+                "on_site_employees": employees_on_site,
+            })
+
+        return Response(result)

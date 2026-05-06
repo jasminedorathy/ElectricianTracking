@@ -12,6 +12,7 @@ export function EmployeesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [successMsg, setSuccessMsg] = useState("")
   const submitBtnRef = useRef(null)
 
   const [employeeId, setEmployeeId] = useState("")
@@ -73,6 +74,8 @@ export function EmployeesPage() {
       setTitle("")
       setHourlyRate("")
       fireSparkleFromEl(submitBtnRef.current)
+      setSuccessMsg(`Employee "${username}" created. They can log in at ${window.location.origin} with their username and password.`)
+      setTimeout(() => setSuccessMsg(""), 8000)
       await load()
     } catch (err) {
       const msg =
@@ -119,12 +122,26 @@ export function EmployeesPage() {
       </div>
 
       {error ? <div className="errorBox">{error}</div> : null}
+      {successMsg ? (
+        <div style={{
+          background: "#F0FDF4", border: "1px solid #86EFAC",
+          borderRadius: 8, padding: "10px 14px",
+          fontSize: 13, color: "#15803D", fontWeight: 600,
+          display: "flex", alignItems: "flex-start", gap: 8,
+        }}>
+          <span style={{ fontSize: 16 }}>&#10003;</span>
+          <span>{successMsg}</span>
+        </div>
+      ) : null}
 
       <Card title="Create Employee">
         <form className="grid3" onSubmit={createEmployee}>
           <Input label="Employee ID" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} required />
           <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <div style={{ gridColumn: "span 1", fontSize: 11, color: "var(--muted)", marginTop: -8, paddingBottom: 4, alignSelf: "start" }}>
+            ⚠️ This becomes the employee&#39;s login password at <strong>{window.location.origin}</strong>
+          </div>
           <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input label="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           <Input label="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />

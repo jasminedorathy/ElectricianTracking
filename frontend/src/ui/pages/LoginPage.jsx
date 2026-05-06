@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../state/auth/useAuth.js"
-import { apiRequest } from "../../api/client.js"
+import { extractAuthError } from "../../api/authService.js"
+import { validateLoginForm, validateRegStep1, validateRegStep2 } from "../../utils/validate.js"
 import { routes } from "../routes.js"
 import { useGoogleLogin } from "@react-oauth/google"
 import { CalTrackLogo } from "../components/CalTrackLogo.jsx"
@@ -232,38 +233,46 @@ export function LoginPage() {
 
   async function onSubmit(e) {
     if (e) e.preventDefault()
+    // Prevent double-submission
+    if (loading) return
     setError("")
     setSuccess("")
 
     if (mode === "signin") {
-      if (!username.trim() || !password) return setError("Enter credentials.")
+      // ── Login validation ───────────────────────────────────────────────
+      const validationError = validateLoginForm({ identifier: username, password })
+      if (validationError) return setError(validationError)
+
       setLoading(true)
       try {
         await login(username.trim(), password)
-        navigate(postLoginRoute())
+        navigate(postLoginRoute(), { replace: true })
       } catch (err) {
-        setError(err?.body?.detail || "Login failed.")
-      } finally { setLoading(false) }
+        setError(extractAuthError(err, "Login failed. Check your credentials."))
+      } finally {
+        setLoading(false)
+      }
+
     } else {
-      // REGISTER SUBMIT (Step 4)
-      if (!robot) return setError("Please confirm you are not a robot.")
-      if (!agree2) return setError("Please agree to terms.")
+      // ── Register validation ────────────────────────────────────────────
+      if (!robot)  return setError("Please confirm you are not a robot.")
+      if (!agree2) return setError("Please agree to the Terms & Privacy Policy.")
 
       setLoading(true)
       try {
-        const [first, ...rest] = fullName.split(" ")
+        const [first, ...rest] = fullName.trim().split(" ")
         await register({
-          username: username.trim(),
+          username:          username.trim(),
           password,
-          email,
-          first_name: first,
-          last_name: rest.join(" "),
+          email:             email.trim(),
+          first_name:        first || "",
+          last_name:         rest.join(" ") || "",
           organization_name: organizationName.trim(),
-          team_size: teamSize,
-          selected_modules: selectedModules
+          team_size:         teamSize,
+          selected_modules:  selectedModules,
         })
 
-        // Store org name so AppShell topbar shows it immediately
+        // Persist org name so AppShell topbar shows it immediately
         if (organizationName.trim()) {
           localStorage.setItem("quicktims.orgName", organizationName.trim())
           window.dispatchEvent(new CustomEvent("quicktims:orgName"))
@@ -271,19 +280,20 @@ export function LoginPage() {
 
         navigate(postLoginRoute(), { replace: true })
       } catch (err) {
-        console.error("Registration Error:", err);
-        const msg = err?.body?.detail || 
-                    (err?.body && typeof err.body === 'object' ? JSON.stringify(err.body) : null) || 
-                    (err?.body && typeof err.body === 'string' ? "Server Error: 500" : null) ||
-                    "Registration failed.";
-        setError(msg)
-      } finally { setLoading(false) }
+        setError(extractAuthError(err, "Registration failed. Please try again."))
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
-  const canGoNext = () => {
-    if (regStep === 1) return fullName.trim() && username.trim() && password.length >= 6 && email.includes("@")
-    if (regStep === 2) return organizationName.trim()
+  function canGoNext() {
+    if (regStep === 1) {
+      return !validateRegStep1({ fullName, username, password, email })
+    }
+    if (regStep === 2) {
+      return !validateRegStep2({ organizationName })
+    }
     if (regStep === 3) return selectedModules.length > 0
     return true
   }

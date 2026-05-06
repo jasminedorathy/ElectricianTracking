@@ -693,6 +693,20 @@ export function AppShell() {
                   <div className="acctAvatarSq">{initials(user.username)}</div>
                   <div className="acctDropName">{displayName(user.username)}</div>
                   <div className="acctDropEmail">{email}</div>
+                  {/* Role indicator — tells user which mode they're in */}
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    marginTop: 6, padding: "3px 10px", borderRadius: 99,
+                    fontSize: 11, fontWeight: 700, letterSpacing: "0.04em",
+                    background: user.role === "admin" ? "#EDE9FE" : "#DBEAFE",
+                    color:      user.role === "admin" ? "#6D28D9"  : "#1D4ED8",
+                    width: "fit-content",
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%",
+                      background: user.role === "admin" ? "#7C3AED" : "#2563EB",
+                      display: "inline-block" }} />
+                    {user.role === "admin" ? "Administrator" : "Employee"}
+                  </div>
                   <button type="button" className="acctManageBtn" onClick={openMyProfile}>
                     Manage CALDIM.com account
                   </button>

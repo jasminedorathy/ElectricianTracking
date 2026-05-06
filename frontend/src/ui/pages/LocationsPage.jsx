@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet"
-import { Search, MapPin, X, ChevronDown, Info, Archive, Layers, UserCheck, Map } from "lucide-react"
+import { Search, MapPin, X, ChevronDown, Info, Archive, Layers, UserCheck, Map, Activity } from "lucide-react"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
 import { apiRequest, unwrapResults } from "../../api/client.js"
 import { ZonesPanel } from "./locations/ZonesPanel.jsx"
 import { AssignmentsPanel } from "./locations/AssignmentsPanel.jsx"
+import { MapOverview } from "./locations/MapOverview.jsx"
 
 /* ── Fix default Leaflet icons ────────────────────────────────── */
 delete L.Icon.Default.prototype._getIconUrl
@@ -474,7 +475,13 @@ export function LocationsPage() {
         ))}
       </div>
 
-      {/* ── Tab Content ──────────────────────────────────────── */}
+      {/* ── Tab Content ──────────────────────────────────── */}
+      {activeTab === "overview" && (
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <MapOverview />
+        </div>
+      )}
+
       {activeTab === "zones" && (
         <div style={{ flex: 1, overflow: "hidden" }}>
           <ZonesPanel locations={savedLocations} />

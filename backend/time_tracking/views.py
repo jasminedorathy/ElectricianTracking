@@ -127,32 +127,76 @@ class ClockInView(APIView):
         notes = request.data.get("notes", "")
         photo = request.FILES.get("photo")
 
-        # Geofence check
-        job_site = employee.assigned_job_site
+        # Layer 2 Geofence check
         company = getattr(request, 'company', None)
         
         distance = None
         passed = True
         override_used = False
+        matched_location = None
         
-        if job_site and company and company.geofence_enabled:
+        # 1. Determine the employee's allowed/assigned locations
+        permitted_locations = EmployeeLocation.objects.filter(employee=employee).select_related('location')
+        
+        # 2. Try to match location based on GPS
+        if permitted_locations.exists():
+            # If no GPS, fallback to primary location
+            primary_loc = permitted_locations.filter(is_primary=True).first()
+            matched_location = primary_loc.location if primary_loc else permitted_locations.first().location
+            
             if lat and lon:
-                distance = calculate_distance(lat, lon, job_site.lat, job_site.lng)
-                radius = job_site.geofence_radius or company.geofence_radius_meters
+                min_dist = float('inf')
+                best_loc = None
+                lat_f, lon_f = float(lat), float(lon)
+                for emp_loc in permitted_locations:
+                    loc = emp_loc.location
+                    if not loc.is_active:
+                        continue
+                    d = calculate_distance(lat_f, lon_f, loc.lat, loc.lng)
+                    if d < min_dist:
+                        min_dist = d
+                        best_loc = loc
+                        
+                if best_loc:
+                    matched_location = best_loc
+                    distance = min_dist
+        else:
+            # Fallback to Layer 1 JobSite
+            job_site = employee.assigned_job_site
+            if job_site and lat and lon:
+                distance = calculate_distance(float(lat), float(lon), job_site.lat, job_site.lng)
                 
-                if distance > radius:
+        # 3. Apply strict Geofencing Rules if enabled
+        if company and company.geofence_enabled and lat and lon:
+            if permitted_locations.exists() and matched_location:
+                radius = matched_location.geofence_radius or 300
+                if distance is not None and distance > radius:
                     passed = False
                     if company.geofence_strict_mode:
-                        # Allow admin override if enabled
                         if company.geofence_admin_override and request.user.role == "admin":
                             override_used = True
-                            passed = True # Override means it passes
+                            passed = True
                         else:
-                            # Blocked
                             dist_km = round(distance / 1000, 1)
                             return Response({
                                 "success": False,
-                                "message": f"You are {dist_km} km from the job site. Move closer to clock in.",
+                                "message": f"You are {dist_km} km from the nearest authorized site. Move closer.",
+                                "distance": distance,
+                                "radius": radius
+                            }, status=403)
+            elif job_site:
+                radius = job_site.geofence_radius or company.geofence_radius_meters
+                if distance is not None and distance > radius:
+                    passed = False
+                    if company.geofence_strict_mode:
+                        if company.geofence_admin_override and request.user.role == "admin":
+                            override_used = True
+                            passed = True
+                        else:
+                            dist_km = round(distance / 1000, 1)
+                            return Response({
+                                "success": False,
+                                "message": f"You are {dist_km} km from the job site. Move closer.",
                                 "distance": distance,
                                 "radius": radius
                             }, status=403)
@@ -168,7 +212,8 @@ class ClockInView(APIView):
             clock_in_photo=photo,
             distance_from_site_meters=distance,
             geofence_passed=passed,
-            admin_override_used=override_used
+            admin_override_used=override_used,
+            location=matched_location
         )
         return Response(TimeLogSerializer(time_log).data, status=201)
 

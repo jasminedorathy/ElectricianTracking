@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useLocation, NavLink } from "react-router-dom"
 import { routes } from "../routes.js"
-import { useAuth } from "../../state/auth/AuthProvider.jsx"
+import { useAuth } from "../../state/auth/useAuth.js"
 import {
   Building2, Palette, CreditCard, Users2, History, ScrollText,
   Clock, CalendarDays, Banknote, FileText, ShieldCheck, BarChart3,

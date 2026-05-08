@@ -452,7 +452,7 @@ export function AppShell() {
               }
             },
             (err) => console.debug("GPS Check failed", err),
-            { enableHighAccuracy: false, maximumAge: 60000, timeout: 10000 }
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
           )
         }
       } catch (err) {

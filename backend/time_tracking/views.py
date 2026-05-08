@@ -132,6 +132,7 @@ class ClockInView(APIView):
         address = request.data.get("address", "")
         notes = request.data.get("notes", "")
         photo = request.FILES.get("photo")
+        task_id = request.data.get("task_id")
 
         # Resolve current shift (if any) so the engine can apply
         # shift–location enforcement. We fall back to None if the model
@@ -173,6 +174,20 @@ class ClockInView(APIView):
             # TimeLog.location accepts only real Locations, so we filter.
             location=_unwrap_location(decision.matched_location),
         )
+
+        if task_id:
+            try:
+                from tasks.models import Task
+                task = Task.objects.filter(id=task_id, company=company, assigned_to=request.user).first()
+                if task:
+                    task.time_log = time_log
+                    task.status = Task.Status.IN_PROGRESS
+                    if not task.started_at:
+                        task.started_at = now
+                    task.save()
+            except Exception as e:
+                print(f"Error linking task: {e}")
+
         return Response(TimeLogSerializer(time_log).data, status=201)
 
 
@@ -310,7 +325,7 @@ class BreakEndView(APIView):
         if not open_break:
             return Response({"detail": "No open break."}, status=400)
         open_break.break_end = timezone.now()
-        open_break.save(update_fields=["break_end"])
+        open_break.save()
         time_log.refresh_from_db()
         return Response(TimeLogSerializer(time_log).data)
 

@@ -191,8 +191,8 @@ export function LiveLocationsPage() {
             </div>
 
             <div className="flex-1 flex relative">
-                {/* ── MAP ── */}
-                <div className="flex-1 relative bg-slate-100">
+                {/* ── MAP (FULL WIDTH) ── */}
+                <div className="absolute inset-0 z-0 bg-slate-900">
                     <MapContainer
                         center={mapCenter}
                         zoom={mapZoom}
@@ -200,9 +200,10 @@ export function LiveLocationsPage() {
                         zoomControl={false}
                     >
                         <MapUpdater center={mapCenter} zoom={mapZoom} />
+                        {/* ── CARTO DARK MATTER TILE LAYER ── */}
                         <TileLayer
-                            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-                            attribution='&copy; <a href="https://maps.google.com/">Google Maps</a>'
+                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                         />
 
                         {employees.map(emp => (
@@ -225,48 +226,48 @@ export function LiveLocationsPage() {
                         {detailData && polylinePositions.length > 1 && (
                             <Polyline
                                 positions={polylinePositions}
-                                pathOptions={{ color: "#6366F1", weight: 5, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }}
+                                pathOptions={{ color: "#818cf8", weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }}
                             />
                         )}
                     </MapContainer>
 
                     {/* Glassmorphism Map Overlays */}
                     <div className="absolute top-6 left-6 z-[1000] flex flex-col gap-3">
-                        <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl shadow-slate-200/50 border border-white flex gap-1">
-                            <button className="px-4 py-2 text-[11px] font-black bg-slate-900 text-white rounded-xl shadow-lg transition-all">MAP</button>
-                            <button className="px-4 py-2 text-[11px] font-black text-slate-500 hover:bg-slate-100 rounded-xl transition-all">SATELLITE</button>
+                        <div className="bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl shadow-black/20 border border-white/10 flex gap-1">
+                            <button className="px-4 py-2 text-[11px] font-black bg-indigo-500 text-white rounded-xl shadow-lg transition-all">DARK</button>
+                            <button className="px-4 py-2 text-[11px] font-black text-slate-400 hover:text-white rounded-xl transition-all">SATELLITE</button>
                         </div>
                         
-                        <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-2xl shadow-slate-200/50 border border-white">
+                        <div className="bg-slate-900/80 backdrop-blur-md p-3 rounded-2xl shadow-2xl shadow-black/20 border border-white/10">
                             <div className="flex items-center gap-2">
-                                <Globe size={14} className="text-indigo-500" />
-                                <span className="text-[11px] font-black text-slate-900">Traffic Layers</span>
+                                <Globe size={14} className="text-indigo-400" />
+                                <span className="text-[11px] font-black text-white">Traffic Layers</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="absolute bottom-8 left-8 z-[1000]">
-                        <button className="w-14 h-14 rounded-2xl bg-white text-indigo-600 flex items-center justify-center shadow-2xl shadow-slate-300 border border-white hover:scale-110 transition-all">
+                        <button className="w-14 h-14 rounded-2xl bg-indigo-500 text-white flex items-center justify-center shadow-2xl shadow-indigo-500/50 border border-indigo-400 hover:scale-110 transition-transform duration-300">
                             <Play size={24} fill="currentColor" />
                         </button>
                     </div>
                 </div>
 
-                {/* ── SIDEBAR PANEL ── */}
-                <div className="w-[400px] h-full bg-white border-l border-slate-100 flex flex-col z-10 shadow-[-20px_0_50px_-10px_rgba(0,0,0,0.05)]">
+                {/* ── FLOATING SIDEBAR PANEL ── */}
+                <div className="absolute right-6 top-6 bottom-6 w-[420px] bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2.5rem] flex flex-col z-[1000] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden">
                     {!detailData ? (
                         <>
                             {/* List Sidebar Header */}
-                            <div className="p-8 bg-slate-50/50 border-b border-slate-100">
+                            <div className="p-8 bg-transparent border-b border-slate-100/50">
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Active Roster</span>
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                        <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Active Roster</span>
                                     </div>
                                     <div className="flex gap-4">
                                         <button className="group flex flex-col items-end gap-0.5" onClick={() => setSortBy(v => v === "name" ? "duration" : "name")}>
                                             <span className="text-[9px] font-black text-slate-400 uppercase">Sort By</span>
-                                            <span className="text-[12px] font-bold text-slate-900 group-hover:text-indigo-600 flex items-center gap-1">
+                                            <span className="text-[12px] font-bold text-slate-900 group-hover:text-indigo-600 flex items-center gap-1 transition-colors">
                                                 {sortBy === "name" ? "Alpha" : "Duration"} <ArrowUpDown size={12} />
                                             </span>
                                         </button>
@@ -279,7 +280,7 @@ export function LiveLocationsPage() {
                                         placeholder="Search live personnel..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl py-3.5 pl-12 pr-6 text-sm font-bold placeholder-slate-300 focus:border-indigo-500 transition-all outline-none"
+                                        className="w-full bg-slate-50/50 backdrop-blur-sm border-2 border-white rounded-2xl py-3.5 pl-12 pr-6 text-sm font-bold text-slate-700 placeholder-slate-400 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-50 transition-all outline-none shadow-inner"
                                     />
                                 </div>
                             </div>
@@ -306,7 +307,7 @@ export function LiveLocationsPage() {
                                             <div
                                                 key={emp.employee}
                                                 onClick={() => handleSelect(emp)}
-                                                className={`group p-5 rounded-[2rem] cursor-pointer transition-all duration-300 border-2 ${selectedId === emp.time_log ? 'bg-slate-900 border-slate-900 shadow-2xl shadow-slate-300' : 'bg-white border-slate-50 hover:border-slate-200 hover:bg-slate-50'}`}
+                                                className={`group p-5 rounded-[2rem] cursor-pointer transition-all duration-300 border-2 hover:-translate-y-1 ${selectedId === emp.time_log ? 'bg-slate-900 border-slate-900 shadow-2xl shadow-slate-400/30' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100/50'}`}
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <div className="relative">
@@ -332,8 +333,8 @@ export function LiveLocationsPage() {
                         </>
                     ) : (
                         /* Detail View with Timeline */
-                        <div className="flex flex-col h-full animate-in slide-in-from-right-8 duration-500">
-                            <div className="p-8 bg-slate-900 text-white relative">
+                        <div className="flex flex-col h-full animate-in slide-in-from-right-8 duration-500 bg-white">
+                            <div className="p-8 bg-slate-900 text-white relative rounded-t-[2.5rem]">
                                 <button
                                     onClick={() => setSelectedId(null)}
                                     className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-white/10 text-white/50 hover:bg-white/20 hover:text-white flex items-center justify-center transition-all"
@@ -357,30 +358,30 @@ export function LiveLocationsPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Active Time</div>
-                                        <div className="text-lg font-black text-emerald-400">{formatDuration(detailData.worked_seconds)}</div>
+                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Time</div>
+                                        <div className="text-xl font-black text-emerald-400 tracking-tight">{formatDuration(detailData.worked_seconds)}</div>
                                     </div>
-                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                                        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Shift Start</div>
-                                        <div className="text-lg font-black">{new Date(detailData.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Shift Start</div>
+                                        <div className="text-xl font-black tracking-tight">{new Date(detailData.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-8">
+                            <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
                                 <div className="flex items-center gap-3 mb-8">
                                     <MapIcon size={16} className="text-indigo-600" />
-                                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Operations Timeline</span>
+                                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Operations Timeline</span>
                                 </div>
 
                                 <div className="relative pl-8 space-y-10">
-                                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100"></div>
+                                    <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-indigo-100/50"></div>
 
                                     {/* Start Event */}
-                                    <div className="relative">
-                                        <div className="absolute left-[-31px] top-1 w-6 h-6 rounded-full bg-white border-4 border-emerald-500 z-10"></div>
-                                        <div>
+                                    <div className="relative group">
+                                        <div className="absolute left-[-31px] top-1 w-6 h-6 rounded-full bg-white border-4 border-emerald-500 z-10 shadow-sm group-hover:scale-110 transition-transform"></div>
+                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                                             <div className="text-xs font-black text-slate-900">Shift Established</div>
                                             <div className="text-[10px] font-bold text-slate-400 mt-0.5">{new Date(detailData.clock_in).toLocaleTimeString()} @ {detailData.job_site_name}</div>
                                             {detailData.clock_in_notes && (
@@ -393,9 +394,9 @@ export function LiveLocationsPage() {
 
                                     {/* Telemetry Pings */}
                                     {(detailData.history || []).map((ping, idx) => (
-                                        <div key={idx} className="relative">
-                                            <div className="absolute left-[-28px] top-1.5 w-4 h-4 rounded-full bg-white border-2 border-indigo-400 z-10"></div>
-                                            <div>
+                                        <div key={idx} className="relative group">
+                                            <div className="absolute left-[-28px] top-3 w-4 h-4 rounded-full bg-white border-2 border-indigo-400 z-10 group-hover:scale-125 group-hover:border-indigo-500 transition-transform"></div>
+                                            <div className="bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow inline-block min-w-[200px]">
                                                 <div className="text-xs font-bold text-slate-700">Telemetry Signal</div>
                                                 <div className="text-[10px] font-medium text-slate-400 mt-0.5">{new Date(ping.timestamp).toLocaleTimeString()}</div>
                                             </div>
@@ -403,9 +404,9 @@ export function LiveLocationsPage() {
                                     ))}
 
                                     {/* Current/End State */}
-                                    <div className="relative">
-                                        <div className={`absolute left-[-31px] top-1 w-6 h-6 rounded-full bg-white border-4 z-10 ${detailData.clock_out ? 'border-slate-300' : 'border-indigo-600 animate-pulse'}`}></div>
-                                        <div>
+                                    <div className="relative group">
+                                        <div className={`absolute left-[-31px] top-1 w-6 h-6 rounded-full bg-white border-4 z-10 shadow-sm group-hover:scale-110 transition-transform ${detailData.clock_out ? 'border-slate-300' : 'border-indigo-600 animate-pulse'}`}></div>
+                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                                             <div className="text-xs font-black text-slate-900">{detailData.clock_out ? 'Shift Concluded' : 'Active Deployment'}</div>
                                             <div className="text-[10px] font-bold text-slate-400 mt-0.5">
                                                 {detailData.clock_out ? new Date(detailData.clock_out).toLocaleTimeString() : 'Signal tracking live...'}
@@ -415,15 +416,15 @@ export function LiveLocationsPage() {
                                 </div>
 
                                 {detailData.photos?.length > 0 && (
-                                    <div className="mt-12">
+                                    <div className="mt-12 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
                                         <div className="flex items-center gap-3 mb-4">
                                             <Paperclip size={16} className="text-indigo-600" />
-                                            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Site Attachments</span>
+                                            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Site Attachments</span>
                                         </div>
                                         <div className="grid grid-cols-3 gap-3">
                                             {detailData.photos.map(photo => (
-                                                <div key={photo.id} className="aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 hover:border-indigo-500 transition-all cursor-zoom-in">
-                                                    <img src={photo.url} className="w-full h-full object-cover" />
+                                                <div key={photo.id} className="aspect-square rounded-2xl overflow-hidden border-2 border-slate-50 hover:border-indigo-400 shadow-sm hover:shadow-md transition-all cursor-zoom-in">
+                                                    <img src={photo.url} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
                                                 </div>
                                             ))}
                                         </div>
@@ -431,8 +432,8 @@ export function LiveLocationsPage() {
                                 )}
                             </div>
                             
-                            <div className="p-6 border-t border-slate-100">
-                                <Button variant="ghost" className="w-full py-4 text-indigo-600 bg-indigo-50 border-none rounded-2xl font-black" onClick={() => setSelectedId(null)}>
+                            <div className="p-6 border-t border-slate-100 bg-white rounded-b-[2.5rem]">
+                                <Button variant="ghost" className="w-full py-4 text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-2xl font-black hover:bg-indigo-600 hover:text-white transition-all shadow-sm" onClick={() => setSelectedId(null)}>
                                     RETURN TO ROSTER
                                 </Button>
                             </div>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from "react"
 
 import { apiRequest, unwrapResults, API_BASE_URL } from "../../api/client.js"
 import { getTokens } from "../../state/auth/tokens.js"
@@ -24,6 +24,8 @@ import {
   ChevronUp,
   AlertCircle,
   TrendingUp,
+  CheckSquare,
+  SlidersHorizontal,
   Calendar,
   Timer,
   Wifi,
@@ -46,10 +48,12 @@ import {
   Upload
 } from "lucide-react"
 
+const AuditLedger = lazy(() => import("./AuditLedger.jsx"))
+
 // ─── GPS helpers ──────────────────────────────────────────────
 const DAILY_TARGET_HRS = 8
-const GPS_TIMEOUT_MS = 15000
-const TARGET_ACCURACY_M = 100
+const GPS_TIMEOUT_MS = 25000
+const TARGET_ACCURACY_M = 30
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // metres
@@ -171,27 +175,40 @@ function useBreakTimer(openBreak) {
 }
 
 function useLocationTracker(isClockedIn) {
+  const isFetching = useRef(false)
+  const lastPos = useRef(null)
+
   useEffect(() => {
     if (!isClockedIn) return;
 
     const reportLocation = async () => {
+      if (isFetching.current) return
+      isFetching.current = true
       try {
         const pos = await getPosition()
         if (pos) {
-          await apiRequest("/live-locations/update/", {
-            method: "POST",
-            json: { lat: pos.lat, lng: pos.lon }
-          })
+          // Only update if location changed significantly (> 10m) or it's first time
+          const dist = lastPos.current ? calculateDistance(pos.lat, pos.lon, lastPos.current.lat, lastPos.current.lon) : 999
+          
+          if (dist > 10) {
+            await apiRequest("/live-locations/update/", {
+              method: "POST",
+              json: { lat: pos.lat, lng: pos.lon }
+            })
+            lastPos.current = pos
+          }
         }
       } catch (err) {
         console.debug("[LiveTracking] Report failed:", err)
+      } finally {
+        isFetching.current = false
       }
     }
 
     // Initial report
     reportLocation()
 
-    // Every 5 minutes (reduced frequency to save DB connections)
+    // Every 5 minutes (reduced frequency to save DB connections and battery)
     const id = setInterval(reportLocation, 300000)
     return () => clearInterval(id)
   }, [isClockedIn])
@@ -873,6 +890,8 @@ function EmployeeTimePage() {
     : "Employee"
 
   const [logs, setLogs] = useState([])
+  const [assignedTasks, setAssignedTasks] = useState([])
+  const [selectedTaskId, setSelectedTaskId] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -1063,8 +1082,12 @@ function EmployeeTimePage() {
       const params = new URLSearchParams()
       if (filterFrom) params.set("date_from", filterFrom)
       if (filterTo) params.set("date_to", filterTo)
-      const [logsRes] = await Promise.allSettled([apiRequest(`/time/logs/?${params}`)])
+      const [logsRes, tasksRes] = await Promise.allSettled([
+        apiRequest(`/time/logs/?${params}`),
+        apiRequest("/tasks/my/")
+      ])
       if (logsRes.status === "fulfilled") setLogs(unwrapResults(logsRes.value))
+      if (tasksRes.status === "fulfilled") setAssignedTasks(unwrapResults(tasksRes.value))
     } finally { setLoading(false) }
   }, [filterFrom, filterTo])
   useEffect(() => { load() }, [load])
@@ -1084,6 +1107,7 @@ function EmployeeTimePage() {
         if (gps) { fd.append("lat", gps.lat); fd.append("lon", gps.lon) }
         if (resolvedAddr) fd.append("address", resolvedAddr)
         if (sessionNotes) fd.append("notes", sessionNotes)
+        if (selectedTaskId) fd.append("task_id", selectedTaskId)
 
         const photoToSend = overridePhoto || selfieFile || sessionPhoto
         if (photoToSend) fd.append("photo", photoToSend)
@@ -1107,7 +1131,7 @@ function EmployeeTimePage() {
       }
 
       setSessionNotes(""); setSessionPhoto(null); setSelfieFile(null); setSelfiePreview(null)
-      setFaceVerifyStatus(null); setFaceVerifyScore(null)
+      setFaceVerifyStatus(null); setFaceVerifyScore(null); setSelectedTaskId("")
       await load()
     } catch (err) {
       const msg = err?.body?.message || err?.body?.detail || "Action failed. Please try again."
@@ -1290,7 +1314,7 @@ function EmployeeTimePage() {
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${openLog ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {openLog ? (openBreak ? 'Currently on Break' : 'On Active Duty') : 'System Standby'}
+                  {openLog ? (openLog.task ? `Working on: ${openLog.task.title}` : (openBreak ? 'Currently on Break' : 'On Active Duty')) : 'System Standby'}
                 </span>
               </div>
             </div>
@@ -1304,16 +1328,18 @@ function EmployeeTimePage() {
                   <span className="text-lg font-black tabular-nums">{formatDuration(elapsed)}</span>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
-                  {!openBreak ? (
-                    <>
-                      <button onClick={() => action("/time/break/start/")} className="p-2.5 bg-slate-800 hover:bg-amber-500 text-white rounded-xl transition-all" title="Start Break"><Coffee size={16} /></button>
-                      <button onClick={() => setPanelOpen(true)} className="p-2.5 bg-slate-800 hover:bg-emerald-500 text-white rounded-xl transition-all" title="Job Photo"><Camera size={16} /></button>
-                      <button onClick={handleClockOut} className="p-2.5 bg-slate-800 hover:bg-red-500 text-white rounded-xl transition-all" title="Clock Out"><Square size={14} fill="currentColor" /></button>
-                    </>
-                  ) : (
+                  {openBreak ? (
                     <button onClick={() => action("/time/break/end/")} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center gap-2 transition-all"><Play size={14} /> RESUME</button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => action("/time/break/start/")} className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl flex items-center gap-2 transition-all">
+                        <Coffee size={14} /> PAUSE
+                      </button>
+                      <button onClick={() => setPanelOpen(true)} className="px-6 py-2.5 bg-slate-800 hover:bg-indigo-500 text-white text-xs font-black rounded-xl flex items-center gap-2 transition-all">
+                        <SlidersHorizontal size={14} /> MANAGE SESSION
+                      </button>
+                    </div>
                   )}
-                  <button onClick={() => setPanelOpen(true)} className="p-2.5 bg-slate-800 hover:bg-indigo-500 text-white rounded-xl transition-all" title="Details"><Edit3 size={16} /></button>
                 </div>
               </div>
             )}
@@ -1398,7 +1424,7 @@ function EmployeeTimePage() {
                   icon={<Clock />} 
                   label="Live Session" 
                   value={formatDuration(elapsed)} 
-                  sub="Active tracking"
+                  sub={openLog.task ? `Task: ${openLog.task.title}` : (geofenceStatus?.job_site?.name || "Corporate Site")}
                   color="#EF4444" 
                   pulse 
                 />
@@ -1422,98 +1448,21 @@ function EmployeeTimePage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                      <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                      <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
-                      <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Verification</th>
-                      <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Approval Status</th>
-                      <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {loading ? (
-                      [1, 2, 3].map(i => (
-                        <tr key={i}>
-                          <td colSpan={5} className="p-6"><Skeleton h="40px" /></td>
-                        </tr>
-                      ))
-                    ) : logs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-20 text-center">
-                          <div className="flex flex-col items-center gap-4 text-slate-400">
-                            <Clock size={48} className="opacity-10" />
-                            <div className="font-bold">No attendance records found</div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      logs.map(l => {
-                        const isRowActive = !l.clock_out
-                        const dur = isRowActive ? elapsed : l.worked_seconds
-                        return (
-                          <tr key={l.id} className={`group hover:bg-slate-50/50 transition-colors ${isRowActive ? 'bg-indigo-50/30' : ''}`}>
-                            <td className="p-6">
-                              <div className="text-sm font-bold text-slate-700">{l.work_date}</div>
-                            </td>
-                            <td className="p-6">
-                              <div className="flex items-center gap-4">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase">In</span>
-                                    <span className="text-sm font-bold text-slate-700">{formatDateTime(l.clock_in).split(",")[1]}</span>
-                                  </div>
-                                  {l.clock_out && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[10px] font-black text-slate-400 uppercase">Out</span>
-                                      <span className="text-sm font-bold text-slate-700">{formatDateTime(l.clock_out).split(",")[1]}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                {isRowActive && <div className="px-2 py-0.5 bg-indigo-600 text-white text-[9px] font-black rounded-full animate-pulse">LIVE</div>}
-                              </div>
-                            </td>
-                            <td className="p-6">
-                              <div className="flex items-center gap-2">
-                                {l.clock_in_photo && (
-                                  <a href={l.clock_in_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm hover:scale-110 transition-transform">
-                                    <img src={l.clock_in_photo} className="w-full h-full object-cover" />
-                                  </a>
-                                )}
-                                {l.clock_out_photo && (
-                                  <a href={l.clock_out_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm hover:scale-110 transition-transform">
-                                    <img src={l.clock_out_photo} className="w-full h-full object-cover" />
-                                  </a>
-                                )}
-                                {!l.clock_in_photo && !l.clock_out_photo && <span className="text-[10px] font-bold text-slate-300">N/A</span>}
-                              </div>
-                            </td>
-                            <td className="p-6">
-                              <div className="flex items-center gap-3">
-                                <Pill variant={l.status === 'approved' ? 'success' : l.status === 'rejected' ? 'danger' : l.status === 'submitted' ? 'warning' : 'neutral'}>
-                                  {l.status === 'submitted' ? 'In Review' : (l.status || (isRowActive ? 'Active' : 'Draft'))}
-                                </Pill>
-                                {l.status === 'draft' && <button onClick={() => submitLog(l.id)} className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black rounded-lg">SUBMIT</button>}
-                                {l.clock_out && <button onClick={() => downloadLogPdf(l.id)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg"><FileText size={14} /></button>}
-                              </div>
-                            </td>
-                            <td className="p-6 text-right">
-                              <div className={`text-sm font-black ${dur > 8 * 3600 ? 'text-red-600' : 'text-slate-900'}`}>
-                                {formatDuration(dur)}
-                              </div>
-                              {dur > 8 * 3600 && <div className="text-[9px] font-black text-red-400 uppercase">OT +{formatDuration(dur - 8 * 3600)}</div>}
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
+            <Suspense fallback={
+              <div className="p-20 flex flex-col items-center gap-4 text-slate-300">
+                <Loader2 className="animate-spin" size={40} />
+                <div className="font-bold text-xs uppercase tracking-widest">Synchronizing Ledger...</div>
               </div>
-            </div>
+            }>
+              <AuditLedger 
+                logs={logs} 
+                loading={loading} 
+                elapsed={elapsed} 
+                downloadLogPdf={downloadLogPdf} 
+                submitLog={submitLog}
+                formatDuration={formatDuration}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -1551,6 +1500,39 @@ function EmployeeTimePage() {
               {geofenceError && geofenceStatus?.strict_mode && (
                 <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs font-bold text-red-600 flex items-center gap-2">
                   <AlertCircle size={14} /> {geofenceError}
+                </div>
+              )}
+
+              {/* Task Selection (Clock-in only) */}
+              {!openLog && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Assigned Task (Optional)</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                      <CheckSquare size={18} />
+                    </div>
+                    <select 
+                      value={selectedTaskId}
+                      onChange={e => setSelectedTaskId(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-indigo-500 outline-none appearance-none transition-all"
+                    >
+                      <option value="">— No specific task —</option>
+                      {assignedTasks
+                        .filter(t => t.status === 'pending' || t.status === 'in_progress')
+                        .map(t => (
+                          <option key={t.id} value={t.id}>{t.title}</option>
+                        ))
+                      }
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronDown size={16} />
+                    </div>
+                  </div>
+                  {selectedTaskId && (
+                    <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 animate-in fade-in slide-in-from-top-1">
+                      Target task identified. Session will be linked to this work order.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1648,36 +1630,111 @@ function EmployeeTimePage() {
                 </div>
               )}
 
-              {/* Break Operations */}
+              {/* Break Management System */}
               {openLog && (
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operational Break</label>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <Coffee size={14} className="text-amber-500" /> Break Management System
+                    </label>
+                    {openBreak && (
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-lg animate-pulse uppercase">
+                        Active Session
+                      </span>
+                    )}
+                  </div>
+
                   {!openBreak ? (
-                    <div className="grid grid-cols-3 gap-3">
-                      {["lunch", "short", "personal"].map(t => (
-                        <button 
-                          key={t} 
-                          onClick={() => setBreakType(t)}
-                          className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${breakType === t ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-white text-slate-400'}`}
-                        >
-                          {t}
-                        </button>
-                      ))}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        {["tea", "lunch", "personal"].map(t => (
+                          <button 
+                            key={t} 
+                            disabled={busy}
+                            onClick={() => setBreakType(t)}
+                            className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 ${breakType === t ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-lg shadow-indigo-100' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'}`}
+                          >
+                            {t === 'tea' && <Coffee size={16} />}
+                            {t === 'lunch' && <Clock size={16} />}
+                            {t === 'personal' && <Users size={16} />}
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                      <button 
+                        onClick={() => action("/time/break/start/")}
+                        disabled={busy}
+                        className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-amber-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
+                        START {breakType.toUpperCase()} BREAK
+                      </button>
                     </div>
                   ) : (
-                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Coffee size={18} className="text-amber-600 animate-bounce" />
-                        <div>
-                          <div className="text-sm font-black text-amber-900">On Break: {openBreak.break_type?.toUpperCase()}</div>
-                          <div className="text-xs font-bold text-amber-600 tabular-nums">{formatDuration(breakElapsed)}</div>
+                    <div className="bg-white rounded-3xl border-2 border-amber-100 p-6 shadow-xl shadow-amber-50 space-y-6 animate-in zoom-in duration-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
+                            <Coffee size={24} className="animate-bounce" />
+                          </div>
+                          <div>
+                            <div className="text-lg font-black text-slate-900">{openBreak.break_type?.toUpperCase()} BREAK</div>
+                            <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">In Progress</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-black text-slate-900 tabular-nums leading-none">{formatDuration(breakElapsed)}</div>
+                          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Timer</div>
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-50">
+                        <div className="space-y-1">
+                          <div className="text-[9px] font-black text-slate-400 uppercase">Started At</div>
+                          <div className="text-sm font-bold text-slate-700">{formatDateTime(openBreak.break_start).split(",")[1]}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[9px] font-black text-slate-400 uppercase">Current Status</div>
+                          <div className="flex items-center gap-1.5 text-amber-600 font-bold text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            ON BREAK
+                          </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => action("/time/break/end/")}
+                        disabled={busy}
+                        className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-sm font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                      >
+                        {busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />}
+                        END BREAK SESSION
+                      </button>
                     </div>
                   )}
+
                   {completedBreaks.length > 0 && (
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Coffee size={12} /> {completedBreaks.length} Session(s) Completed • {formatDuration(totalBreakSecs)}
+                    <div className="space-y-3">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Sessions</div>
+                      <div className="space-y-2">
+                        {completedBreaks.slice(-2).reverse().map(b => (
+                          <div key={b.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400">
+                                <Coffee size={14} />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-700">{b.break_type?.toUpperCase()}</div>
+                                <div className="text-[9px] font-medium text-slate-400">{formatDateTime(b.break_start).split(",")[1]} - {formatDateTime(b.break_end).split(",")[1]}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-xs font-black text-slate-900">{Math.round(b.duration_seconds / 60)}m</div>
+                              <div className="text-[9px] font-black text-emerald-600 uppercase">Done</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

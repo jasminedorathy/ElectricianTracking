@@ -69,49 +69,12 @@ function TaskCard({ task, onAction, busy }) {
   const [note, setNote] = useState(task.employee_notes || "")
   const [expanded, setExpanded] = useState(false)
 
-  // Start flow state
-  const [startFlow, setStartFlow] = useState(false)
-  const [showSelfie, setShowSelfie] = useState(false)
-  const [selfieFile, setSelfieFile] = useState(null)
-  const [gpsStatus, setGpsStatus] = useState("")
-
   // Complete flow state
   const [afterPhoto, setAfterPhoto] = useState(null)
 
   const elapsed = useElapsed(task.started_at)
   const liveHours = task.status === "in_progress" && elapsed > 0 ? formatDuration(elapsed) : null
 
-  async function beginStartFlow() {
-    if (task.require_selfie) {
-      setShowSelfie(true)
-    } else {
-      executeStartFlow(null)
-    }
-  }
-
-  async function executeStartFlow(photoFile) {
-    setShowSelfie(false)
-    setStartFlow(true)
-    setGpsStatus("Acquiring GPS...")
-    try {
-      const pos = await getPosition()
-      setGpsStatus("GPS locked!")
-
-      const payload = {
-        lat: pos.lat,
-        lon: pos.lon,
-        require_fd: true
-      }
-      if (photoFile) payload.photo = photoFile
-
-      await onAction(task.id, "start", payload)
-    } catch (e) {
-      setGpsStatus("GPS failed: " + e.message)
-      alert("GPS failed. You must allow location to start the task.")
-    } finally {
-      setStartFlow(false)
-    }
-  }
 
   function handleAfterPhotoChange(e) {
     if (e.target.files && e.target.files[0]) {
@@ -183,26 +146,12 @@ function TaskCard({ task, onAction, busy }) {
         </div>
       )}
 
-      {showSelfie && (
-        <SelfieCapture
-          onCancel={() => setShowSelfie(false)}
-          onCapture={(file) => executeStartFlow(file)}
-        />
-      )}
 
       {task.status !== "completed" && task.status !== "cancelled" && (
         <div className="mt-2 pt-4 border-t border-slate-100">
           {task.status === "pending" && (
-            <div className="flex flex-col gap-3">
-              {gpsStatus && <div className="text-xs text-indigo-600 font-medium">{gpsStatus}</div>}
-              <Button
-                disabled={busy || startFlow}
-                onClick={beginStartFlow}
-                className="w-full py-3 gap-2"
-              >
-                {startFlow ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                {startFlow ? "Processing..." : "START TASK & CLOCK IN"}
-              </Button>
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 text-center uppercase tracking-widest">
+              Please initiate this task via the Attendance module
             </div>
           )}
           {task.status === "in_progress" && (

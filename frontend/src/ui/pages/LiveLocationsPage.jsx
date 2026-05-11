@@ -758,7 +758,6 @@ export function LiveLocationsPage() {
                       <>
                         <div style={{ fontSize: 10, fontWeight: 900, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 20, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
                           <Paperclip size={12} /> Attachments
-
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
                           {detailData.photos.map((p) => (

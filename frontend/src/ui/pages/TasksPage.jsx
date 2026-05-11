@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, memo } from "react"
 import { apiRequest, unwrapResults } from "../../api/client.js"
 import { useAuth } from "../../state/auth/useAuth.js"
 import { Pill, Button, Card, Input, Select, TextArea } from "../components/kit.jsx"
@@ -44,17 +44,27 @@ const EMPTY_FORM = {
 }
 
 // ─── Task Card (Employee) ────────────────────────────────────
+// Centralized timer to prevent multiple intervals
+let _globalTick = Date.now()
+const _timerCallbacks = new Set()
+setInterval(() => {
+  _globalTick = Date.now()
+  _timerCallbacks.forEach(cb => cb(_globalTick))
+}, 1000)
+
 function useElapsed(clockInStr) {
-  const [elapsed, setElapsed] = useState(0)
+  const [now, setNow] = useState(Date.now())
+  
   useEffect(() => {
-    if (!clockInStr) { setElapsed(0); return }
-    const start = new Date(clockInStr).getTime()
-    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)))
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+    if (!clockInStr) return
+    const update = (t) => setNow(t)
+    _timerCallbacks.add(update)
+    return () => _timerCallbacks.delete(update)
   }, [clockInStr])
-  return elapsed
+
+  if (!clockInStr) return 0
+  const start = new Date(clockInStr).getTime()
+  return Math.max(0, Math.floor((now - start) / 1000))
 }
 
 function formatDuration(seconds) {
@@ -65,15 +75,9 @@ function formatDuration(seconds) {
   return [h, m, s].map(v => String(v).padStart(2, "0")).join(":")
 }
 
-function TaskCard({ task, onAction, busy }) {
+const TaskCard = memo(({ task, onAction, busy }) => {
   const [note, setNote] = useState(task.employee_notes || "")
   const [expanded, setExpanded] = useState(false)
-
-  // Start flow state
-  const [startFlow, setStartFlow] = useState(false)
-  const [showSelfie, setShowSelfie] = useState(false)
-  const [selfieFile, setSelfieFile] = useState(null)
-  const [gpsStatus, setGpsStatus] = useState("")
 
   // Complete flow state
   const [afterPhoto, setAfterPhoto] = useState(null)
@@ -81,37 +85,6 @@ function TaskCard({ task, onAction, busy }) {
   const elapsed = useElapsed(task.started_at)
   const liveHours = task.status === "in_progress" && elapsed > 0 ? formatDuration(elapsed) : null
 
-  async function beginStartFlow() {
-    if (task.require_selfie) {
-      setShowSelfie(true)
-    } else {
-      executeStartFlow(null)
-    }
-  }
-
-  async function executeStartFlow(photoFile) {
-    setShowSelfie(false)
-    setStartFlow(true)
-    setGpsStatus("Acquiring GPS...")
-    try {
-      const pos = await getPosition()
-      setGpsStatus("GPS locked!")
-
-      const payload = {
-        lat: pos.lat,
-        lon: pos.lon,
-        require_fd: true
-      }
-      if (photoFile) payload.photo = photoFile
-
-      await onAction(task.id, "start", payload)
-    } catch (e) {
-      setGpsStatus("GPS failed: " + e.message)
-      alert("GPS failed. You must allow location to start the task.")
-    } finally {
-      setStartFlow(false)
-    }
-  }
 
   function handleAfterPhotoChange(e) {
     if (e.target.files && e.target.files[0]) {
@@ -183,26 +156,12 @@ function TaskCard({ task, onAction, busy }) {
         </div>
       )}
 
-      {showSelfie && (
-        <SelfieCapture
-          onCancel={() => setShowSelfie(false)}
-          onCapture={(file) => executeStartFlow(file)}
-        />
-      )}
 
       {task.status !== "completed" && task.status !== "cancelled" && (
         <div className="mt-2 pt-4 border-t border-slate-100">
           {task.status === "pending" && (
-            <div className="flex flex-col gap-3">
-              {gpsStatus && <div className="text-xs text-indigo-600 font-medium">{gpsStatus}</div>}
-              <Button
-                disabled={busy || startFlow}
-                onClick={beginStartFlow}
-                className="w-full py-3 gap-2"
-              >
-                {startFlow ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                {startFlow ? "Processing..." : "START TASK & CLOCK IN"}
-              </Button>
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 text-center uppercase tracking-widest">
+              Please initiate this task via the Attendance module
             </div>
           )}
           {task.status === "in_progress" && (
@@ -237,7 +196,7 @@ function TaskCard({ task, onAction, busy }) {
       )}
     </div>
   )
-}
+})
 
 // ─── ADMIN: Assign Panel ─────────────────────────────────────
 function AssignTaskPanel({ employees, jobSites, onAssigned, onClose }) {

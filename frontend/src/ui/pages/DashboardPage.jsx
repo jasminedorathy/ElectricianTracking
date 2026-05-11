@@ -1,16 +1,15 @@
-import React, { useEffect, useMemo, useState, useRef } from "react"
-import { Clock, Users, Briefcase, CalendarDays, DollarSign, Loader2, AlertCircle, Timer, Activity, MapPin } from "lucide-react"
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler } from "chart.js"
-import { Bar, Line, Doughnut, Pie } from "react-chartjs-2"
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet"
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
+import React, { useEffect, useMemo, useState, useRef, lazy, Suspense } from "react"
+import { Clock, Users, Briefcase, CalendarDays, DollarSign, Loader2, AlertCircle, Timer, Activity, MapPin, ShieldAlert, TrendingUp, FileWarning, BadgeCheck, XCircle } from "lucide-react"
 
-import { apiRequest, unwrapResults } from "../../api/client.js"
+import { apiRequest } from "../../api/client.js"
 import { useAuth } from "../../state/auth/useAuth.js"
 
-// Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, Filler)
+// Lazy-loaded sub-modules
+const DashboardMap = lazy(() => import("./DashboardMap.jsx"))
+const BarChart = lazy(() => import("../components/DashboardCharts.jsx").then(m => ({ default: m.BarChart })))
+const LineChart = lazy(() => import("../components/DashboardCharts.jsx").then(m => ({ default: m.LineChart })))
+const DoughnutChart = lazy(() => import("../components/DashboardCharts.jsx").then(m => ({ default: m.DoughnutChart })))
+const PieChart = lazy(() => import("../components/DashboardCharts.jsx").then(m => ({ default: m.DoughnutChart }))) // Pie is similar to Doughnut
 
 // ── Shared Chart Defaults ──
 const CHART_COLORS = {
@@ -71,6 +70,10 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [analytics, setAnalytics] = useState(null)
+  const [otAlerts, setOtAlerts] = useState([])
+  const [wageViolations, setWageViolations] = useState([])
+  const [rtwExpiring, setRtwExpiring] = useState([])
+  const [complianceDismissed, setComplianceDismissed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -91,7 +94,34 @@ export function DashboardPage() {
       }
     }
 
-    if (user) load()
+    async function loadCompliance() {
+      try {
+        // OT risk
+        const otData = await apiRequest("/compliance/ot-risk/")
+        if (!cancelled && otData?.data?.alerts) setOtAlerts(otData.data.alerts)
+      } catch (_) {}
+      try {
+        // Wage floor violations
+        const wfData = await apiRequest("/compliance/wage-floor/")
+        if (!cancelled && wfData?.data?.violations) setWageViolations(wfData.data.violations)
+      } catch (_) {}
+      try {
+        // RTW expiry (UK)
+        const rtwData = await apiRequest("/compliance/rtw/expiry-check/")
+        if (!cancelled && rtwData?.data) {
+          const expiring = [
+            ...(rtwData.data.expiring_within_60_days || []),
+            ...(rtwData.data.expired || []),
+          ]
+          setRtwExpiring(expiring)
+        }
+      } catch (_) {}
+    }
+
+    if (user) {
+      load()
+      if (user.role === "admin") loadCompliance()
+    }
     return () => { cancelled = true }
   }, [user])
 
@@ -624,82 +654,6 @@ export function DashboardPage() {
     },
   }
 
-  // Map center: compute average of location coords or fallback
-  const mapCenter = useMemo(() => {
-    const locs = locationSummary.filter((l) => l.lat && l.lng)
-    if (locs.length === 0) return [20.5937, 78.9629] // India fallback
-    const avgLat = locs.reduce((s, l) => s + l.lat, 0) / locs.length
-    const avgLng = locs.reduce((s, l) => s + l.lng, 0) / locs.length
-    return [avgLat, avgLng]
-  }, [locationSummary])
-
-  // Fit map bounds to all locations + fix grey tiles
-  function FitBounds({ locations }) {
-    const map = useMap()
-    useEffect(() => {
-      // Force Leaflet to recalculate container size (fixes grey tiles in flex layouts)
-      const t1 = setTimeout(() => map.invalidateSize(), 100)
-      const t2 = setTimeout(() => map.invalidateSize(), 400)
-      const t3 = setTimeout(() => {
-        map.invalidateSize()
-        const valid = locations.filter((l) => l.lat && l.lng)
-        if (valid.length === 0) return
-        if (valid.length === 1) {
-          map.setView([valid[0].lat, valid[0].lng], 13)
-          return
-        }
-        const bounds = L.latLngBounds(valid.map((l) => [l.lat, l.lng]))
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 })
-      }, 600)
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-    }, [locations, map])
-    return null
-  }
-
-  // Build custom Leaflet DivIcon markers
-  function createLocationDotIcon(loc) {
-    const clockedIn = loc.clocked_in_now || 0
-    const clockedOut = loc.clocked_out_today || 0
-    const total = clockedIn + clockedOut
-    const employees = loc.employees || 0
-
-    // Size proportional to employee count (min 36, max 72)
-    const size = Math.max(36, Math.min(72, employees * 8 + 28))
-    const half = size / 2
-
-    // Color: green if people clocked in, blue if assigned but none active, grey if empty
-    let color = "#6366F1" // default indigo
-    let glow  = "rgba(99,102,241,0.35)"
-    let pulse = false
-    if (clockedIn > 0) {
-      color = "#10B981"
-      glow  = "rgba(16,185,129,0.35)"
-      pulse = true
-    } else if (clockedOut > 0) {
-      color = "#F43F5E"
-      glow  = "rgba(244,63,94,0.25)"
-    } else if (employees === 0 && total === 0) {
-      color = "#94A3B8"
-      glow  = "rgba(148,163,184,0.2)"
-    }
-
-    const label = employees > 0 ? employees : (total > 0 ? total : "")
-
-    return L.divIcon({
-      className: "bg-transparent border-none",
-      iconSize: [size, size],
-      iconAnchor: [half, half],
-      popupAnchor: [0, -half - 4],
-      html: `
-        <div class="relative" style="width:${size}px; height:${size}px;">
-          ${pulse ? `<div class="absolute inset-0 rounded-full animate-ping opacity-60" style="background: ${color};"></div>` : ''}
-          <div class="absolute inset-0 rounded-full flex items-center justify-center transition-transform duration-300 hover:scale-110 hover:z-[1000] shadow-[0_4px_14px_rgba(0,0,0,0.18)]" style="background: ${color}; box-shadow: 0 0 0 6px ${glow};">
-            <span class="text-white font-extrabold text-[13px] drop-shadow-md tracking-[0.02em] pointer-events-none">${label}</span>
-          </div>
-        </div>
-      `,
-    })
-  }
 
   const [hoveredLoc, setHoveredLoc] = useState(null)
 
@@ -719,6 +673,105 @@ export function DashboardPage() {
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium">
           <AlertCircle size={18} /> {error}
+        </div>
+      )}
+
+      {/* ── Compliance Risk Banner (admin only) ── */}
+      {user?.role === "admin" && !complianceDismissed && (otAlerts.length > 0 || wageViolations.length > 0 || rtwExpiring.length > 0) && (
+        <div style={{
+          background: "linear-gradient(135deg, #fef3c7 0%, #fde8d8 100%)",
+          border: "1.5px solid #f59e0b",
+          borderRadius: 14,
+          padding: "16px 20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          position: "relative",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <ShieldAlert size={22} color="#d97706" />
+              <span style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>
+                Compliance Alerts — Action Required
+              </span>
+            </div>
+            <button
+              onClick={() => setComplianceDismissed(true)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", display: "flex", alignItems: "center" }}
+            >
+              <XCircle size={18} />
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {/* OT Alerts */}
+            {otAlerts.map((a, i) => {
+              const isUK = a.country === "UK"
+              const isExceeded = a.alert_type === "exceeded_40" || a.alert_type === "exceeded_48_uk"
+              const isDoubleTime = a.alert_type === "double_time_ca"
+              const color = isDoubleTime ? "#dc2626" : isExceeded ? "#d97706" : "#2563eb"
+              const bg = isDoubleTime ? "#fef2f2" : isExceeded ? "#fffbeb" : "#eff6ff"
+              const border = isDoubleTime ? "#fca5a5" : isExceeded ? "#fcd34d" : "#bfdbfe"
+              const labels = {
+                approaching_40: "Approaching 40hr limit",
+                exceeded_40: "OT Pay Required (>40hrs)",
+                daily_ot_ca: "CA Daily OT (>8hrs)",
+                double_time_ca: "CA Double Time (>12hrs)",
+                daily_ot_ak: "AK Daily OT (>8hrs)",
+                approaching_48_uk: "UK WTR: Approaching 48hr avg",
+                exceeded_48_uk: "UK WTR: 48hr Limit Breached",
+              }
+              return (
+                <div key={i} style={{
+                  background: bg, border: `1.5px solid ${border}`, borderRadius: 8,
+                  padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  <TrendingUp size={14} color={color} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color }}>
+                    {labels[a.alert_type] || a.alert_type}
+                  </span>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>
+                    {a.employee_name} — {a.hours_this_week != null ? `${a.hours_this_week}h` : a.rolling_17wk_avg != null ? `avg ${a.rolling_17wk_avg}h/wk` : ""}
+                    {a.state ? ` (${a.state})` : isUK ? " (UK)" : ""}
+                    {a.wtr_opt_out ? " · Opt-out active" : ""}
+                  </span>
+                </div>
+              )
+            })}
+
+            {/* Wage floor violations */}
+            {wageViolations.map((v, i) => (
+              <div key={`wf-${i}`} style={{
+                background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 8,
+                padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <FileWarning size={14} color="#dc2626" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#dc2626" }}>
+                  Below Minimum Wage
+                </span>
+                <span style={{ fontSize: 11, color: "#64748b" }}>
+                  {v.employee_name} — ${v.hourly_rate}/hr (floor: ${v.minimum_wage_floor}/hr, shortfall: ${v.shortfall_per_hour.toFixed(2)}/hr)
+                  {v.country === "UK" ? " · UK NMW" : v.state ? ` · ${v.state}` : " · Federal"}
+                </span>
+              </div>
+            ))}
+
+            {/* RTW expiry */}
+            {rtwExpiring.map((r, i) => (
+              <div key={`rtw-${i}`} style={{
+                background: "#fff7ed", border: "1.5px solid #fed7aa", borderRadius: 8,
+                padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <BadgeCheck size={14} color="#ea580c" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#ea580c" }}>
+                  RTW {r.days_until_expiry != null && r.days_until_expiry >= 0 ? `Expiring in ${r.days_until_expiry}d` : "Expired"}
+                </span>
+                <span style={{ fontSize: 11, color: "#64748b" }}>
+                  {r.employee_name} — {r.document_type} · {r.expiry_date}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -777,7 +830,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {hoursByEmployee.length ? (
-              <Bar data={hbeData} options={hbeOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={hbeData} options={hbeOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No time data available</div>
             )}
@@ -790,7 +845,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {tsLabels.length ? (
-              <Doughnut data={tsData} options={donutOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <DoughnutChart data={tsData} options={donutOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No tasks</div>
             )}
@@ -803,7 +860,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {lsLabels.length ? (
-              <Doughnut data={lsData} options={pieOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <DoughnutChart data={lsData} options={pieOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No leave data</div>
             )}
@@ -819,7 +878,9 @@ export function DashboardPage() {
             <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 30 days</span>
           </div>
           <div className="p-5 h-[280px] relative">
-            <Line data={trendData} options={trendOptions} />
+            <Suspense fallback={<ChartPlaceholder />}>
+              <LineChart data={trendData} options={trendOptions} />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -832,7 +893,9 @@ export function DashboardPage() {
             <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 7 days</span>
           </div>
           <div className="p-5 h-[280px] relative">
-            <Bar data={attData} options={attOptions} />
+            <Suspense fallback={<ChartPlaceholder />}>
+              <BarChart data={attData} options={attOptions} />
+            </Suspense>
           </div>
         </div>
 
@@ -842,7 +905,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[280px] relative">
             {tcLabels.length ? (
-              <Bar data={tcData} options={tcOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={tcData} options={tcOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No categorized tasks</div>
             )}
@@ -855,7 +920,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[280px] relative">
             {payrollTrend.length ? (
-              <Bar data={ptData} options={ptOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={ptData} options={ptOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No payroll data</div>
             )}
@@ -872,7 +939,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {employeesByLoc.length ? (
-              <Bar data={empLocData} options={empLocOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={empLocData} options={empLocOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No locations configured</div>
             )}
@@ -886,7 +955,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {tasksByLoc.length ? (
-              <Bar data={taskLocData} options={taskLocOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={taskLocData} options={taskLocOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location task data</div>
             )}
@@ -900,7 +971,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[300px] relative">
             {hoursByLoc.length ? (
-              <Bar data={hrsLocData} options={hrsLocOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={hrsLocData} options={hrsLocOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location hours data</div>
             )}
@@ -990,48 +1063,9 @@ export function DashboardPage() {
             {/* Map */}
             <div className="flex-1 relative min-h-[300px]">
               {locationSummary.length ? (
-                <MapContainer
-                  center={mapCenter}
-                  zoom={11}
-                  style={{ width: "100%", height: "100%", background: "#F1F5F9" }}
-                  scrollWheelZoom={true}
-                  zoomControl={false}
-                >
-                  <FitBounds locations={locationSummary} />
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; OSM &copy; CARTO'
-                  />
-                  {locationSummary.map((loc) => (
-                    <Marker
-                      key={loc.name}
-                      position={[loc.lat, loc.lng]}
-                      icon={createLocationDotIcon(loc)}
-                    >
-                      <Popup className="anl-locmap-popup" offset={[0, -4]}>
-                        <div className="p-4">
-                          <div className="font-bold text-slate-900 text-base mb-1">{loc.name}</div>
-                          {loc.address && <div className="text-slate-500 text-xs mb-3">{loc.address}</div>}
-                          <div className="grid grid-cols-3 gap-3 border-t border-slate-100 pt-3 mb-3">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-indigo-600 font-bold text-base">{loc.employees || 0}</span>
-                              <span className="text-slate-500 text-[10px] font-semibold uppercase">Employees</span>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-emerald-500 font-bold text-base">{loc.clocked_in_now || 0}</span>
-                              <span className="text-slate-500 text-[10px] font-semibold uppercase">Clocked In</span>
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-rose-500 font-bold text-base">{loc.clocked_out_today || 0}</span>
-                              <span className="text-slate-500 text-[10px] font-semibold uppercase">Clocked Out</span>
-                            </div>
-                          </div>
-                          <div className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg text-center">{loc.hours}h worked (30d)</div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
+                <Suspense fallback={<ChartPlaceholder />}>
+                  <DashboardMap locationSummary={locationSummary} />
+                </Suspense>
               ) : (
                 <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No locations configured</div>
               )}
@@ -1049,7 +1083,9 @@ export function DashboardPage() {
           </div>
           <div className="p-5 h-[320px] relative">
             {locationSummary.length ? (
-              <Bar data={clockLocData} options={clockLocOptions} />
+              <Suspense fallback={<ChartPlaceholder />}>
+                <BarChart data={clockLocData} options={clockLocOptions} />
+              </Suspense>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location data</div>
             )}

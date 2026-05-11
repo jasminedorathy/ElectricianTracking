@@ -1626,6 +1626,11 @@ button {
   --ct-tagline-size: 15px;
 }
 
+.ctLogo-dark .ctCal,
+.ctLogo-dark .ctTrack {
+  text-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
+}
+
 .ctRow {
   display: flex;
   align-items: center;

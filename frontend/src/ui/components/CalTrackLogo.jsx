@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useState } from "react"
 
-export function CalTrackLogo({ size = "md", showTagline = false, className = "" }) {
+export function CalTrackLogo({ size = "md", showTagline = false, className = "", theme = "light" }) {
   const [animated, setAnimated] = useState(false)
   const uid = useId()
   const sandGradId = `ctSandGrad-${uid}`
@@ -14,7 +14,7 @@ export function CalTrackLogo({ size = "md", showTagline = false, className = "" 
   }, [])
 
   return (
-    <div className={["ctLogo", `ctLogo-${size}`, animated ? "is-animated" : "", className].filter(Boolean).join(" ")}>
+    <div className={["ctLogo", `ctLogo-${size}`, theme === "dark" ? "ctLogo-dark" : "", animated ? "is-animated" : "", className].filter(Boolean).join(" ")}>
       <svg className="ctCircuitBg" viewBox="0 0 560 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <g fill="none" strokeLinecap="round" strokeLinejoin="round">
           <g stroke="rgba(26, 86, 219, 0.18)" strokeWidth="2">

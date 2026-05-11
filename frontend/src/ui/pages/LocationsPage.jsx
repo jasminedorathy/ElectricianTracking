@@ -515,12 +515,12 @@ export function LocationsPage() {
           {/* LEFT: search + map stacked in a column */}
           <div className="flex-1 flex flex-col relative min-w-0">
 
-            {/* ── Top Search Bar ──────────────────────────────────── */}
-            <div className="relative z-[1000] px-8 py-4 flex gap-4 items-center bg-white border-b border-slate-50 shadow-sm">
-              <div ref={searchRef} className="relative flex-1 max-w-2xl">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                    <Search size={20} className="text-slate-300" />
+            {/* ── Floating Search Bar ──────────────────────────────────── */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] flex gap-4 items-center w-full max-w-3xl px-4 animate-in slide-in-from-top-4 duration-500">
+              <div ref={searchRef} className="relative flex-1">
+                <div className="relative shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] rounded-[1.5rem]">
+                  <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                    <Search size={22} className="text-slate-400" />
                   </div>
                   <input
                     id="location-search-input"
@@ -532,17 +532,17 @@ export function LocationsPage() {
                       if (e.target.value.length >= 2) setShowDropdown(true)
                     }}
                     onFocus={() => { if (searchResults.length > 0) setShowDropdown(true) }}
-                    className="w-full pl-14 pr-12 py-4 bg-slate-50/50 border-2 border-slate-100 rounded-[1.25rem] text-base font-semibold text-slate-700 placeholder-slate-400 outline-none focus:border-indigo-400 focus:bg-white focus:ring-8 focus:ring-indigo-50/50 transition-all"
+                    className="w-full pl-16 pr-14 py-5 bg-white/90 backdrop-blur-xl border border-white/50 rounded-[1.5rem] text-base font-bold text-slate-700 placeholder-slate-400 outline-none focus:bg-white focus:ring-[6px] focus:ring-indigo-500/20 transition-all shadow-inner"
                   />
                   {searching && (
                     <div className="absolute inset-y-0 right-14 flex items-center">
-                      <Loader2 size={18} className="animate-spin text-indigo-400" />
+                      <Loader2 size={20} className="animate-spin text-indigo-500" />
                     </div>
                   )}
                   {searchQuery && (
                     <button
                       onClick={() => { setSearchQuery(""); setSearchResults([]); setShowDropdown(false); setSelectedPlace(null) }}
-                      className="absolute inset-y-0 right-5 flex items-center text-slate-300 hover:text-slate-500 transition-colors"
+                      className="absolute inset-y-0 right-6 flex items-center text-slate-300 hover:text-slate-500 transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -551,30 +551,32 @@ export function LocationsPage() {
 
                 {/* ── Search Dropdown ─────────────────────────────── */}
                 {showDropdown && searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-4 bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-slate-100 z-[9999] overflow-hidden max-h-[28rem] overflow-y-auto animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-xl rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] border border-white/50 z-[9999] overflow-hidden max-h-[28rem] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300">
                     {searchResults.map((r) => (
                       <button
                         key={r.id}
                         onClick={() => handleSelectPlace(r)}
-                        className="w-full px-6 py-5 flex items-start gap-5 hover:bg-slate-50 text-left transition-colors border-b border-slate-50 last:border-0"
+                        className="w-full px-6 py-4 flex items-center gap-5 hover:bg-indigo-50/50 text-left transition-colors border-b border-slate-100/50 last:border-0 group"
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-                          <MapPin size={24} />
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white flex items-center justify-center shrink-0 shadow-sm transition-colors">
+                          <MapPin size={22} />
                         </div>
                         <div className="min-w-0">
-                          <div className="text-base font-extrabold text-slate-900 mb-1">{r.name}</div>
-                          <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                          <div className="text-base font-black text-slate-900 mb-0.5">{r.name}</div>
+                          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate">
                             {r.secondaryText || r.fullAddress.split(",").slice(1).join(",").trim()}
                           </div>
                         </div>
                       </button>
                     ))}
-                    <button 
-                      className="w-full px-6 py-5 text-indigo-600 text-sm font-extrabold text-left hover:bg-indigo-50/50 transition-colors flex items-center gap-3"
-                      onClick={() => handleManualAdd()}
-                    >
-                      <Plus size={18} /> Add missing location manually
-                    </button>
+                    <div className="p-2">
+                      <button 
+                        className="w-full px-4 py-4 bg-slate-50 hover:bg-indigo-50 text-indigo-600 rounded-xl text-sm font-black text-center transition-colors flex items-center justify-center gap-2 shadow-sm"
+                        onClick={() => handleManualAdd()}
+                      >
+                        <Plus size={18} /> Add missing location manually
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -583,21 +585,21 @@ export function LocationsPage() {
             <div ref={radiusRef} className="relative">
               <button 
                 onClick={() => setShowRadiusDropdown(!showRadiusDropdown)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${selectedRadiusFilters.length > 0 ? 'border-indigo-400 bg-indigo-50 text-indigo-600' : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200'}`}
+                className={`flex items-center gap-2 px-5 py-4 rounded-[1.5rem] text-sm font-bold transition-all shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] bg-white/90 backdrop-blur-xl border border-white/50 hover:bg-white ${selectedRadiusFilters.length > 0 ? 'text-indigo-600' : 'text-slate-600'}`}
               >
                 {radiusFilterLabel}
                 <ChevronDown size={14} className={`transition-transform duration-200 ${showRadiusDropdown ? 'rotate-180' : ''}`} />
               </button>
 
               {showRadiusDropdown && (
-                <div className="absolute top-full left-0 mt-3 bg-white rounded-2xl shadow-2xl border border-slate-100 z-[9999] w-64 overflow-hidden p-2 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-full right-0 mt-3 bg-white/95 backdrop-blur-xl rounded-[1.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] border border-white/50 z-[9999] w-64 overflow-hidden p-2 animate-in fade-in slide-in-from-top-2">
                   {radiusFilterOptions.map((opt) => {
                     const isSelected = selectedRadiusFilters.some(f => f.id === opt.id)
                     return (
                       <button
                         key={opt.id}
                         onClick={() => toggleRadiusFilter(opt)}
-                        className={`w-full px-4 py-3 flex items-center justify-between rounded-xl text-sm transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                        className={`w-full px-4 py-3 flex items-center justify-between rounded-xl text-sm transition-colors ${isSelected ? 'bg-indigo-50/50 text-indigo-600 font-black' : 'text-slate-600 font-bold hover:bg-slate-50'}`}
                       >
                         {opt.label}
                         {isSelected && (
@@ -611,7 +613,7 @@ export function LocationsPage() {
                   <div className="h-px bg-slate-100 my-2" />
                   <button
                     onClick={clearRadiusFilters}
-                    className="w-full px-4 py-3 text-left text-sm font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                    className="w-full px-4 py-3 text-left text-sm font-black text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
                   >
                     Clear selection
                   </button>
@@ -619,52 +621,36 @@ export function LocationsPage() {
               )}
             </div>
 
-          <div style={{ flex: 1 }} />
-
           {/* Map / List toggle */}
-          <div style={{
-            display: "flex", borderRadius: "8px",
-            border: "1px solid var(--stroke)", overflow: "hidden",
-          }}>
+          <div className="flex bg-white/90 backdrop-blur-xl rounded-[1.5rem] border border-white/50 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] overflow-hidden">
             <button
               onClick={() => setViewMode("map")}
-              style={{
-                padding: "8px 18px", border: "none", cursor: "pointer",
-                fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px",
-                background: viewMode === "map" ? "rgba(249,115,22,0.08)" : "var(--surface)",
-                color: viewMode === "map" ? "#F97316" : "var(--fg2)",
-                borderRight: "1px solid var(--stroke)",
-              }}
+              className={`px-5 py-4 text-sm font-bold flex items-center gap-2 transition-colors ${viewMode === "map" ? "bg-indigo-50/50 text-indigo-600" : "text-slate-500 hover:bg-slate-50"} border-r border-slate-100`}
             >
-              <MapPin size={14} /> Map
+              <MapPin size={16} /> Map
             </button>
             <button
               onClick={() => setViewMode("list")}
-              style={{
-                padding: "8px 18px", border: "none", cursor: "pointer",
-                fontSize: "13px", fontWeight: 600,
-                background: viewMode === "list" ? "rgba(249,115,22,0.08)" : "var(--surface)",
-                color: viewMode === "list" ? "#F97316" : "var(--fg2)",
-              }}
+              className={`px-5 py-4 text-sm font-bold flex items-center gap-2 transition-colors ${viewMode === "list" ? "bg-indigo-50/50 text-indigo-600" : "text-slate-500 hover:bg-slate-50"}`}
             >
-              ☰ List
+              <Layers size={16} /> List
             </button>
           </div>
         </div>
 
         {/* ── Map View ───────────────────────────────────────── */}
         {viewMode === "map" ? (
-          <div className="flex-1 relative z-0">
+          <div className="absolute inset-0 z-0">
             <MapContainer
               center={mapCenter}
               zoom={mapZoom}
               className="w-full h-full"
-              zoomControl={true}
+              zoomControl={false}
             >
               <MapUpdater center={mapCenter} zoom={mapZoom} />
               <TileLayer
-                url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-                attribution='&copy; <a href="https://maps.google.com/">Google Maps</a>'
+                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
               />
 
               {/* Selected search result: orange pin with popup */}
@@ -739,8 +725,8 @@ export function LocationsPage() {
 
             {/* Left info card when nothing is selected */}
             {!selectedPlace && !showAddPanel && (
-              <div className="absolute top-6 left-6 z-[500] w-72 animate-in slide-in-from-left-4 duration-500">
-                <Card className="shadow-2xl shadow-indigo-100 rounded-3xl p-8 bg-white/95 backdrop-blur-sm border-none">
+              <div className="absolute bottom-10 left-10 z-[500] w-80 animate-in slide-in-from-bottom-8 duration-500">
+                <div className="shadow-[0_20px_50px_-15px_rgba(0,0,0,0.15)] rounded-[2rem] p-8 bg-white/90 backdrop-blur-xl border border-white/50">
                   <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-6 shadow-sm">
                     <MapPin size={28} />
                   </div>
@@ -757,7 +743,7 @@ export function LocationsPage() {
                       <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Active Sites</div>
                     </div>
                   </div>
-                </Card>
+                </div>
               </div>
             )}
           </div>

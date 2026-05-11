@@ -39,11 +39,7 @@ async function fetchJSON(path, options = {}) {
  * Returns { access, refresh }.
  */
 export async function apiLogin(identifier, password) {
-  // The backend accepts either `username` or `email` in the same field
-  const isEmail = identifier.includes("@")
-  const payload = isEmail
-    ? { username: "", email: identifier, password }
-    : { username: identifier, password }
+  const payload = { username: identifier, password }
 
   return fetchJSON("/auth/login/", {
     method: "POST",

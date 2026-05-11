@@ -17,7 +17,7 @@ class BreakSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Break
-        fields = ("id", "break_start", "break_end", "break_type", "duration_seconds", "created_at")
+        fields = ("id", "break_start", "break_end", "break_type", "duration_seconds", "duration_minutes", "created_at")
         read_only_fields = ("id", "created_at")
 
     def get_duration_seconds(self, obj):

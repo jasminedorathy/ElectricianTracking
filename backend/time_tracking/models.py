@@ -215,13 +215,21 @@ class Break(models.Model):
     break_end = models.DateTimeField(null=True, blank=True)
 
     BREAK_TYPES = [
-        ("lunch", "Lunch"),
-        ("short", "Short"),
-        ("personal", "Personal"),
+        ("tea", "Tea Break"),
+        ("lunch", "Lunch Break"),
+        ("personal", "Personal Break"),
     ]
-    break_type = models.CharField(max_length=20, choices=BREAK_TYPES, default="lunch")
-
+    break_type = models.CharField(max_length=20, choices=BREAK_TYPES, default="tea")
+    duration_minutes = models.IntegerField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if self.break_start and self.break_end:
+            delta = self.break_end - self.break_start
+            self.duration_minutes = int(delta.total_seconds() / 60)
+        super().save(*args, **kwargs)
 
     @property
     def is_open(self) -> bool:

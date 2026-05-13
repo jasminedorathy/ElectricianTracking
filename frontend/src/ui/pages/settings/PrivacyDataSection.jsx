@@ -56,7 +56,7 @@ export default function PrivacyDataSection({ showToast, SectionHeader }) {
       import("../../../api/client.js").then(({ apiRequest }) => {
         apiRequest("/compliance/audit-log/")
           .then(res => setAuditLog(res?.results || res?.data || []))
-          .catch(() => {})
+          .catch(() => { })
           .finally(() => setAuditLoading(false))
       })
     } else {

@@ -3,57 +3,42 @@ import {
   Users, UserPlus, Mail, Shield, Trash2, ChevronDown,
   Clock, Check, X, Loader2, Search,
 } from "lucide-react"
-import { apiRequest } from "../../../api/client.js"
+import { apiRequest, unwrapResults } from "../../../api/client.js"
 import { useAuth } from "../../../state/auth/useAuth.js"
+import { Card, Button, Input, Select, Pill } from "../../components/kit.jsx"
 
 const ROLE_CONFIG = {
-  admin: { label: "Admin", color: "#7C3AED", bg: "#F5F3FF" },
-  manager: { label: "Manager", color: "#1A56DB", bg: "#EFF4FF" },
-  employee: { label: "Employee", color: "#059669", bg: "#ECFDF5" },
-  kiosk: { label: "Kiosk", color: "#D97706", bg: "#FFFBEB" },
-}
-
-function RoleBadge({ role }) {
-  const cfg = ROLE_CONFIG[role] || { label: role, color: "var(--muted)", bg: "var(--bg2)" }
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: cfg.bg, color: cfg.color }}>
-      {cfg.label}
-    </span>
-  )
+  admin: { label: "Admin", tone: "neutral" },
+  manager: { label: "Manager", tone: "neutral" },
+  employee: { label: "Employee", tone: "neutral" },
+  kiosk: { label: "Kiosk", tone: "neutral" },
 }
 
 function RoleMenu({ value, onChange, exclude = [] }) {
   const [open, setOpen] = useState(false)
   const options = Object.entries(ROLE_CONFIG).filter(([k]) => !exclude.includes(k))
   return (
-    <div style={{ position: "relative" }}>
+    <div className="relative">
       <button
-        className="stGhostBtn"
-        style={{ fontSize: 12, padding: "4px 10px" }}
         onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-stroke dark:border-slate-800 hover:border-indigo-500/30 transition-all group"
       >
-        <RoleBadge role={value} /> <ChevronDown size={11} />
+        <Pill tone="neutral">{ROLE_CONFIG[value]?.label || value}</Pill>
+        <ChevronDown size={12} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
       </button>
       {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 200,
-          background: "var(--surface)", border: "1px solid var(--stroke2)", borderRadius: 10,
-          padding: 6, boxShadow: "0 8px 24px rgba(0,0,0,.1)", minWidth: 140,
-        }}>
+        <div className="absolute top-full right-0 mt-2 z-50 w-40 bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 rounded-[20px] p-2 shadow-2xl animate-fadeUp">
           {options.map(([key, cfg]) => (
             <button
               key={key}
               onClick={() => { onChange(key); setOpen(false) }}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, width: "100%",
-                padding: "8px 10px", background: "none", border: "none", borderRadius: 6,
-                fontSize: 12, fontWeight: 600, cursor: "pointer",
-                color: key === value ? cfg.color : "var(--fg2)",
-                background: key === value ? cfg.bg : "transparent",
-              }}
+              className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${key === value
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
             >
-              {key === value && <Check size={11} style={{ color: cfg.color }} />}
               {cfg.label}
+              {key === value && <Check size={12} />}
             </button>
           ))}
         </div>
@@ -85,8 +70,8 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
         apiRequest("/settings/team/members/"),
         isAdmin ? apiRequest("/settings/team/invites/") : Promise.resolve({ data: [] }),
       ])
-      setMembers(membersRes?.data || [])
-      setInvites(invitesRes?.data || [])
+      setMembers(unwrapResults(membersRes))
+      setInvites(unwrapResults(invitesRes))
     } catch {
       showToast("Failed to load team.", "error")
     } finally {
@@ -102,7 +87,7 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
     try {
       const res = await apiRequest("/settings/team/invites/", { method: "POST", json: inviteForm })
       showToast(res?.message || "Invite sent.")
-      setInvites(prev => [res.data, ...prev])
+      setInvites(prev => [res.data || res, ...prev])
       setInviteForm({ email: "", role: "employee" })
       setShowInviteForm(false)
     } catch (err) {
@@ -121,7 +106,8 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
     } catch (err) {
       showToast(err?.body?.message || "Failed to update role.", "error")
     } finally {
-      setChangingRole(null) }
+      setChangingRole(null)
+    }
   }
 
   const handleRemove = async (memberId) => {
@@ -134,7 +120,8 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
     } catch (err) {
       showToast(err?.body?.message || "Failed to remove member.", "error")
     } finally {
-      setRemoving(null) }
+      setRemoving(null)
+    }
   }
 
   const handleRevokeInvite = async (inviteId) => {
@@ -146,133 +133,129 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
     } catch (err) {
       showToast(err?.body?.message || "Failed to cancel invite.", "error")
     } finally {
-      setRevoking(null) }
+      setRevoking(null)
+    }
   }
 
   const filtered = members.filter(m => {
     const q = search.toLowerCase()
-    const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+    const matchesSearch = !q || m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)
     const matchesRole = !roleFilter || m.role === roleFilter
     return matchesSearch && matchesRole
   })
 
   return (
-    <div className="stPanel">
+    <div className="stPanel animate-fadeUp">
       <SectionHeader title="Team & Members" subtitle="Invite teammates, assign roles, and manage workspace access." />
 
-      {/* Action bar */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
-            <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-              <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-              <input
-                className="stInput"
-                style={{ paddingLeft: 30 }}
-                placeholder="Search members..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <select className="stInput stSelect" style={{ width: 130 }} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
-              <option value="">All roles</option>
-              {Object.entries(ROLE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
+      <Card>
+        <div className="flex flex-col md:flex-row md:items-end gap-6">
+          <div className="flex-1">
+            <Input
+              variant="dark"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              icon={<Search size={16} />}
+            />
+          </div>
+          <div className="w-full md:w-48">
+            <Select
+              value={roleFilter}
+              onChange={e => setRoleFilter(e.target.value)}
+              options={[
+                { label: "All Roles", value: "" },
+                ...Object.entries(ROLE_CONFIG).map(([k, v]) => ({ label: v.label, value: k }))
+              ]}
+            />
           </div>
           {isAdmin && (
-            <button className="stPrimaryBtn" onClick={() => setShowInviteForm(v => !v)}>
-              <UserPlus size={13} /> Invite member
-            </button>
+            <Button onClick={() => setShowInviteForm(v => !v)} className="h-[50px] px-6">
+              <UserPlus size={16} className="mr-2" /> Invite Member
+            </Button>
           )}
         </div>
 
-        {/* Invite form */}
         {showInviteForm && isAdmin && (
-          <div style={{ marginTop: 20, padding: 20, background: "var(--bg2)", borderRadius: 10, border: "1px dashed var(--stroke2)" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginBottom: 14 }}>Send invitation</div>
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Email address</div>
-                <div className="stInputAddon">
-                  <span className="stInputAddonPrefix"><Mail size={12} /></span>
-                  <input
-                    className="stInput stInputAddonField"
-                    type="email"
-                    placeholder="colleague@company.com"
-                    value={inviteForm.email}
-                    onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
-                  />
-                </div>
+          <div className="mt-8 p-8 bg-slate-50 dark:bg-slate-950/40 rounded-3xl border border-dashed border-stroke dark:border-slate-800 animate-fadeUp">
+            <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">Send Invitation</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+              <div className="lg:col-span-1">
+                <Input
+                  label="Email Address"
+                  type="email"
+                  placeholder="colleague@company.com"
+                  value={inviteForm.email}
+                  onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
+                  icon={<Mail size={16} />}
+                />
               </div>
-              <div style={{ width: 150 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Role</div>
-                <select
-                  className="stInput stSelect"
+              <div className="lg:col-span-1">
+                <Select
+                  label="Select Role"
                   value={inviteForm.role}
                   onChange={e => setInviteForm(p => ({ ...p, role: e.target.value }))}
-                >
-                  <option value="employee">Employee</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
+                  options={[
+                    { label: "Employee", value: "employee" },
+                    { label: "Manager", value: "manager" },
+                    { label: "Admin", value: "admin" }
+                  ]}
+                />
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="stPrimaryBtn" onClick={handleInvite} disabled={inviting || !inviteForm.email}>
-                  {inviting ? <Loader2 size={13} style={{ animation: "spin .7s linear infinite" }} /> : <Mail size={13} />}
-                  Send invite
-                </button>
-                <button className="stGhostBtn" onClick={() => setShowInviteForm(false)}>Cancel</button>
+              <div className="flex gap-3">
+                <Button onClick={handleInvite} disabled={inviting || !inviteForm.email} className="flex-1 h-[52px]">
+                  {inviting ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} className="mr-2" />}
+                  Send Invite
+                </Button>
+                <Button variant="ghost" onClick={() => setShowInviteForm(false)} className="h-[52px] px-6">Cancel</Button>
               </div>
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Members table */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>
-            Members <span style={{ color: "var(--muted)", fontWeight: 500 }}>({filtered.length})</span>
-          </div>
+      <Card title={
+        <div className="flex items-center gap-3">
+          <span>Active Members</span>
+          <Pill tone="neutral">{filtered.length}</Pill>
         </div>
-
+      }>
         {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
-            <Loader2 size={24} style={{ animation: "spin .7s linear infinite" }} />
+          <div className="py-20 flex justify-center">
+            <Loader2 size={32} className="animate-spin text-indigo-500" />
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 32, color: "var(--muted)", fontSize: 13 }}>
-            {search || roleFilter ? "No members match your filter." : "No team members yet."}
+          <div className="py-20 text-center">
+            <Users size={40} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
+            <p className="text-slate-400 font-medium italic">
+              {search || roleFilter ? "No members match your criteria." : "No team members found."}
+            </p>
           </div>
         ) : (
-          <div>
+          <div className="divide-y divide-stroke dark:divide-slate-800/60 -mx-6 -mb-6">
             {filtered.map(member => (
-              <div key={member.id} style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "12px 0", borderBottom: "1px solid var(--stroke)", gap: 12,
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    background: "linear-gradient(135deg, #0B1629, #1A56DB)",
-                    color: "#fff", fontSize: 13, fontWeight: 800,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    {(member.name?.[0] || member.username?.[0] || "U").toUpperCase()}
+              <div key={member.id} className="flex items-center justify-between p-6 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white text-base font-black flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/20">
+                    {(String(member.name || member.username || "U")[0]).toUpperCase()}
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", display: "flex", alignItems: "center", gap: 8 }}>
-                      {member.name || member.username}
-                      {member.is_current_user && <span style={{ fontSize: 10, background: "var(--bg2)", color: "var(--muted)", padding: "1px 6px", borderRadius: 10 }}>You</span>}
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 truncate">
+                      {typeof member.name === 'object' ? member.name?.name || member.name?.username : (member.name || member.username)}
+                      {member.is_current_user && <Pill tone="neutral">You</Pill>}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.email}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                      {typeof member.email === 'object' ? member.email?.email : member.email}
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontSize: 11, color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Clock size={10} />
-                    {new Date(member.date_joined).toLocaleDateString()}
+
+                <div className="flex items-center gap-8">
+                  <div className="hidden lg:flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    <Clock size={12} />
+                    Joined {new Date(member.date_joined).toLocaleDateString()}
                   </div>
+
                   {isAdmin && !member.is_current_user ? (
                     <RoleMenu
                       value={member.role}
@@ -280,15 +263,16 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
                       exclude={["kiosk"]}
                     />
                   ) : (
-                    <RoleBadge role={member.role} />
+                    <Pill tone="neutral">{ROLE_CONFIG[member.role]?.label || member.role}</Pill>
                   )}
+
                   {isAdmin && !member.is_current_user && (
                     <button
                       onClick={() => handleRemove(member.id)}
                       disabled={removing === member.id}
-                      style={{ background: "none", border: "none", color: "#DC2626", cursor: "pointer", padding: 4, display: "flex", alignItems: "center" }}
+                      className="p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors opacity-0 group-hover:opacity-100"
                     >
-                      {removing === member.id ? <Loader2 size={13} style={{ animation: "spin .7s linear infinite" }} /> : <Trash2 size={13} />}
+                      {removing === member.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                     </button>
                   )}
                 </div>
@@ -296,48 +280,50 @@ export default function TeamMembersSection({ showToast, SectionHeader }) {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Pending invites */}
       {isAdmin && invites.length > 0 && (
-        <div className="stCard">
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-            <Clock size={15} style={{ color: "#D97706" }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Pending Invitations ({invites.length})</span>
+        <Card title={
+          <div className="flex items-center gap-3">
+            <Mail size={18} className="text-amber-500" />
+            <span>Pending Invitations</span>
+            <Pill tone="warn">{invites.length}</Pill>
           </div>
-          {invites.map(invite => (
-            <div key={invite.id} style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "10px 0", borderBottom: "1px solid var(--stroke)", gap: 12,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FFFBEB", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Mail size={14} style={{ color: "#D97706" }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>{invite.email}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                    Invited by {invite.invited_by_name} · Expires {new Date(invite.expires_at).toLocaleDateString()}
+        }>
+          <div className="divide-y divide-stroke dark:divide-slate-800/60 -mx-6 -mb-6">
+            {invites.map(invite => (
+              <div key={invite.id} className="flex items-center justify-between p-6 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/30">
+                    <Mail size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-slate-900 dark:text-white truncate">
+                      {typeof invite.email === 'object' ? invite.email?.email : invite.email}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">
+                      Invited by {invite.invited_by_name} · Expires {new Date(invite.expires_at).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-4">
+                  <Pill tone={invite.is_expired ? "bad" : "warn"}>
+                    {invite.is_expired ? "Expired" : "Pending"}
+                  </Pill>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleRevokeInvite(invite.id)}
+                    disabled={revoking === invite.id}
+                    className="h-9 px-4 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                  >
+                    {revoking === invite.id ? <Loader2 size={14} className="animate-spin" /> : <X size={14} className="mr-2" />}
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <RoleBadge role={invite.role} />
-                <span style={{ fontSize: 11, background: invite.is_expired ? "#FEF2F2" : "#FFFBEB", color: invite.is_expired ? "#DC2626" : "#D97706", padding: "2px 8px", borderRadius: 20, fontWeight: 700 }}>
-                  {invite.is_expired ? "Expired" : "Pending"}
-                </span>
-                <button
-                  onClick={() => handleRevokeInvite(invite.id)}
-                  disabled={revoking === invite.id}
-                  className="stDangerBtn"
-                >
-                  {revoking === invite.id ? <Loader2 size={11} style={{ animation: "spin .7s linear infinite" }} /> : <X size={11} />}
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
       )}
     </div>
   )

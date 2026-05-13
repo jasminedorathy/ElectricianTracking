@@ -103,7 +103,7 @@ const TaskCard = memo(({ task, onAction, busy }) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col gap-4">
+    <div className="bg-surface dark:bg-slate-900/60 rounded-2xl border border-stroke dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col gap-4">
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
@@ -117,9 +117,9 @@ const TaskCard = memo(({ task, onAction, busy }) => {
       </div>
 
       <div className="flex-1">
-        <h3 className="text-lg font-bold text-slate-900 leading-tight">{task.title}</h3>
+        <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight tracking-tight">{task.title}</h3>
         {task.description && (
-          <div className={`text-slate-500 text-sm mt-2 line-clamp-${expanded ? 'none' : '3'} whitespace-pre-wrap`}>
+          <div className={`text-slate-500 dark:text-slate-400 text-sm mt-2 line-clamp-${expanded ? 'none' : '3'} whitespace-pre-wrap leading-relaxed`}>
             {task.description}
           </div>
         )}
@@ -152,8 +152,8 @@ const TaskCard = memo(({ task, onAction, busy }) => {
       </div>
         
       {task.admin_notes && (
-        <div className="bg-amber-50 text-amber-800 p-3 rounded-xl text-xs border border-amber-100">
-          <strong className="uppercase tracking-tight mr-1">Admin note:</strong> {task.admin_notes}
+        <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-400 p-3 rounded-xl text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">
+          <strong className="uppercase tracking-widest mr-1 opacity-60">Admin note:</strong> {task.admin_notes}
         </div>
       )}
 
@@ -161,18 +161,18 @@ const TaskCard = memo(({ task, onAction, busy }) => {
       {task.status !== "completed" && task.status !== "cancelled" && (
         <div className="mt-2 pt-4 border-t border-slate-100">
           {task.status === "pending" && (
-            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 text-center uppercase tracking-widest">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 rounded-xl text-[10px] font-black text-indigo-700 dark:text-indigo-400 text-center uppercase tracking-[0.15em]">
               Please initiate this task via the Attendance module
             </div>
           )}
           {task.status === "in_progress" && (
             <div className="flex flex-col gap-4">
               {task.require_before_after_photos && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-                    <Camera size={14} /> Requirement: After Photo
+                <div className="p-3 bg-bg dark:bg-slate-950/40 rounded-xl border border-stroke dark:border-slate-800">
+                  <div className="text-[10px] font-black text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5 uppercase tracking-widest">
+                    <Camera size={14} className="text-indigo-600 dark:text-indigo-400" /> After Photo Required
                   </div>
-                  <input type="file" accept="image/*" onChange={handleAfterPhotoChange} className="text-xs w-full" />
+                  <input type="file" accept="image/*" onChange={handleAfterPhotoChange} className="text-xs w-full text-slate-500 dark:text-slate-400" />
                 </div>
               )}
 
@@ -350,12 +350,12 @@ function AssignTaskPanel({ employees, jobSites, onAssigned, onClose }) {
         />
       </div>
 
-      <button type="button" className="text-indigo-600 text-sm font-bold hover:underline flex items-center gap-1" onClick={() => setShowMore(v => !v)}>
+      <button type="button" className="text-indigo-600 dark:text-indigo-400 text-xs font-black uppercase tracking-widest hover:underline flex items-center gap-1" onClick={() => setShowMore(v => !v)}>
         {showMore ? "- Hide advanced options" : "+ Add more properties (GPS, Client, Requirements)"}
       </button>
 
       {showMore && (
-        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
+        <div className="p-6 bg-surface2 dark:bg-slate-900/40 rounded-2xl border border-stroke dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
           <Input 
             label="Estimated Hours"
             type="number" 
@@ -429,14 +429,14 @@ function AssignTaskPanel({ employees, jobSites, onAssigned, onClose }) {
           onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
         >
           <div className="flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400">
+            <div className="w-12 h-12 rounded-full bg-bg dark:bg-slate-950/40 shadow-sm border border-stroke dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600">
               <Paperclip size={24} />
             </div>
             <div>
               <p className="text-sm font-bold text-slate-700">Drag & drop files here</p>
               <p className="text-xs text-slate-400 mt-1">or click to browse your computer</p>
             </div>
-            <Button type="button" variant="ghost" className="mt-2 border border-slate-200 bg-white" onClick={() => fileInputRef.current?.click()}>
+            <Button type="button" variant="ghost" className="mt-2 border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40" onClick={() => fileInputRef.current?.click()}>
               Choose Files
             </Button>
             <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={(e) => addFiles(e.target.files)} />
@@ -446,7 +446,7 @@ function AssignTaskPanel({ employees, jobSites, onAssigned, onClose }) {
         {files.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {files.map((f, idx) => (
-              <div key={`${f.name}:${f.size}:${f.lastModified}`} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700">
+              <div key={`${f.name}:${f.size}:${f.lastModified}`} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 bg-bg dark:bg-slate-950/40 border border-stroke dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300">
                 <span className="truncate max-w-[150px]">{f.name}</span>
                 <button type="button" className="p-1 rounded-md hover:bg-rose-50 hover:text-rose-600 transition-colors" onClick={() => removeFile(idx)}>
                   <X size={14} />
@@ -497,19 +497,19 @@ function AdminTasksTable({ tasks, employees, jobSites, onRefresh }) {
   function getEmp(id) { return employees.find((x) => x.user?.id === id) }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-stroke dark:border-slate-800 bg-surface dark:bg-slate-900/60 shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="p-6 professional-subtitle text-slate-400">Task Details</th>
-              <th className="p-6 professional-subtitle text-slate-400">Assigned To</th>
-              <th className="p-6 professional-subtitle text-slate-400">Due Date</th>
-              <th className="p-6 professional-subtitle text-slate-400">Status</th>
-              <th className="p-6 professional-subtitle text-slate-400 text-right">Actions</th>
+            <tr className="bg-surface2 dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800">
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Task Details</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Assigned To</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Due Date</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50">
+          <tbody className="divide-y divide-stroke dark:divide-slate-800">
             {tasks.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-24 text-center text-slate-400">
@@ -523,18 +523,18 @@ function AdminTasksTable({ tasks, employees, jobSites, onRefresh }) {
           {tasks.map(t => {
             const emp = getEmp(t.assigned_to)
             return (
-              <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
+              <tr key={t.id} className="hover:bg-bg dark:hover:bg-slate-950/40 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-bold text-slate-900 text-sm">{t.title}</div>
-                  <div className="flex items-center gap-2 mt-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    <span className="flex items-center gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${priorityColorClass(t.priority)}`} />
+                  <div className="font-black text-slate-900 dark:text-white text-sm tracking-tight">{t.title}</div>
+                  <div className="flex items-center gap-2 mt-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    <span className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${priorityColorClass(t.priority)} shadow-[0_0_8px_rgba(0,0,0,0.1)]`} />
                       {t.priority}
                     </span>
-                    <span>·</span>
+                    <span className="opacity-30">|</span>
                     <span>{categoryLabel(t.category)}</span>
                     {t.job_site_name && (
-                      <><span>·</span><span className="text-slate-500">🏢 {t.job_site_name}</span></>
+                      <><span className="opacity-30">|</span><span className="text-indigo-600 dark:text-indigo-400">🏢 {t.job_site_name}</span></>
                     )}
                   </div>
                   {(t.require_selfie || t.require_before_after_photos) && (
@@ -549,16 +549,16 @@ function AdminTasksTable({ tasks, employees, jobSites, onRefresh }) {
                 <td className="px-6 py-4">
                   {emp && emp.user ? (
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-black border border-indigo-100 dark:border-indigo-800">
                         {(emp.user.first_name || emp.user.username || "?").charAt(0).toUpperCase()}
                       </div>
-                      <div className="text-sm font-bold text-slate-700">
+                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300">
                         {emp.user.first_name || emp.user.username} {emp.user.last_name || ""}
                       </div>
                     </div>
-                  ) : <span className="text-slate-300 italic text-sm">Unassigned</span>}
+                  ) : <span className="text-slate-300 dark:text-slate-600 italic text-sm">Unassigned</span>}
                 </td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-600">{t.due_date}</td>
+                <td className="px-6 py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t.due_date}</td>
                 <td className="px-6 py-4">
                   <Pill tone={statusTone(t.status)}>{statusLabel(t.status)}</Pill>
                 </td>
@@ -600,7 +600,7 @@ function AdminTasksPage({ tasks, employees, jobSites, loadTasks }) {
           >
             <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 shrink-0">
               <div className="flex flex-col flex-1 user-select-none">
-                <div className="text-xl professional-title text-slate-900">Create Work Order</div>
+                <div className="text-xl professional-title text-slate-900 dark:text-white">Create Work Order</div>
                 <div className="text-sm text-slate-400 font-medium mt-0.5">Define tasks, assign personnel, and set location constraints.</div>
               </div>
               <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" onClick={() => setOpen(false)}>
@@ -619,7 +619,7 @@ function AdminTasksPage({ tasks, employees, jobSites, loadTasks }) {
       <div className="flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <div className="flex items-baseline gap-3">
-            <h2 className="text-xl professional-title text-slate-900">Task Queue</h2>
+            <h2 className="text-xl professional-title text-slate-900 dark:text-white">Task Queue</h2>
             <span className="text-[10px] professional-subtitle text-slate-400">{tasks.length} Total</span>
           </div>
 
@@ -641,19 +641,19 @@ function EmployeeTasksPage({ tasks, handleAction, busy }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-2xl self-start">
+      <div className="flex flex-wrap gap-2 bg-surface2 dark:bg-slate-900/60 p-1.5 rounded-2xl self-start border border-stroke dark:border-slate-800 shadow-inner">
         {STATUS_FILTERS.map(f => {
           const isActive = filter === f
           const count = tasks.filter(t => t.status === f).length
           return (
             <button 
               key={f} 
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`} 
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all ${isActive ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-200 dark:shadow-none' : 'text-slate-500 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'}`} 
               onClick={() => setFilter(f)}
             >
               <span className="flex items-center gap-2">
                 {f === "all" ? "All Tasks" : statusLabel(f)}
-                {f !== "all" && count > 0 && <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${isActive ? 'bg-slate-100 text-slate-600' : 'bg-slate-200 text-slate-500'}`}>{count}</span>}
+                {f !== "all" && count > 0 && <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>{count}</span>}
               </span>
             </button>
           )
@@ -661,12 +661,12 @@ function EmployeeTasksPage({ tasks, handleAction, busy }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-6 bg-white border border-slate-200 border-dashed rounded-[2rem] text-center">
-          <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 mb-6">
+        <div className="flex flex-col items-center justify-center py-24 px-6 bg-surface dark:bg-slate-900/40 border border-stroke dark:border-slate-800 border-dashed rounded-[3rem] text-center">
+          <div className="w-20 h-20 rounded-3xl bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-200 dark:text-slate-800 mb-8 shadow-inner">
             <ClipboardList size={40} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900">No tasks found</h3>
-          <p className="text-slate-400 mt-2 max-w-xs">You're all caught up! Enjoy your break or check back later for new assignments.</p>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">No tasks found</h3>
+          <p className="text-slate-400 dark:text-slate-500 mt-3 max-w-xs text-sm font-medium leading-relaxed">You're all caught up! Enjoy your break or check back later for new assignments.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -742,17 +742,17 @@ export function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-bg dark:bg-bg overflow-hidden">
       {/* ── HEADER ── */}
-      <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
         <div className="flex items-center gap-6">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight font-[Manrope] flex items-center gap-3">
-              <ClipboardList className="text-indigo-600" size={24} />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope] flex items-center gap-3">
+              <ClipboardList className="text-indigo-600 dark:text-indigo-400" size={24} />
               Tasks & Orders
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest opacity-80">
                 {isAdmin ? "Dispatch and monitor work activity across all employees." : "Your personal task feed and execution queue."}
               </span>
             </div>

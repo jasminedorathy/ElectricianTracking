@@ -9,17 +9,17 @@ import { fireSparkleFromEl } from "../sparkle.js"
 // ── Exempt status badge ─────────────────────────────────────────────────────
 function ExemptBadge({ status }) {
   if (status === "exempt") return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#ecfdf5", color: "#059669", border: "1px solid #6ee7b7", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+    <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
       <ShieldCheck size={11} /> EXEMPT
     </span>
   )
   if (status === "non_exempt") return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+    <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
       <ShieldOff size={11} /> NON-EXEMPT
     </span>
   )
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#fefce8", color: "#ca8a04", border: "1px solid #fde68a", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+    <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
       <AlertTriangle size={11} /> PENDING
     </span>
   )
@@ -124,34 +124,34 @@ export function EmployeesPage() {
     return (
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Employees</h1>
-          <div className="text-slate-500 mt-1">Admin access required.</div>
+          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Employees</h1>
+          <div className="text-slate-500 dark:text-slate-400 mt-1">Admin access required.</div>
         </div>
-        <Card><div className="text-slate-400 italic">You don't have permission to view this page.</div></Card>
+        <Card><div className="text-slate-400 dark:text-slate-600 italic">You don't have permission to view this page.</div></Card>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-bg dark:bg-bg overflow-hidden">
       {/* ── HEADER ── */}
-      <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
         <div className="flex items-center gap-6">
           <div>
-            <h1 className="text-2xl professional-title text-slate-900 flex items-center gap-3">
-              <Users className="text-indigo-600" size={24} />
+            <h1 className="text-2xl professional-title text-slate-900 dark:text-white flex items-center gap-3">
+              <Users className="text-indigo-600 dark:text-indigo-400" size={24} />
               Employees
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-[10px] professional-subtitle text-slate-500">
+              <span className="text-[10px] professional-subtitle text-slate-500 dark:text-slate-500 uppercase tracking-widest">
                 Manage roster, rates, and compliance classification.
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-4 relative z-10">
-          <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-            <span className="text-[13px] font-black text-slate-700 tracking-tight uppercase">{items.length} Total</span>
+          <div className="flex items-center gap-3 px-6 py-3 bg-bg dark:bg-slate-800/50 rounded-2xl border border-stroke dark:border-slate-700">
+            <span className="text-[13px] font-black text-slate-700 dark:text-slate-300 tracking-tight uppercase">{items.length} Total</span>
           </div>
         </div>
       </div>
@@ -173,7 +173,7 @@ export function EmployeesPage() {
               <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} required />
               <div className="flex flex-col gap-1">
                 <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <div className="text-[10px] text-slate-400 mt-1 flex gap-1">
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 flex gap-1">
                   <span>⚠️</span>
                   <span>This becomes the login password at <strong>{window.location.origin}</strong></span>
                 </div>
@@ -186,30 +186,29 @@ export function EmployeesPage() {
             </div>
 
             {/* Compliance accordion */}
-            <div style={{ border: "1px solid var(--stroke)", borderRadius: 10, overflow: "hidden" }}>
+            <div className="rounded-2xl border border-stroke dark:border-slate-800 overflow-hidden bg-surface dark:bg-slate-950/20 shadow-sm">
               <button
                 type="button"
                 onClick={() => setShowComplianceFields(v => !v)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "12px 16px", background: "var(--surface)", border: "none", cursor: "pointer",
-                  fontWeight: 700, fontSize: 13, color: "var(--fg)",
-                }}
+                className="w-full flex items-center justify-between px-6 py-4 bg-surface2 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-none cursor-pointer"
               >
-                <span>⚖️ Compliance &amp; Payroll Classification</span>
-                {showComplianceFields ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">⚖️</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Compliance & Payroll Classification</span>
+                </div>
+                {showComplianceFields ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
               </button>
 
               {showComplianceFields && (
-                <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 16 }}>
+                <div className="p-6 flex flex-col gap-8 bg-surface dark:bg-slate-900/40">
                   {/* Region */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-                    <div className="flex flex-col gap-1">
-                      <label className="fieldLabel">Country</label>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Country</label>
                       <select
                         value={country}
                         onChange={e => setCountry(e.target.value)}
-                        style={{ border: "1px solid var(--stroke)", borderRadius: 8, padding: "8px 12px", fontSize: 14, background: "var(--bg)", color: "var(--fg)" }}
+                        className="w-full h-11 px-4 rounded-xl border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/60 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                       >
                         <option value="US">🇺🇸 United States</option>
                         <option value="UK">🇬🇧 United Kingdom</option>
@@ -240,23 +239,23 @@ export function EmployeesPage() {
 
                   {/* US FLSA classification */}
                   {country === "US" && (
-                    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: 14 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#1d4ed8", marginBottom: 10 }}>
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-5">
+                      <div className="font-black text-[11px] text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4">
                         🇺🇸 US FLSA Classification
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="flex flex-col gap-1">
-                          <label className="fieldLabel">Exempt Status</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Exempt Status</label>
                           <select
                             value={exemptStatus}
                             onChange={e => setExemptStatus(e.target.value)}
-                            style={{ border: "1px solid var(--stroke)", borderRadius: 8, padding: "8px 12px", fontSize: 14, background: "var(--bg)", color: "var(--fg)" }}
+                            className="w-full h-11 px-4 rounded-xl border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/60 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                           >
                             <option value="non_exempt">Non-Exempt (eligible for OT pay)</option>
                             <option value="exempt">Exempt (no OT pay required)</option>
                             <option value="pending">Pending Classification</option>
                           </select>
-                          <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1.5 uppercase font-bold tracking-wider">
                             Exempt threshold: $844/week salary + duties test
                           </div>
                         </div>
@@ -271,7 +270,7 @@ export function EmployeesPage() {
                             step="0.01"
                           />
                           {weeklySalary && (
-                            <div style={{ fontSize: 11, marginTop: 2, fontWeight: 600, color: Number(weeklySalary) >= 844 ? "#059669" : "#dc2626" }}>
+                            <div className={`text-[10px] mt-2 font-black uppercase tracking-wider ${Number(weeklySalary) >= 844 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                               {Number(weeklySalary) >= 844
                                 ? "✓ Meets $844/wk FLSA threshold — verify duties test"
                                 : "✗ Below $844/wk threshold — likely non-exempt"}
@@ -284,22 +283,22 @@ export function EmployeesPage() {
 
                   {/* UK payroll */}
                   {country === "UK" && (
-                    <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: 14 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: "#166534", marginBottom: 10 }}>
+                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl p-5">
+                      <div className="font-black text-[11px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-4">
                         🇬🇧 UK PAYE &amp; NI Settings
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                         <div className="flex flex-col gap-1">
                           <label className="fieldLabel">Tax Code</label>
                           <input className="input" value={ukTaxCode} onChange={e => setUkTaxCode(e.target.value)} placeholder="e.g. 1257L" />
-                          <div style={{ fontSize: 11, color: "#64748b" }}>Standard personal allowance: 1257L</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1 uppercase font-bold tracking-wider">Standard personal allowance: 1257L</div>
                         </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="fieldLabel">NI Category Letter</label>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">NI Category Letter</label>
                           <select
                             value={ukNiCategory}
                             onChange={e => setUkNiCategory(e.target.value)}
-                            style={{ border: "1px solid var(--stroke)", borderRadius: 8, padding: "8px 12px", fontSize: 14, background: "var(--bg)", color: "var(--fg)" }}
+                            className="w-full h-11 px-4 rounded-xl border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/60 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
                           >
                             <option value="A">A — Standard (most employees)</option>
                             <option value="B">B — Married women / widows (reduced)</option>
@@ -342,70 +341,70 @@ export function EmployeesPage() {
 
         <Card title="Roster">
           {loading ? (
-            <div className="text-slate-400 flex items-center gap-2">
+            <div className="text-slate-400 dark:text-slate-600 flex items-center gap-2">
               <Loader2 className="animate-spin" size={16} />Loading…
             </div>
           ) : items.length ? (
             <div className="w-full overflow-x-auto">
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid var(--stroke)", textTransform: "uppercase", fontSize: 11, color: "var(--muted)", letterSpacing: "0.05em" }}>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>ID</th>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>User</th>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>Title</th>
-                    <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700 }}>Rate</th>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>Region</th>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>Classification</th>
-                    <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700 }}>UK Payroll</th>
-                    <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700 }}>Status</th>
+                  <tr className="bg-bg dark:bg-slate-800/50 border-b-2 border-stroke dark:border-slate-800">
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">ID</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">User</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Title</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-right">Rate</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Region</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Classification</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">UK Payroll</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-stroke dark:divide-slate-800">
                   {items.map((e) => (
-                    <tr key={e.id} style={{ borderBottom: "1px solid var(--stroke2)" }}>
-                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "var(--fg)" }}>{e.employee_id}</td>
-                      <td style={{ padding: "10px 12px", color: "var(--muted)" }}>
-                        {e.user?.username}
-                        {e.user?.email && <div style={{ fontSize: 11 }}>{e.user.email}</div>}
+                    <tr key={e.id} className="hover:bg-bg dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-5 font-bold text-slate-900 dark:text-white">{e.employee_id}</td>
+                      <td className="px-6 py-5 text-slate-600 dark:text-slate-400">
+                        <div className="font-bold">{e.user?.username}</div>
+                        {e.user?.email && <div className="text-[11px] opacity-60 font-medium">{e.user.email}</div>}
                       </td>
-                      <td style={{ padding: "10px 12px", color: "var(--fg)" }}>{e.title || "—"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>
+                      <td className="px-6 py-5 text-slate-700 dark:text-slate-300">{e.title || "—"}</td>
+                      <td className="px-6 py-5 text-right font-black text-slate-900 dark:text-white">
                         {e.country === "UK" ? "£" : "$"}{e.hourly_rate}/hr
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>
+                      <td className="px-6 py-5">
+                        <div className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                           {e.country === "UK" ? "🇬🇧 UK" : e.country === "US" ? "🇺🇸 US" : (e.country || "—")}
                         </div>
-                        {e.state && <div style={{ fontSize: 11, color: "var(--muted)" }}>{e.state}</div>}
+                        {e.state && <div className="text-[10px] text-slate-500 dark:text-slate-500 uppercase font-bold">{e.state}</div>}
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td className="px-6 py-5">
                         {e.country === "US" ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          <div className="flex flex-col gap-1.5">
                             <ExemptBadge status={e.exempt_status} />
                             {e.weekly_salary && (
-                              <span style={{ fontSize: 11, color: "var(--muted)" }}>${e.weekly_salary}/wk</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-tighter">${e.weekly_salary}/wk</span>
                             )}
                             {e.flsa_duties_category && (
-                              <span style={{ fontSize: 10, color: "#6366f1", textTransform: "uppercase", fontWeight: 600 }}>{e.flsa_duties_category}</span>
+                              <span className="text-[9px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest">{e.flsa_duties_category}</span>
                             )}
                           </div>
-                        ) : "—"}
+                        ) : <span className="text-slate-400 dark:text-slate-600 italic text-xs">N/A</span>}
                       </td>
-                      <td style={{ padding: "10px 12px" }}>
+                      <td className="px-6 py-5">
                         {e.country === "UK" ? (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Tax: {e.uk_tax_code || "—"}</span>
-                            <span style={{ fontSize: 11, color: "var(--muted)" }}>NI Cat: {e.uk_ni_category || "—"}</span>
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">Tax: {e.uk_tax_code || "—"}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase">NI Cat: {e.uk_ni_category || "—"}</span>
                             {e.rolled_up_holiday_pay && (
-                              <span style={{ fontSize: 10, color: "#059669", fontWeight: 700 }}>Rolled-up holiday</span>
+                              <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest">Rolled-up holiday</span>
                             )}
                             {e.wtr_opt_out_active && (
-                              <span style={{ fontSize: 10, color: "#d97706", fontWeight: 700 }}>48hr opt-out</span>
+                              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-widest">48hr opt-out</span>
                             )}
                           </div>
-                        ) : "—"}
+                        ) : <span className="text-slate-400 dark:text-slate-600 italic text-xs">N/A</span>}
                       </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                      <td className="px-6 py-5 text-right">
                         <Pill tone={e.is_active ? "good" : "bad"}>{e.is_active ? "active" : "inactive"}</Pill>
                       </td>
                     </tr>

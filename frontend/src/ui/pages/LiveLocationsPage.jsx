@@ -375,7 +375,7 @@ export function LiveLocationsPage() {
             <Activity size={20} />
           </div>
           <div>
-            <h1 className="text-xl professional-title text-slate-900">Live Operations</h1>
+            <h1 className="text-xl professional-title text-slate-900 dark:text-white">Live Operations</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
               <div style={{ width: 8, height: 8, borderRadius: "50%", background: connected ? "#059669" : "#E94560", boxShadow: connected ? "0 0 0 4px rgba(5,150,105,.2)" : "none", transition: "all 0.3s" }} />
               <span style={{ fontSize: 10, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>

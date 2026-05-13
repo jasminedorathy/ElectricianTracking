@@ -618,9 +618,9 @@ export function PeopleSettingsPage() {
                 fetchMembers()
             } catch (err) {
                 console.error("Failed to add member:", err)
-                const errorMsg = err?.body?.detail || 
-                               (typeof err?.body === 'object' ? Object.values(err.body)[0] : null) || 
-                               err?.message || "Error"
+                const errorMsg = err?.body?.detail ||
+                    (typeof err?.body === 'object' ? Object.values(err.body)[0] : null) ||
+                    err?.message || "Error"
                 setQueue(prev => prev.map(q =>
                     (q.email === r.email && q.name === r.name) ? { ...q, status: errorMsg } : q
                 ))

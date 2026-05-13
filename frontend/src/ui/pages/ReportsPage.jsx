@@ -56,11 +56,13 @@ function Report3DCard({ label, value }) {
       className="relative group cursor-default w-full h-[240px]"
     >
       <div
-        className="relative h-full w-full rounded-3xl p-8 bg-white border border-slate-100/50 shadow-xl overflow-hidden transition-all duration-200 ease-out"
+        className="relative h-full w-full rounded-3xl p-8 bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-200 ease-out"
         style={{
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           transformStyle: "preserve-3d",
-          boxShadow: isHovered ? "0 40px 80px -12px rgba(0,0,0,0.15)" : "0 20px 40px -12px rgba(0,0,0,0.05)"
+          boxShadow: isHovered 
+            ? "0 40px 80px -12px rgba(0,0,0,0.3)" 
+            : "0 20px 40px -12px rgba(0,0,0,0.1)"
         }}
       >
         {/* Glossy Reflection Overlay */}
@@ -80,10 +82,10 @@ function Report3DCard({ label, value }) {
           </div>
 
           <div className="mt-auto">
-            <div className="text-6xl professional-title text-slate-900 leading-none mb-1">
+            <div className="text-6xl font-black text-slate-900 dark:text-white leading-none mb-2 tracking-tighter">
               {value ?? "—"}
             </div>
-            <div className="text-[13px] professional-subtitle text-slate-500">
+            <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {label}
             </div>
           </div>
@@ -142,16 +144,16 @@ export function ReportsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-slate-50 overflow-hidden">
-        <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-bg dark:bg-bg overflow-hidden">
+        <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
           <div className="flex items-center gap-6">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight font-[Manrope] flex items-center gap-3">
-                <BarChart3 className="text-indigo-600" size={24} />
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope] flex items-center gap-3">
+                <BarChart3 className="text-indigo-600 dark:text-indigo-400" size={24} />
                 Reports
               </h1>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                <span className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">
                   Admin access required.
                 </span>
               </div>
@@ -160,7 +162,7 @@ export function ReportsPage() {
         </div>
         <div className="flex-1 overflow-y-auto p-10 space-y-10">
           <Card>
-            <div className="text-slate-400 italic">You don't have permission to view this page.</div>
+            <div className="text-slate-400 dark:text-slate-600 italic">You don't have permission to view this page.</div>
           </Card>
         </div>
       </div>
@@ -168,17 +170,17 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-slate-50 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-bg dark:bg-bg overflow-hidden">
       {/* ── HEADER ── */}
-      <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
         <div className="flex items-center gap-6">
           <div>
-            <h1 className="text-2xl professional-title text-slate-900 flex items-center gap-3">
-              <BarChart3 className="text-indigo-600" size={24} />
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope] flex items-center gap-3">
+              <BarChart3 className="text-indigo-600 dark:text-indigo-400" size={24} />
               Reports
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-[10px] professional-subtitle text-slate-500">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest opacity-80">
                 A clean overview for decision-making.
               </span>
             </div>
@@ -186,8 +188,8 @@ export function ReportsPage() {
         </div>
         <div className="flex items-center gap-4 relative z-10">
           {data?.range?.start && data?.range?.end && (
-            <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[13px] font-black text-slate-700 tracking-tight uppercase">{data.range.start} → {data.range.end}</span>
+            <div className="flex items-center gap-3 px-6 py-3 bg-bg dark:bg-slate-950/40 rounded-2xl border border-stroke dark:border-slate-800 shadow-sm">
+              <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 tracking-tight uppercase">{data.range.start} → {data.range.end}</span>
             </div>
           )}
         </div>

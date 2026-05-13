@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Save, Camera, User, Globe, Languages, Phone, Link as LinkIcon, Loader2 } from "lucide-react"
 import { apiRequest } from "../../../api/client.js"
 import { useAuth } from "../../../state/auth/useAuth.js"
+import { Input, Select, TextArea } from "../../components/kit.jsx"
 
 const TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
@@ -44,8 +45,8 @@ export default function ProfileSection({ markDirty, showToast, Field, SectionHea
   useEffect(() => {
     if (user) {
       setForm({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
+        first_name: user.firstName || "",
+        last_name: user.lastName || "",
         bio: user.bio || "",
         phone: user.phone || "",
         timezone: user.timezone || "UTC",
@@ -142,53 +143,38 @@ export default function ProfileSection({ markDirty, showToast, Field, SectionHea
       <div className="stCard">
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginBottom: 16 }}>Personal Information</div>
         <div className="stFormGrid">
-          <Field label="First name" half>
-            <input
-              className="stInput"
-              value={form.first_name}
-              placeholder="First name"
-              onChange={e => handleChange("first_name", e.target.value)}
-            />
-          </Field>
-          <Field label="Last name" half>
-            <input
-              className="stInput"
-              value={form.last_name}
-              placeholder="Last name"
-              onChange={e => handleChange("last_name", e.target.value)}
-            />
-          </Field>
-          <Field label="Phone number">
-            <div className="stInputAddon">
-              <span className="stInputAddonPrefix"><Phone size={13} /></span>
-              <input
-                className="stInput stInputAddonField"
-                value={form.phone}
-                placeholder="+1 (555) 000-0000"
-                onChange={e => handleChange("phone", e.target.value)}
-              />
-            </div>
-          </Field>
-          <Field label="Profile link">
-            <div className="stInputAddon">
-              <span className="stInputAddonPrefix">quicktims.com/u/</span>
-              <input
-                className="stInput stInputAddonField"
-                value={user?.username || ""}
-                readOnly
-                style={{ opacity: 0.6 }}
-              />
-            </div>
-          </Field>
-          <Field label="Bio">
-            <textarea
-              className="stInput stTextarea"
+          <Input
+            label="First name"
+            value={form.first_name}
+            placeholder="First name"
+            onChange={e => handleChange("first_name", e.target.value)}
+          />
+          <Input
+            label="Last name"
+            value={form.last_name}
+            placeholder="Last name"
+            onChange={e => handleChange("last_name", e.target.value)}
+          />
+          <Input
+            label="Phone number"
+            value={form.phone}
+            placeholder="+1 (555) 000-0000"
+            onChange={e => handleChange("phone", e.target.value)}
+          />
+          <Input
+            label="Profile link"
+            value={`quicktims.com/u/${user?.username || ""}`}
+            readOnly
+            style={{ opacity: 0.6 }}
+          />
+          <div className="col-span-full">
+            <TextArea
+              label="Bio"
               value={form.bio}
               placeholder="A short bio about yourself..."
               onChange={e => handleChange("bio", e.target.value)}
-              rows={3}
             />
-          </Field>
+          </div>
         </div>
         <div className="stCardActions">
           <button className="stPrimaryBtn" onClick={handleSave} disabled={saving}>
@@ -202,32 +188,18 @@ export default function ProfileSection({ markDirty, showToast, Field, SectionHea
       <div className="stCard">
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginBottom: 16 }}>Locale & Language</div>
         <div className="stFormGrid">
-          <Field label="Timezone" half>
-            <div style={{ position: "relative" }}>
-              <Globe size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-              <select
-                className="stInput stSelect"
-                style={{ paddingLeft: 30 }}
-                value={form.timezone}
-                onChange={e => handleChange("timezone", e.target.value)}
-              >
-                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
-          </Field>
-          <Field label="Language" half>
-            <div style={{ position: "relative" }}>
-              <Languages size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-              <select
-                className="stInput stSelect"
-                style={{ paddingLeft: 30 }}
-                value={form.language}
-                onChange={e => handleChange("language", e.target.value)}
-              >
-                {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-              </select>
-            </div>
-          </Field>
+          <Select
+            label="Timezone"
+            value={form.timezone}
+            onChange={e => handleChange("timezone", e.target.value)}
+            options={TIMEZONES.map(tz => ({ label: tz.replace(/_/g, " "), value: tz }))}
+          />
+          <Select
+            label="Language"
+            value={form.language}
+            onChange={e => handleChange("language", e.target.value)}
+            options={LANGUAGES}
+          />
         </div>
         <div className="stCardActions">
           <button className="stPrimaryBtn" onClick={handleSave} disabled={saving}>

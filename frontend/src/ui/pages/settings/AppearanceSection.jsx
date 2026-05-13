@@ -69,40 +69,52 @@ export default function AppearanceSection({ showToast, SectionHeader }) {
       <SectionHeader title="Appearance" subtitle="Customize the look and feel of your QuickTIMS workspace." />
 
       {/* Theme */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Sun size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Color mode</span>
+      <div className="bg-surface dark:bg-slate-900/60 rounded-2xl p-6 border border-stroke dark:border-slate-800 shadow-sm mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Sun size={18} />
+          </div>
+          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Color mode</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {THEMES.map(theme => (
             <button
               key={theme.key}
               onClick={() => update("theme", theme.key)}
-              style={{
-                border: prefs.theme === theme.key ? "2px solid #1A56DB" : "1px solid var(--stroke2)",
-                borderRadius: 12, padding: 0, cursor: "pointer", background: "none",
-                overflow: "hidden", transition: "all .2s",
-              }}
+              className={`relative flex flex-col rounded-2xl overflow-hidden border-2 transition-all group ${
+                prefs.theme === theme.key 
+                  ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/10" 
+                  : "border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}
             >
               {/* Mini preview */}
-              <div style={{
-                height: 80, background: typeof theme.preview.bg === "string" && theme.preview.bg.startsWith("linear") ? theme.preview.bg : theme.preview.bg,
-                position: "relative", overflow: "hidden",
-              }}>
+              <div 
+                className="h-24 relative overflow-hidden"
+                style={{ background: theme.preview.bg }}
+              >
                 {theme.key !== "system" && (
-                  <>
-                    <div style={{ position: "absolute", top: 10, left: 10, right: 10, height: 12, borderRadius: 4, background: theme.preview.surface, opacity: 0.9 }} />
-                    <div style={{ position: "absolute", top: 28, left: 10, width: "60%", height: 8, borderRadius: 4, background: theme.preview.fg, opacity: 0.15 }} />
-                    <div style={{ position: "absolute", top: 40, left: 10, width: "40%", height: 8, borderRadius: 4, background: theme.preview.fg, opacity: 0.1 }} />
-                  </>
+                  <div className="absolute inset-x-4 top-4 space-y-2">
+                    <div className="h-2.5 rounded-full bg-white/20 w-3/4" />
+                    <div className="h-2 rounded-full bg-white/10 w-1/2" />
+                    <div className="h-2 rounded-full bg-white/5 w-1/3" />
+                  </div>
+                )}
+                {theme.key === "system" && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                    <Monitor size={48} className="text-slate-400" />
+                  </div>
                 )}
               </div>
-              <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface2)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
-                  {theme.icon} {theme.label}
+              <div className="p-4 flex items-center justify-between bg-surface2 dark:bg-slate-900/80 border-t border-stroke dark:border-slate-800">
+                <div className={`flex items-center gap-3 text-sm font-bold ${prefs.theme === theme.key ? "text-indigo-600 dark:text-indigo-400" : "text-slate-600 dark:text-slate-400"}`}>
+                  {theme.icon}
+                  {theme.label}
                 </div>
-                {prefs.theme === theme.key && <Check size={14} style={{ color: "#1A56DB" }} />}
+                {prefs.theme === theme.key && (
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white">
+                    <Check size={12} strokeWidth={3} />
+                  </div>
+                )}
               </div>
             </button>
           ))}
@@ -110,87 +122,91 @@ export default function AppearanceSection({ showToast, SectionHeader }) {
       </div>
 
       {/* Accent color */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <div style={{ width: 15, height: 15, borderRadius: 4, background: ACCENT_COLORS.find(c => c.key === prefs.accent)?.value || "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Accent color</span>
+      <div className="bg-surface dark:bg-slate-900/60 rounded-2xl p-6 border border-stroke dark:border-slate-800 shadow-sm mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Layers size={18} />
+          </div>
+          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Accent color</span>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <div className="flex flex-wrap gap-4">
           {ACCENT_COLORS.map(color => (
             <button
               key={color.key}
               onClick={() => update("accent", color.key)}
               title={color.label}
-              style={{
-                width: 36, height: 36, borderRadius: "50%", background: color.value,
-                border: prefs.accent === color.key ? `3px solid ${color.value}` : "2px solid transparent",
-                outline: prefs.accent === color.key ? `2px solid ${color.value}44` : "none",
-                outlineOffset: 2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all .15s",
-              }}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border-2 ${
+                prefs.accent === color.key 
+                  ? "border-indigo-600 dark:border-indigo-500 scale-110 shadow-lg" 
+                  : "border-transparent hover:scale-105"
+              }`}
+              style={{ backgroundColor: color.value }}
             >
-              {prefs.accent === color.key && <Check size={14} style={{ color: "#fff" }} />}
+              {prefs.accent === color.key && <Check size={18} className="text-white drop-shadow-md" strokeWidth={4} />}
             </button>
           ))}
         </div>
-        <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted)" }}>
-          Selected: <strong style={{ color: ACCENT_COLORS.find(c => c.key === prefs.accent)?.value }}>{ACCENT_COLORS.find(c => c.key === prefs.accent)?.label}</strong>
+        <div className="mt-6 text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2">
+          Current selection: <span className="text-slate-900 dark:text-white font-black uppercase tracking-widest">{ACCENT_COLORS.find(c => c.key === prefs.accent)?.label}</span>
         </div>
       </div>
 
       {/* Density */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Layers size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Layout density</span>
+      <div className="bg-surface dark:bg-slate-900/60 rounded-2xl p-6 border border-stroke dark:border-slate-800 shadow-sm mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Layers size={18} />
+          </div>
+          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Layout density</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {DENSITIES.map(density => (
             <button
               key={density.key}
               onClick={() => update("density", density.key)}
-              style={{
-                border: prefs.density === density.key ? "2px solid #1A56DB" : "1px solid var(--stroke2)",
-                borderRadius: 12, padding: 16, cursor: "pointer", background: prefs.density === density.key ? "#EFF4FF" : "var(--surface2)",
-                textAlign: "left", transition: "all .15s",
-              }}
+              className={`flex flex-col p-5 rounded-2xl border-2 transition-all text-left ${
+                prefs.density === density.key 
+                  ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/10" 
+                  : "border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}
             >
-              <div style={{ display: "flex", flexDirection: "column", gap: density.key === "compact" ? 3 : density.key === "comfortable" ? 5 : 8, marginBottom: 12 }}>
+              <div className={`flex flex-col mb-4 space-y-1.5`}>
                 {density.lines.map((w, i) => (
-                  <div key={i} style={{ height: 3, borderRadius: 2, width: `${w * 10}%`, background: prefs.density === density.key ? "#1A56DB" : "var(--stroke2)" }} />
+                  <div key={i} className={`h-1 rounded-full ${prefs.density === density.key ? "bg-indigo-600/40 dark:bg-indigo-500/40" : "bg-slate-200 dark:bg-slate-800"}`} style={{ width: `${w * 10}%` }} />
                 ))}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {density.label}
-                {prefs.density === density.key && <Check size={12} style={{ color: "#1A56DB" }} />}
+              <div className="flex items-center justify-between mb-1">
+                <span className={`text-sm font-bold ${prefs.density === density.key ? "text-indigo-600 dark:text-indigo-400" : "text-slate-900 dark:text-white"}`}>{density.label}</span>
+                {prefs.density === density.key && <Check size={14} className="text-indigo-600 dark:text-indigo-400" strokeWidth={3} />}
               </div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>{density.desc}</div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">{density.desc}</p>
             </button>
           ))}
         </div>
       </div>
 
       {/* Font size */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Type size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Font size</span>
+      <div className="bg-surface dark:bg-slate-900/60 rounded-2xl p-6 border border-stroke dark:border-slate-800 shadow-sm mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Type size={18} />
+          </div>
+          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Font size</span>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {FONT_SIZES.map(size => (
             <button
               key={size.key}
               onClick={() => update("fontSize", size.key)}
-              style={{
-                border: prefs.fontSize === size.key ? "2px solid #1A56DB" : "1px solid var(--stroke2)",
-                borderRadius: 10, padding: "14px 12px", cursor: "pointer",
-                background: prefs.fontSize === size.key ? "#EFF4FF" : "var(--surface2)",
-                textAlign: "center", transition: "all .15s",
-              }}
+              className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${
+                prefs.fontSize === size.key 
+                  ? "border-indigo-600 dark:border-indigo-500 bg-indigo-50/10" 
+                  : "border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700"
+              }`}
             >
-              <div style={{ fontSize: size.px, fontWeight: 800, color: prefs.fontSize === size.key ? "#1A56DB" : "var(--fg)", marginBottom: 4, lineHeight: 1 }}>Aa</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: prefs.fontSize === size.key ? "#1A56DB" : "var(--muted)" }}>{size.label}</div>
-              <div style={{ fontSize: 10, color: "var(--subtle)", marginTop: 2 }}>{size.px}px</div>
+              <div className={`font-black mb-2 transition-all ${prefs.fontSize === size.key ? "text-indigo-600 dark:text-indigo-500" : "text-slate-900 dark:text-white"}`} style={{ fontSize: size.px + 4 }}>Aa</div>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${prefs.fontSize === size.key ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-slate-400"}`}>{size.label}</span>
+              <span className="text-[10px] text-slate-300 dark:text-slate-600 font-mono mt-1">{size.px}px</span>
             </button>
           ))}
         </div>

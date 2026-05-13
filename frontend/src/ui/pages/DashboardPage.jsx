@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef, lazy, Suspense } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from "framer-motion"
 import { Clock, Users, Briefcase, CalendarDays, DollarSign, Loader2, AlertCircle, Timer, Activity, MapPin, ShieldAlert, TrendingUp, FileWarning, BadgeCheck, XCircle } from "lucide-react"
 
@@ -68,14 +69,15 @@ function formatMoney(n) {
 
 function ChartPlaceholder() {
   return (
-    <div className="flex items-center justify-center h-full w-full bg-slate-50/50 rounded-xl border border-dashed border-slate-200 animate-pulse">
-      <Loader2 className="text-slate-200 animate-spin" size={20} />
+    <div className="flex items-center justify-center h-full w-full bg-bg dark:bg-slate-950/40 rounded-xl border border-dashed border-stroke dark:border-slate-800 animate-pulse">
+      <Loader2 className="text-slate-200 dark:text-slate-800 animate-spin" size={20} />
     </div>
   )
 }
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [analytics, setAnalytics] = useState(null)
@@ -734,8 +736,8 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-[1600px] mx-auto flex flex-col gap-6 bg-slate-50 min-h-screen">
-        <div className="flex items-center justify-center gap-3 h-[50vh] text-slate-500 text-lg font-medium">
+      <div className="p-6 max-w-[1600px] mx-auto flex flex-col gap-6 bg-bg dark:bg-bg min-h-screen">
+        <div className="flex items-center justify-center gap-3 h-[50vh] text-slate-500 dark:text-slate-400 text-lg font-medium">
           <Loader2 className="animate-spin" size={24} />
           <span>Loading analytics…</span>
         </div>
@@ -744,35 +746,76 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto flex flex-col gap-6 bg-slate-50 min-h-screen">
-      {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 font-medium">
-          <AlertCircle size={18} /> {error}
-        </div>
+    <div className="p-6 max-w-[1600px] mx-auto flex flex-col gap-6 bg-bg dark:bg-bg min-h-screen">
+      {/* ── Onboarding Progress Banner (Top Simple View) ── */}
+      {!complianceDismissed && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-surface dark:bg-slate-900/50 rounded-xl shadow-sm border border-stroke dark:border-slate-800 p-6 flex items-center gap-6 relative group hover:shadow-md transition-shadow cursor-pointer mb-2"
+          onClick={() => navigate("/get-started")}
+        >
+          <div className="relative w-16 h-16 flex-shrink-0">
+            <svg className="w-full h-full" viewBox="0 0 36 36">
+              <path
+                className="text-slate-100 dark:text-slate-800"
+                stroke="currentColor"
+                strokeWidth="3"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <motion.path
+                className="text-orange-500"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeDasharray="100, 100"
+                initial={{ strokeDasharray: "0, 100" }}
+                animate={{ strokeDasharray: "20, 100" }}
+                transition={{ duration: 1, delay: 0.5 }}
+                strokeLinecap="round"
+                fill="none"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-[0.7rem] font-black text-slate-800 dark:text-slate-200">
+              20%
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">
+              Complete setting up your organization
+            </h3>
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider">
+              1 of 5 steps completed
+            </p>
+          </div>
+          <div className="ml-auto flex items-center gap-4">
+            <div className="text-indigo-600 dark:text-indigo-400 font-bold text-xs bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+              Resume Setup
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setComplianceDismissed(true); }}
+              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-400 dark:text-slate-600 transition-colors"
+            >
+              <XCircle size={18} />
+            </button>
+          </div>
+        </motion.div>
       )}
 
       {/* ── Compliance Risk Banner (admin only) ── */}
       {user?.role === "admin" && !complianceDismissed && (otAlerts.length > 0 || wageViolations.length > 0 || rtwExpiring.length > 0) && (
-        <div style={{
-          background: "linear-gradient(135deg, #fef3c7 0%, #fde8d8 100%)",
-          border: "1.5px solid #f59e0b",
-          borderRadius: 14,
-          padding: "16px 20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          position: "relative",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <ShieldAlert size={22} color="#d97706" />
-              <span style={{ fontWeight: 700, fontSize: 15, color: "#92400e" }}>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-500/50 dark:border-amber-500/30 rounded-2xl p-5 flex flex-col gap-3 relative shadow-sm mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <ShieldAlert size={20} className="text-amber-600 dark:text-amber-400" />
+              <span className="font-bold text-[15px] text-amber-900 dark:text-amber-100">
                 Compliance Alerts — Action Required
               </span>
             </div>
             <button
               onClick={() => setComplianceDismissed(true)}
-              style={{ background: "none", border: "none", cursor: "pointer", color: "#92400e", display: "flex", alignItems: "center" }}
+              className="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-lg text-amber-900/60 dark:text-amber-100/60 transition-colors"
             >
               <XCircle size={18} />
             </button>
@@ -850,10 +893,10 @@ export function DashboardPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 overflow-hidden transition-all duration-500">
         <div className="px-6 pt-5 pb-1.5">
-          <div className="text-[1.25rem] professional-title text-slate-900">Key Performance Indicators</div>
-          <div className="text-[0.9rem] text-slate-400 font-medium mt-1">Strategic overview</div>
+          <div className="text-[1.25rem] professional-title text-slate-900 dark:text-white">Key Performance Indicators</div>
+          <div className="text-[0.9rem] text-slate-400 dark:text-slate-500 font-medium mt-1">Strategic overview</div>
         </div>
 
         <div className="p-8 pb-12 grid grid-cols-1 lg:grid-cols-[1fr_260px_1fr] lg:grid-rows-[repeat(3,minmax(110px,auto))] gap-x-24 gap-y-12 items-center">
@@ -864,20 +907,20 @@ export function DashboardPage() {
               transition={{ duration: 1, type: "spring" }}
               className="relative w-[180px] h-[180px] grid place-items-center"
             >
-              <div className="absolute inset-0 rounded-full border-2 border-dashed border-slate-400/60 animate-[spin_20s_linear_infinite]">
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] -top-[7px] left-1/2 -translate-x-1/2" style={{ backgroundColor: kpiEmp.color }} />
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] top-[24px] right-[12px]" style={{ backgroundColor: kpiHrs.color }} />
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] top-1/2 -right-[7px] -translate-y-1/2" style={{ backgroundColor: kpiPay.color }} />
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] bottom-[24px] right-[12px]" style={{ backgroundColor: kpiShft.color }} />
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] -bottom-[7px] left-1/2 -translate-x-1/2" style={{ backgroundColor: kpiLvs.color }} />
-                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-[0_0_15px_rgba(0,0,0,0.1)] top-1/2 -left-[7px] -translate-y-1/2" style={{ backgroundColor: kpiTsk.color }} />
+              <div className="absolute inset-0 rounded-full border-2 border-dashed border-slate-400/60 dark:border-slate-700/60 animate-[spin_20s_linear_infinite]">
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] -top-[7px] left-1/2 -translate-x-1/2" style={{ backgroundColor: kpiEmp.color }} />
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] top-[24px] right-[12px]" style={{ backgroundColor: kpiHrs.color }} />
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] top-1/2 -right-[7px] -translate-y-1/2" style={{ backgroundColor: kpiPay.color }} />
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] bottom-[24px] right-[12px]" style={{ backgroundColor: kpiShft.color }} />
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] -bottom-[7px] left-1/2 -translate-x-1/2" style={{ backgroundColor: kpiLvs.color }} />
+                <span className="absolute w-[14px] h-[14px] rounded-full border-[3px] border-surface dark:border-slate-800 shadow-[0_0_15px_rgba(0,0,0,0.1)] top-1/2 -left-[7px] -translate-y-1/2" style={{ backgroundColor: kpiTsk.color }} />
               </div>
               <motion.div
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                className="w-[96px] h-[96px] rounded-3xl bg-white border border-slate-200 shadow-[0_15px_40px_rgba(0,0,0,0.1)] flex items-center justify-center text-slate-900 z-10 relative overflow-hidden group"
+                className="w-[96px] h-[96px] rounded-3xl bg-surface dark:bg-slate-800 border border-stroke dark:border-slate-700 shadow-[0_15px_40px_rgba(0,0,0,0.1)] flex items-center justify-center text-slate-900 dark:text-white z-10 relative overflow-hidden group"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Activity size={32} className="text-indigo-600 group-hover:animate-pulse" />
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Activity size={32} className="text-indigo-600 dark:text-indigo-400 group-hover:animate-pulse" />
               </motion.div>
 
               {/* Outer Pulse Rings */}
@@ -914,10 +957,10 @@ export function DashboardPage() {
 
       {/* ── Row 1: Hours by Employee + Task Status Donut + Leave Status Pie ── */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-[2fr_1fr_1fr]">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Hours by Employee</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 30 days</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Hours by Employee</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Last 30 days</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {hoursByEmployee.length ? (
@@ -925,14 +968,14 @@ export function DashboardPage() {
                 <BarChart data={hbeData} options={hbeOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No time data available</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-950/40 rounded-lg border border-dashed border-stroke dark:border-slate-800">No time data available</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Task Status</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Task Status</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {tsLabels.length ? (
@@ -940,14 +983,14 @@ export function DashboardPage() {
                 <DoughnutChart data={tsData} options={donutOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No tasks</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No tasks</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Leave Status</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Leave Status</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {lsLabels.length ? (
@@ -955,7 +998,7 @@ export function DashboardPage() {
                 <DoughnutChart data={lsData} options={pieOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No leave data</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No leave data</div>
             )}
           </div>
         </div>
@@ -963,10 +1006,10 @@ export function DashboardPage() {
 
       {/* ── Row 2: Daily Hours Trend (full width) ── */}
       <div className="grid gap-6 grid-cols-1">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Daily Hours Trend</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 30 days</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Daily Hours Trend</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Last 30 days</span>
           </div>
           <div className="p-5 h-[280px] relative">
             <Suspense fallback={<ChartPlaceholder />}>
@@ -978,10 +1021,10 @@ export function DashboardPage() {
 
       {/* ── Row 3: Attendance + Task Category + Payroll Trend ── */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Daily Attendance</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 7 days</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Daily Attendance</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Last 7 days</span>
           </div>
           <div className="p-5 h-[280px] relative">
             <Suspense fallback={<ChartPlaceholder />}>
@@ -990,9 +1033,9 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Tasks by Category</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Tasks by Category</span>
           </div>
           <div className="p-5 h-[280px] relative">
             {tcLabels.length ? (
@@ -1000,14 +1043,14 @@ export function DashboardPage() {
                 <BarChart data={tcData} options={tcOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No categorized tasks</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-950/40 rounded-lg border border-dashed border-stroke dark:border-slate-800">No categorized tasks</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Payroll Trend</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Payroll Trend</span>
           </div>
           <div className="p-5 h-[280px] relative">
             {payrollTrend.length ? (
@@ -1015,7 +1058,7 @@ export function DashboardPage() {
                 <BarChart data={ptData} options={ptOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No payroll data</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No payroll data</div>
             )}
           </div>
         </div>
@@ -1023,10 +1066,10 @@ export function DashboardPage() {
 
       {/* ── Row 4: Location-wise Analysis ── */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Employees by Location</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">{employeesByLoc.length} locations</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Employees by Location</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">{employeesByLoc.length} locations</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {employeesByLoc.length ? (
@@ -1034,15 +1077,15 @@ export function DashboardPage() {
                 <BarChart data={empLocData} options={empLocOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No locations configured</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No locations configured</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Tasks by Location</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Active vs Total</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Tasks by Location</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Active vs Total</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {tasksByLoc.length ? (
@@ -1050,15 +1093,15 @@ export function DashboardPage() {
                 <BarChart data={taskLocData} options={taskLocOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location task data</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No location task data</div>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Hours by Location</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Last 30 days</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Hours by Location</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Last 30 days</span>
           </div>
           <div className="p-5 h-[300px] relative">
             {hoursByLoc.length ? (
@@ -1066,7 +1109,7 @@ export function DashboardPage() {
                 <BarChart data={hrsLocData} options={hrsLocOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location hours data</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-900/50 rounded-lg border border-dashed border-stroke dark:border-slate-800">No location hours data</div>
             )}
           </div>
         </div>
@@ -1074,28 +1117,28 @@ export function DashboardPage() {
 
       {/* ── Row 5: Location Map — Innovative Full-Width ── */}
       <div className="grid gap-6 grid-cols-1">
-        <div className="bg-white rounded-2xl shadow-[0_4px_24px_rgba(15,23,42,0.08)] border border-slate-200 overflow-hidden">
+        <div className="bg-surface dark:bg-slate-900/40 rounded-2xl shadow-sm border border-stroke dark:border-slate-800 overflow-hidden">
           {/* White Header */}
-          <div className="bg-white border-b border-slate-100 px-7 py-5 flex justify-between items-center flex-wrap gap-3">
+          <div className="bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-7 py-5 flex justify-between items-center flex-wrap gap-3">
             <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2.5 text-[1.15rem] professional-title text-slate-900">
-                <MapPin size={20} className="text-indigo-600" />
-                <span>Location <span className="text-indigo-600 italic">Distribution</span> of Employees</span>
+              <div className="flex items-center gap-2.5 text-[1.15rem] professional-title text-slate-900 dark:text-white">
+                <MapPin size={20} className="text-indigo-600 dark:text-indigo-400" />
+                <span>Location <span className="text-indigo-600 dark:text-indigo-400 italic">Distribution</span> of Employees</span>
               </div>
-              <div className="text-[0.82rem] text-slate-500 font-medium pl-[30px]">
+              <div className="text-[0.82rem] text-slate-500 dark:text-slate-500 font-medium pl-[30px]">
                 {locationSummary.length} locations · {locationSummary.reduce((s, l) => s + (l.employees || 0), 0)} total employees
               </div>
             </div>
             <div className="flex gap-4.5">
-              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 tracking-wide">
+              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 dark:text-slate-400 tracking-wide">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
                 Clocked In
               </div>
-              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 tracking-wide ml-4">
+              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 dark:text-slate-400 tracking-wide ml-4">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]" />
                 Clocked Out
               </div>
-              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 tracking-wide ml-4">
+              <div className="flex items-center gap-1.5 text-[0.78rem] font-bold text-slate-600 dark:text-slate-400 tracking-wide ml-4">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.3)]" />
                 Assigned
               </div>
@@ -1105,8 +1148,8 @@ export function DashboardPage() {
           {/* Map + Sidebar Layout */}
           <div className="flex h-[460px]">
             {/* Sidebar location list */}
-            <div className="w-[280px] min-w-[280px] bg-slate-50 border-r border-slate-200 flex flex-col overflow-hidden">
-              <div className="px-5 pt-4 pb-2.5 text-xs font-bold text-slate-500 uppercase tracking-widest">Locations by Activity</div>
+            <div className="w-[280px] min-w-[280px] bg-bg dark:bg-slate-900/50 border-r border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+              <div className="px-5 pt-4 pb-2.5 text-xs font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest">Locations by Activity</div>
               {locationSummary.length ? (
                 <div className="flex-1 overflow-y-auto px-3 pb-3 scrollbar-hide">
                   {locationSummary.map((loc) => {
@@ -1114,15 +1157,15 @@ export function DashboardPage() {
                     return (
                       <div
                         key={loc.name}
-                        className={`p-3.5 rounded-xl cursor-pointer transition-all duration-200 mb-1 ${isHovered ? 'bg-white shadow-[0_2px_8px_rgba(99,102,241,0.1)]' : 'hover:bg-white hover:shadow-[0_2px_8px_rgba(99,102,241,0.1)]'}`}
+                        className={`p-3.5 rounded-xl cursor-pointer transition-all duration-200 mb-1 ${isHovered ? 'bg-surface dark:bg-slate-800 shadow-sm border border-stroke dark:border-slate-700' : 'hover:bg-surface dark:hover:bg-slate-800 hover:shadow-sm border border-transparent hover:border-stroke dark:hover:border-slate-700'}`}
                         onMouseEnter={() => setHoveredLoc(loc.name)}
                         onMouseLeave={() => setHoveredLoc(null)}
                       >
                         <div className="flex justify-between items-center mb-1.5">
-                          <div className="text-[0.88rem] font-bold text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{loc.name}</div>
-                          <div className="text-[0.95rem] font-extrabold text-indigo-600 min-w-[24px] text-right">{loc.employees || 0}</div>
+                          <div className="text-[0.88rem] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{loc.name}</div>
+                          <div className="text-[0.95rem] font-extrabold text-indigo-600 dark:text-indigo-400 min-w-[24px] text-right">{loc.employees || 0}</div>
                         </div>
-                        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1.5">
+                        <div className="h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mb-1.5">
                           <div
                             className="h-full rounded-full transition-all duration-500 min-w-[4px]"
                             style={{
@@ -1158,7 +1201,7 @@ export function DashboardPage() {
                   <DashboardMap locationSummary={locationSummary} />
                 </Suspense>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No locations configured</div>
+                <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-950/40 rounded-lg border border-dashed border-stroke dark:border-slate-800">No locations configured</div>
               )}
             </div>
           </div>
@@ -1167,10 +1210,10 @@ export function DashboardPage() {
 
       {/* ── Row 5b: Clock-in Status Bar Chart (Full Width) ── */}
       <div className="grid gap-6 grid-cols-1">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Clock-in Status by Location</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Today</span>
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Clock-in Status by Location</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-900/50">Today</span>
           </div>
           <div className="p-5 h-[320px] relative">
             {locationSummary.length ? (
@@ -1178,7 +1221,7 @@ export function DashboardPage() {
                 <BarChart data={clockLocData} options={clockLocOptions} />
               </Suspense>
             ) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300">No location data</div>
+              <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-950/40 rounded-lg border border-dashed border-stroke dark:border-slate-800">No location data</div>
             )}
           </div>
         </div>
@@ -1186,10 +1229,10 @@ export function DashboardPage() {
 
       {/* ── Row 6: Location Summary Table ── */}
       <div className="grid gap-6 grid-cols-1">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-            <span className="text-[1.05rem] font-bold text-slate-800">Location Summary</span>
-            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full flex items-center">
+        <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 flex flex-col overflow-hidden">
+          <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center">
+            <span className="text-[1.05rem] font-bold text-slate-800 dark:text-slate-200">Location Summary</span>
+            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full flex items-center border border-indigo-100 dark:border-indigo-900/50">
               <MapPin size={14} className="mr-1" />
               {locationSummary.length} Locations
             </span>
@@ -1199,52 +1242,52 @@ export function DashboardPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Location</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Address</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Employees</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Clocked In</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Clocked Out</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Tasks</th>
-                    <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 border-b-2 border-slate-200">Hours (30d)</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Location</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Address</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Employees</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Clocked In</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Clocked Out</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800">Tasks</th>
+                    <th className="px-6 py-4 text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest bg-bg dark:bg-slate-800/50 border-b border-stroke dark:border-slate-800 text-right">Hours (30d)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-stroke dark:divide-slate-800">
                   {locationSummary.map((loc) => (
-                    <tr key={loc.name} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={loc.name} className="hover:bg-bg dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center font-semibold shadow-sm">
                             <MapPin size={14} />
                           </div>
-                          <div className="font-bold text-slate-800">{loc.name}</div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200">{loc.name}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 max-w-[180px] truncate">{loc.address || "—"}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                      <td className="px-6 py-5 text-sm text-slate-600 dark:text-slate-400 max-w-[180px] truncate">{loc.address || "—"}</td>
+                      <td className="px-6 py-5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                           {loc.employees}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                      <td className="px-6 py-5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
                           {loc.clocked_in_now || 0}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                      <td className="px-6 py-5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5" />
                           {loc.clocked_out_today || 0}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-700 font-medium">{loc.total_tasks}</td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-600">{loc.hours}h</td>
+                      <td className="px-6 py-5 text-sm text-slate-700 dark:text-slate-300 font-medium">{loc.total_tasks}</td>
+                      <td className="px-6 py-5 text-sm font-bold text-slate-600 dark:text-slate-400 text-right">{loc.hours}h</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <div className="flex items-center justify-center h-[200px] text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-dashed border-slate-300 m-6">No locations configured. Add locations in Settings › Locations.</div>
+              <div className="flex items-center justify-center h-[200px] text-slate-400 dark:text-slate-600 text-sm italic bg-bg dark:bg-slate-950/40 rounded-lg border border-dashed border-stroke dark:border-slate-800 m-6">No locations configured. Add locations in Settings › Locations.</div>
             )}
           </div>
         </div>

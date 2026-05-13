@@ -1,504 +1,272 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-  MapPin, Clock, CalendarRange, Bell,
-  CheckCircle2, ArrowRight, ChevronRight, Rocket,
-  Building2, UserPlus, Settings2, Timer, Zap, Users,
+  MapPin, Clock, CalendarRange,
+  CheckCircle2, ArrowRight, X,
+  Building2, Users, LayoutGrid,
+  Briefcase
 } from "lucide-react"
 import { useAuth } from "../../state/auth/useAuth.js"
 import { routes } from "../routes.js"
-import { CalTrackLogo } from "../components/CalTrackLogo.jsx"
-import { apiRequest } from "../../api/client.js"
 
-/* ── CalTrack brand tokens (from logo) ───────────────────────── */
-const C = {
-  navy:       "#0B2B6F",
-  blue:       "#1A56DB",
-  blueMid:    "#2563EB",
-  blueLight:  "#60A5FA",
-  amber:      "#F59E0B",
-  amberDark:  "#D97706",
-  amberLight: "#FDE68A",
+/* ── Design System ───────────────────────────────────────────── */
+const COLORS = {
+  primary: "#ff7020",      // CalTrack Orange
+  primaryLight: "#fff7ed",
+  primaryHover: "#ea580c",
+  success: "#22c55e",
+  successLight: "#f0fdf4",
+  text: "#1e293b",
+  textMuted: "#64748b",
+  border: "#e2e8f0",
+  bg: "#f8fafc",
+  white: "#ffffff",
 }
 
-/* ── Setup steps ─────────────────────────────────────────────── */
 const STEPS = [
   {
-    id: "location",
-    icon: <MapPin size={20} />,
-    title: "Add a Work Location",
-    desc: "Set up your office or site address. CalTrack uses this to create GPS geofences for clock-in verification.",
-    action: "Set up location",
-    to: routes.locations,
-    color: C.blue,
-    bg: "#EFF6FF",
+    id: "schedule",
+    icon: <CalendarRange size={22} />,
+    title: "Create a work schedule",
+    desc: "Plan your team's work hours and breaks.",
+    est: "3 min",
+    to: routes.settings_schedules,
+    color: "#4f46e5",
+    bg: "#f5f3ff",
+  },
+  {
+    id: "rules",
+    icon: <Clock size={22} />,
+    title: "Define rules for time tracking",
+    desc: "Take control of how your team members clock in and out.",
+    est: "5 min",
+    to: routes.settings_timetracking,
+    color: "#f59e0b",
+    bg: "#fffbeb",
+  },
+  {
+    id: "activities",
+    icon: <Briefcase size={22} />,
+    title: "Add activities and projects",
+    desc: "Add a few activities and projects that you want to track time against.",
     est: "2 min",
+    to: routes.tasks,
+    color: "#8b5cf6",
+    bg: "#f5f3ff",
+  },
+  {
+    id: "locations",
+    icon: <MapPin size={22} />,
+    title: "List work locations",
+    desc: "Add your locations where your team members will be clocking in and out.",
+    est: "2 min",
+    to: routes.locations,
+    color: "#10b981",
+    bg: "#ecfdf5",
   },
   {
     id: "employees",
-    icon: <UserPlus size={20} />,
-    title: "Add Your Team",
-    desc: "Invite employees and assign roles. They'll get an email to create their account and start tracking time.",
-    action: "Add employees",
-    to: routes.employees,
-    color: "#7C3AED",
-    bg: "#F5F3FF",
+    icon: <Users size={22} />,
+    title: "Invite your team",
+    desc: "Add your first team members to get started.",
     est: "5 min",
-  },
-  {
-    id: "schedules",
-    icon: <CalendarRange size={20} />,
-    title: "Set Work Schedules",
-    desc: "Define working days and hours so leave requests and payroll calculations stay accurate.",
-    action: "Configure schedules",
-    to: routes.settings_schedules,
-    color: C.amberDark,
-    bg: "#FFFBEB",
-    est: "3 min",
-  },
-  {
-    id: "timetracking",
-    icon: <Clock size={20} />,
-    title: "Configure Time Tracking",
-    desc: "Choose how your team clocks in — web, mobile, or kiosk. Set overtime and break rules.",
-    action: "Set up time tracking",
-    to: routes.settings_timetracking,
-    color: "#059669",
-    bg: "#ECFDF5",
-    est: "4 min",
-  },
-  {
-    id: "notifications",
-    icon: <Bell size={20} />,
-    title: "Turn On Notifications",
-    desc: "Get alerts for leave approvals, payroll readiness, shift reminders, and security events.",
-    action: "Set notifications",
-    to: routes.settings_notifications,
-    color: "#DC2626",
-    bg: "#FEF2F2",
-    est: "2 min",
+    to: routes.employees,
+    color: "#3b82f6",
+    bg: "#eff6ff",
   },
 ]
 
-const STORAGE_KEY = "caltrack.onboarding.completed"
+const STORAGE_KEY = "caltrack.onboarding.dismissed"
 
-function loadCompleted() {
-  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")) }
-  catch { return new Set() }
-}
+/* ── Components ─────────────────────────────────────────────── */
 
-function saveCompleted(set) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]))
-}
+export function GetStartedPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [completedSteps, setCompletedSteps] = useState(new Set(["employees"])) // Demo: one step completed
 
-/* ── Progress ring ───────────────────────────────────────────── */
-function ProgressRing({ pct }) {
-  const r = 38, circ = 2 * Math.PI * r
+  const displayName = user?.username ? user.username.charAt(0).toUpperCase() + user.username.slice(1) : "Rohit"
+  const totalSteps = STEPS.length
+  const doneCount = completedSteps.size
+  const percentage = Math.round((doneCount / totalSteps) * 100)
+
+  const handleDismiss = () => {
+    localStorage.setItem(STORAGE_KEY, "true")
+    navigate(routes.dashboard)
+  }
+
   return (
-    <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
-      <svg width="92" height="92" style={{ transform: "rotate(-90deg)" }}>
-        <circle cx="46" cy="46" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="7" />
-        <motion.circle
-          cx="46" cy="46" r={r}
-          fill="none"
-          stroke={C.amber}
-          strokeWidth="7"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        />
-      </svg>
-      <div style={{
-        position: "absolute", inset: 0,
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      }}>
-        <span style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{pct}%</span>
-        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>done</span>
+    <div className="min-h-screen bg-bg dark:bg-bg flex flex-col">
+
+      {/* ── Hero Section ─────────────────────────────────────── */}
+      <div className="bg-orange-600 dark:bg-slate-900 h-[420px] px-10 md:px-20 py-10 relative overflow-hidden flex flex-col md:flex-row items-center justify-center gap-10 md:gap-20">
+        
+        {/* Abstract Background Shapes */}
+        <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full bg-white/10 dark:bg-indigo-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-50px] right-[100px] w-[200px] h-[200px] rounded-full bg-white/5 dark:bg-orange-500/5 blur-2xl pointer-events-none" />
+
+        {/* Big Background Text */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-black text-white/5 dark:text-white/[0.02] whitespace-nowrap pointer-events-none uppercase tracking-tighter select-none">
+          CALTRACK CALTRACK CALTRACK
+        </div>
+
+        {/* Greeting Card (Left) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-surface dark:bg-slate-900 border border-white/20 dark:border-slate-800 rounded-[2.5rem] p-10 flex-1 max-w-[520px] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)] dark:shadow-none relative z-10 flex flex-col gap-4"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-orange-100 dark:bg-orange-500/10 text-orange-600 dark:text-orange-500 flex items-center justify-center mb-2">
+            <LayoutGrid size={32} />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight m-0">
+            Hi {displayName}! 👋 <br/>Welcome to CalTrack
+          </h1>
+          <p className="text-base font-medium text-slate-500 dark:text-slate-400 m-0 max-w-[380px] leading-relaxed">
+            Your enterprise portal is ready. Let's finish the setup and start managing your workspace.
+          </p>
+          <button
+            onClick={() => navigate(routes.locations)}
+            className="bg-orange-600 dark:bg-orange-500 hover:bg-orange-700 dark:hover:bg-orange-600 text-white border-none rounded-2xl px-8 py-4 text-base font-black tracking-wide cursor-pointer w-fit mt-4 transition-all hover:scale-[1.02] shadow-lg shadow-orange-600/20 active:scale-95"
+          >
+            Start onboarding
+          </button>
+        </motion.div>
+
+        {/* Progress Card (Right) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/10 dark:bg-slate-950/40 backdrop-blur-2xl rounded-[2.5rem] p-8 flex items-center gap-8 max-w-[420px] flex-1 border border-white/20 dark:border-slate-800 z-10"
+        >
+          <div className="bg-white dark:bg-slate-900 rounded-full p-1.5 shadow-xl">
+            <ProgressCircle percentage={percentage} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white dark:text-white mb-1 tracking-tight">
+              Setup Progress
+            </h2>
+            <p className="text-sm text-white/80 dark:text-slate-400 font-bold m-0 uppercase tracking-widest">
+              {doneCount} of {totalSteps} steps completed
+            </p>
+            <div className="mt-4 px-3 py-1 bg-white/20 dark:bg-slate-800 rounded-full text-[10px] font-black text-white dark:text-indigo-400 uppercase tracking-widest w-fit">
+              Keep going!
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── Content Section ──────────────────────────────────── */}
+      <div className="flex-1 px-10 md:px-20 py-16 relative z-20">
+
+        {/* Steps Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          {STEPS.map((step, index) => (
+            <SetupCard
+              key={step.id}
+              step={step}
+              isCompleted={completedSteps.has(step.id)}
+              onStart={(s) => navigate(s.to)}
+            />
+          ))}
+        </div>
+
+        {/* Footer Link */}
+        <div className="mt-20 flex justify-center">
+          <button
+            onClick={handleDismiss}
+            className="bg-transparent border-none text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 text-sm font-black uppercase tracking-widest cursor-pointer flex items-center gap-3 transition-colors group"
+          >
+            Want to skip the onboarding?
+            <span className="text-orange-600 dark:text-orange-500 font-black flex items-center gap-1 group-hover:underline">
+              <X size={14} /> Dismiss onboarding
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   )
 }
 
-/* ── Step card ───────────────────────────────────────────────── */
-function StepCard({ step, index, done, onToggle, onGo }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.08 * index + 0.3, duration: 0.35 }}
-      style={{
-        background: done ? "#F0FDF4" : "var(--surface)",
-        border: `1.5px solid ${done ? "#BBF7D0" : "var(--stroke2)"}`,
-        borderRadius: 14,
-        padding: "18px 22px 18px 26px",
-        display: "flex",
-        alignItems: "center",
-        gap: 18,
-        position: "relative",
-        overflow: "hidden",
-        opacity: done ? 0.8 : 1,
-        transition: "opacity 0.3s, border-color 0.3s, background 0.3s",
-      }}
+const SetupCard = ({ step, isCompleted, onStart }) => (
+  <motion.div
+    whileHover={{ y: -6 }}
+    className="relative p-[1px] rounded-[2rem] overflow-hidden group/card"
+  >
+    {/* Border Animation Layer */}
+    <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0deg,transparent_120deg,rgba(93,95,239,0.5)_180deg,transparent_240deg)] animate-[spin_4s_linear_infinite] opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
+    
+    <div
+      className={`relative bg-surface dark:bg-slate-900 border ${isCompleted ? 'border-emerald-500/20 dark:border-emerald-500/10' : 'border-stroke dark:border-slate-800'} rounded-[2rem] p-8 h-full flex flex-col gap-6 transition-all duration-300 group-hover/card:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.1)] dark:group-hover/card:shadow-none`}
     >
-      {/* Left color stripe */}
-      <div style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
-        background: done ? "#22C55E" : step.color,
-        transition: "background 0.3s",
-      }} />
-
-      {/* Icon */}
-      <div style={{
-        width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-        background: done ? "#DCFCE7" : step.bg,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: done ? "#16A34A" : step.color,
-        transition: "background 0.3s, color 0.3s",
-      }}>
-        {done ? <CheckCircle2 size={20} /> : step.icon}
+      <div 
+        className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm`}
+        style={{ 
+          background: isCompleted ? '#ecfdf5' : step.bg,
+          color: isCompleted ? '#10b981' : step.color 
+        }}
+      >
+        {step.icon}
       </div>
 
-      {/* Text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{
-            fontSize: 14, fontWeight: 700,
-            color: done ? "#15803D" : "var(--fg)",
-            textDecoration: done ? "line-through" : "none",
-            opacity: done ? 0.75 : 1,
-            transition: "all 0.3s",
-          }}>
-            {step.title}
-          </span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, color: "var(--muted)",
-            background: "var(--bg2)", borderRadius: 6,
-            padding: "2px 6px", textTransform: "uppercase",
-            letterSpacing: "0.06em", flexShrink: 0,
-          }}>
-            ~{step.est}
-          </span>
-        </div>
-        <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.65, margin: 0 }}>
+      <div className="flex-1">
+        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2 leading-tight tracking-tight">
+          {step.title}
+        </h3>
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
           {step.desc}
         </p>
+        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">
+          <Clock size={12} /> {step.est}
+        </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        {!done && (
+      <div className="mt-4">
+        {isCompleted ? (
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-xs font-black uppercase tracking-widest">
+            <CheckCircle2 size={16} /> Completed
+          </div>
+        ) : (
           <button
-            onClick={() => onGo(step)}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 9,
-              background: step.color, color: "#fff",
-              border: "none", fontSize: 12, fontWeight: 700,
-              cursor: "pointer", whiteSpace: "nowrap",
-              transition: "filter 0.15s, transform 0.15s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.1)"; e.currentTarget.style.transform = "translateY(-1px)" }}
-            onMouseLeave={e => { e.currentTarget.style.filter = ""; e.currentTarget.style.transform = "" }}
+            onClick={() => onStart(step)}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-bg dark:bg-slate-950/40 border border-stroke dark:border-slate-800 text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest hover:bg-orange-600 hover:text-white dark:hover:bg-orange-600 hover:border-orange-600 transition-all duration-300 group"
           >
-            {step.action} <ChevronRight size={13} />
+            Start <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </button>
         )}
-
-        {/* Check toggle */}
-        <button
-          onClick={() => onToggle(step.id)}
-          title={done ? "Mark incomplete" : "Mark complete"}
-          style={{
-            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-            border: `2px solid ${done ? "#22C55E" : "var(--stroke2)"}`,
-            background: done ? "#22C55E" : "transparent",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", transition: "all 0.2s",
-          }}
-          onMouseEnter={e => { if (!done) e.currentTarget.style.borderColor = C.blue }}
-          onMouseLeave={e => { if (!done) e.currentTarget.style.borderColor = "var(--stroke2)" }}
-        >
-          {done && <CheckCircle2 size={14} style={{ color: "#fff" }} />}
-        </button>
       </div>
-    </motion.div>
-  )
-}
+    </div>
+  </motion.div>
+)
 
-/* ── Page ────────────────────────────────────────────────────── */
-export function GetStartedPage() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const [completed, setCompleted] = useState(loadCompleted)
-  const [orgName, setOrgName] = useState(() => localStorage.getItem("quicktims.orgName") || "")
-  const [employees, setEmployees] = useState(0)
-
-  const displayName = user?.username
-    ? user.username.charAt(0).toUpperCase() + user.username.slice(1)
-    : "there"
-
-  const doneCount = completed.size
-  const total = STEPS.length
-  const pct = Math.round((doneCount / total) * 100)
-  const allDone = doneCount === total
-
-  useEffect(() => {
-    apiRequest("/employees/")
-      .then(r => setEmployees(r?.data?.length ?? r?.count ?? 0))
-      .catch(() => {})
-    apiRequest("/company/me")
-      .then(r => {
-        if (r?.company_name) {
-          setOrgName(r.company_name)
-          localStorage.setItem("quicktims.orgName", r.company_name)
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  const toggle = (id) => {
-    setCompleted(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      saveCompleted(next)
-      return next
-    })
-  }
+const ProgressCircle = ({ percentage }) => {
+  const radius = 32
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (percentage / 100) * circumference
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
-
-      {/* ── Hero ─────────────────────────────────────────────── */}
-      <div style={{
-        background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 58%, ${C.blueMid} 100%)`,
-        padding: "52px 64px 44px",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        {/* Amber radial glow */}
-        <div style={{
-          position: "absolute", top: -120, right: -120,
-          width: 420, height: 420, borderRadius: "50%",
-          background: `radial-gradient(circle, ${C.amber}28 0%, transparent 70%)`,
-          pointerEvents: "none",
-        }} />
-        {/* Subtle grid */}
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.035,
-          backgroundImage: `repeating-linear-gradient(0deg,transparent,transparent 39px,${C.blueLight} 40px),
-                            repeating-linear-gradient(90deg,transparent,transparent 39px,${C.blueLight} 40px)`,
-          pointerEvents: "none",
-        }} />
-
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, x: -28 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          style={{ marginBottom: 36 }}
-        >
-          <CalTrackLogo size="md" showTagline theme="dark" />
-        </motion.div>
-
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
-
-          {/* Headline */}
-          <div>
-            <motion.h1
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              style={{
-                fontSize: 40, fontWeight: 900, color: "#fff",
-                margin: "0 0 6px", letterSpacing: "-0.02em", lineHeight: 1.15,
-              }}
-            >
-              Welcome, {displayName}!
-            </motion.h1>
-            <motion.h2
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-              style={{
-                fontSize: 32, fontWeight: 800, color: C.amberLight,
-                margin: "0 0 16px", letterSpacing: "-0.02em", lineHeight: 1.2,
-              }}
-            >
-              Let's set up CalTrack.
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
-              style={{
-                fontSize: 15, color: "rgba(255,255,255,0.65)",
-                maxWidth: 460, lineHeight: 1.7, margin: 0,
-              }}
-            >
-              Complete these steps to get your team tracking time, managing leave, and running payroll — all in one place.
-            </motion.p>
-          </div>
-
-          {/* Progress ring + CTA */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.88 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-            style={{ display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}
-          >
-            <ProgressRing pct={pct} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>
-                {doneCount} of {total} steps complete
-              </div>
-              {allDone ? (
-                <button
-                  onClick={() => navigate(routes.dashboard)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "10px 18px", background: C.amber,
-                    color: C.navy, border: "none", borderRadius: 10,
-                    fontSize: 13, fontWeight: 800, cursor: "pointer",
-                  }}
-                >
-                  <Rocket size={14} /> Go to Dashboard
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate(routes.dashboard)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "8px 14px",
-                    background: "rgba(255,255,255,0.09)",
-                    color: "rgba(255,255,255,0.62)",
-                    border: "1px solid rgba(255,255,255,0.16)",
-                    borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.16)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
-                >
-                  Skip for now <ArrowRight size={12} />
-                </button>
-              )}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Meta chips */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.6 }}
-          style={{ display: "flex", gap: 10, marginTop: 32, flexWrap: "wrap" }}
-        >
-          {[
-            { icon: <Building2 size={13} />, label: orgName || "Organization not set" },
-            { icon: <Users size={13} />, label: `${employees} team member${employees !== 1 ? "s" : ""}` },
-            { icon: <Timer size={13} />, label: "~16 min to complete" },
-            { icon: <Zap size={13} style={{ color: C.amber }} />, label: `${doneCount}/${total} steps done` },
-          ].map((chip, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "6px 14px",
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.13)",
-              borderRadius: 20,
-              fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.68)",
-            }}>
-              {chip.icon} {chip.label}
-            </div>
-          ))}
-        </motion.div>
-      </div>
-
-      {/* ── Body ─────────────────────────────────────────────── */}
-      <div style={{ flex: 1, padding: "36px 64px 48px", maxWidth: 860 }}>
-
-        {/* Section header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <Zap size={14} style={{ color: C.amber }} />
-          <span style={{
-            fontSize: 11, fontWeight: 800, color: "var(--muted)",
-            textTransform: "uppercase", letterSpacing: "0.12em",
-          }}>
-            Setup checklist
-          </span>
-          <div style={{ flex: 1, height: 1, background: "var(--stroke)" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
-            {doneCount}/{total} complete
-          </span>
-        </div>
-
-        {/* Step cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {STEPS.map((step, i) => (
-            <StepCard
-              key={step.id}
-              step={step}
-              index={i}
-              done={completed.has(step.id)}
-              onToggle={toggle}
-              onGo={(s) => navigate(s.to)}
-            />
-          ))}
-        </div>
-
-        {/* All-done banner */}
-        {allDone && (
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              marginTop: 24, padding: "24px 28px",
-              background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
-              borderRadius: 14, display: "flex", alignItems: "center", gap: 20,
-            }}
-          >
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
-              background: C.amber,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <CheckCircle2 size={24} style={{ color: C.navy }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 3 }}>
-                You're all set — CalTrack is ready!
-              </div>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>
-                Your team can now clock in, request leave, and run payroll from one place.
-              </div>
-            </div>
-            <button
-              onClick={() => navigate(routes.dashboard)}
-              style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "11px 20px", background: C.amber,
-                color: C.navy, border: "none", borderRadius: 11,
-                fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0,
-              }}
-            >
-              <Rocket size={14} /> Open Dashboard
-            </button>
-          </motion.div>
-        )}
-
-        {/* Tip */}
-        <div style={{
-          marginTop: 20, padding: "13px 18px",
-          background: "var(--surface)", borderRadius: 10,
-          border: "1px solid var(--stroke)",
-          display: "flex", alignItems: "flex-start", gap: 10,
-        }}>
-          <Settings2 size={14} style={{ color: C.blue, marginTop: 1, flexShrink: 0 }} />
-          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
-            <strong style={{ color: "var(--fg)" }}>Tip:</strong> Return here anytime from the sidebar. Your progress is saved automatically and survives page refreshes.
-          </p>
-        </div>
+    <div className="relative w-20 h-20 flex-shrink-0">
+      <svg className="w-full h-full" viewBox="0 0 84 84">
+        <circle
+          cx="42" cy="42" r={radius}
+          fill="none" stroke="#e2e8f0" strokeWidth="8"
+          className="dark:stroke-slate-800"
+        />
+        <motion.circle
+          cx="42" cy="42" r={radius}
+          fill="none" stroke="#ea580c" strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-slate-900 dark:text-white">
+        {percentage}%
       </div>
     </div>
   )

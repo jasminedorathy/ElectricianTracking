@@ -19,7 +19,8 @@ export function applyTheme(theme) {
   if (resolved === "dark") {
     root.setAttribute("data-theme", "dark")
     root.classList.add("dark")
-    document.body.style.backgroundColor = "#0F1117"
+    // Match the established dark palette from styles.css
+    document.body.style.backgroundColor = "#0B111D"
   } else {
     root.setAttribute("data-theme", "light")
     root.classList.remove("dark")

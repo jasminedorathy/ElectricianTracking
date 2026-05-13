@@ -5,6 +5,7 @@ import {
 } from "lucide-react"
 import { apiRequest } from "../../../api/client.js"
 import { useAuth } from "../../../state/auth/useAuth.js"
+import { Card, Button, Input, Select, TextArea } from "../../components/kit.jsx"
 
 const TIMEZONES = [
   "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
@@ -67,7 +68,7 @@ export default function WorkspaceSection({ showToast, SectionHeader }) {
           if (res.logo_url) setLogoPreview(res.logo_url)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
@@ -105,86 +106,81 @@ export default function WorkspaceSection({ showToast, SectionHeader }) {
   )
 
   return (
-    <div className="stPanel">
+    <div className="stPanel animate-fadeUp">
       <SectionHeader title="Workspace" subtitle="Manage your organization's identity, settings, and data preferences." />
 
       {!isAdmin && (
-        <div style={{ padding: 14, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, marginBottom: 4, fontSize: 12, color: "#92400E", display: "flex", gap: 10 }}>
-          <span>⚠</span>
-          <span>You are viewing workspace settings. Only admins can make changes.</span>
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl mb-8 flex gap-4 items-start text-sm text-amber-800 dark:text-amber-400">
+          <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">⚠</div>
+          <p className="pt-1.5 font-medium">You are viewing workspace settings. Only administrators with proper authority can modify these parameters.</p>
         </div>
       )}
 
       {/* Organization Identity */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Building2 size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Organization identity</span>
-        </div>
-        <div className="stFormGrid">
-          <Field label="Organization name" half>
-            <input
-              className="stInput"
-              value={form.company_name}
-              placeholder="Acme Corp"
-              disabled={!isAdmin}
-              onChange={e => handleChange("company_name", e.target.value)}
+      <Card 
+        title={
+          <div className="flex items-center gap-2">
+            <Building2 size={18} className="text-indigo-600" />
+            <span>Organization Identity</span>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Input 
+            label="Organization name" 
+            value={form.company_name} 
+            placeholder="Acme Corp" 
+            disabled={!isAdmin} 
+            onChange={e => handleChange("company_name", e.target.value)} 
+          />
+          <Input 
+            label="URL slug" 
+            value={form.slug} 
+            placeholder="acme-corp" 
+            disabled 
+            hint="This is your unique workspace identifier."
+            className="opacity-60 cursor-not-allowed bg-slate-100 dark:bg-slate-800"
+          />
+          <Select 
+            label="Industry" 
+            value={form.industry} 
+            disabled={!isAdmin} 
+            onChange={e => handleChange("industry", e.target.value)} 
+            options={[
+              { label: "Select industry", value: "" },
+              ...INDUSTRIES.map(i => ({ label: i, value: i }))
+            ]}
+          />
+          <Input 
+            label="Website" 
+            value={form.website} 
+            placeholder="https://company.com" 
+            disabled={!isAdmin} 
+            onChange={e => handleChange("website", e.target.value)} 
+            icon={<Globe size={14} className="text-slate-400" />}
+          />
+          <div className="col-span-full">
+            <TextArea 
+              label="Office address" 
+              placeholder="123 Main St, City, State, ZIP" 
+              value={form.address} 
+              disabled={!isAdmin} 
+              onChange={e => handleChange("address", e.target.value)} 
+              rows={2} 
             />
-          </Field>
-          <Field label="URL slug" half>
-            <div className="stInputAddon">
-              <span className="stInputAddonPrefix">quicktims.com/</span>
-              <input
-                className="stInput stInputAddonField"
-                value={form.slug}
-                placeholder="acme-corp"
-                disabled
-                style={{ opacity: 0.6, cursor: "not-allowed" }}
-              />
-            </div>
-          </Field>
-          <Field label="Industry" half>
-            <select
-              className="stInput stSelect"
-              value={form.industry}
-              disabled={!isAdmin}
-              onChange={e => handleChange("industry", e.target.value)}
-            >
-              <option value="">Select industry</option>
-              {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
-            </select>
-          </Field>
-          <Field label="Website" half>
-            <div className="stInputAddon">
-              <span className="stInputAddonPrefix"><Globe size={12} /></span>
-              <input
-                className="stInput stInputAddonField"
-                placeholder="https://company.com"
-                value={form.website}
-                disabled={!isAdmin}
-                onChange={e => handleChange("website", e.target.value)}
-              />
-            </div>
-          </Field>
-          <Field label="Office address">
-            <textarea
-              className="stInput stTextarea"
-              placeholder="123 Main St, City, State, ZIP"
-              value={form.address}
-              disabled={!isAdmin}
-              onChange={e => handleChange("address", e.target.value)}
-              rows={2}
-            />
-          </Field>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Logo */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <ImageIcon size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Organization logo</span>
-        </div>
+      <Card 
+        title={
+          <div className="flex items-center gap-2">
+            <ImageIcon size={18} className="text-indigo-600" />
+            <span>Organization Logo</span>
+          </div>
+        }
+      >
         <div className="stLogoGrid">
           <div
             className={`stDropZone ${logoPreview ? "has" : ""} ${dragOver ? "drag" : ""}`}
@@ -203,92 +199,72 @@ export default function WorkspaceSection({ showToast, SectionHeader }) {
               </>
             )}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ padding: 16, background: "var(--bg2)", borderRadius: 10, fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
-              <div style={{ fontWeight: 700, color: "var(--fg)", marginBottom: 6 }}>Logo guidelines</div>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          <div className="flex flex-col gap-4">
+            <div className="p-6 bg-bg2 dark:bg-slate-950/40 rounded-2xl border border-stroke dark:border-slate-800/50 text-[12px] leading-relaxed">
+              <div className="font-black text-slate-900 dark:text-white uppercase tracking-widest mb-3 text-[11px]">Logo guidelines</div>
+              <ul className="space-y-2 text-slate-500 dark:text-slate-400 font-medium">
                 {["Minimum 200 × 200 px", "Transparent background preferred", "PNG or SVG for best quality", "Maximum 2 MB file size"].map(g => (
-                  <li key={g} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-                    <Check size={11} style={{ color: "#059669", flexShrink: 0, marginTop: 2 }} /> {g}
+                  <li key={g} className="flex items-center gap-3">
+                    <Check size={12} className="text-emerald-600 dark:text-emerald-500 shrink-0" /> {g}
                   </li>
                 ))}
               </ul>
             </div>
             {isAdmin && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="stGhostBtn" style={{ fontSize: 12 }} onClick={() => logoRef.current?.click()}>
-                  <Upload size={12} /> Choose file
-                </button>
+              <div className="flex gap-3">
+                <Button variant="ghost" onClick={() => logoRef.current?.click()} className="text-xs py-2">
+                  <Upload size={14} className="mr-2" /> Choose file
+                </Button>
                 {logoPreview && (
-                  <button className="stDangerBtn" onClick={() => { setLogoPreview(null); setLogoFile(null) }}>
+                  <Button variant="danger" onClick={() => { setLogoPreview(null); setLogoFile(null) }} className="text-xs py-2">
                     Remove
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
           </div>
         </div>
         <input ref={logoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleLogoFile(e.target.files?.[0])} />
-      </div>
+      </Card>
 
       {/* Regional Settings */}
-      <div className="stCard">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          <Globe size={15} style={{ color: "#1A56DB" }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>Regional settings</span>
+      <Card 
+        title={
+          <div className="flex items-center gap-2">
+            <Globe size={18} className="text-indigo-600" />
+            <span>Regional Settings</span>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Select 
+            label="Default timezone" 
+            value={form.timezone} 
+            disabled={!isAdmin} 
+            onChange={e => handleChange("timezone", e.target.value)} 
+            options={TIMEZONES.map(tz => ({ label: tz.replace(/_/g, " "), value: tz }))}
+          />
+          <Select 
+            label="Data region" 
+            value={form.data_region} 
+            disabled={!isAdmin} 
+            onChange={e => handleChange("data_region", e.target.value)} 
+            options={DATA_REGIONS}
+          />
         </div>
-        <div className="stFormGrid">
-          <Field label="Default timezone" half>
-            <div style={{ position: "relative" }}>
-              <Globe size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-              <select
-                className="stInput stSelect"
-                style={{ paddingLeft: 30 }}
-                value={form.timezone}
-                disabled={!isAdmin}
-                onChange={e => handleChange("timezone", e.target.value)}
-              >
-                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
-          </Field>
-          <Field label="Data region" half>
-            <div style={{ position: "relative" }}>
-              <MapPin size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted)", pointerEvents: "none" }} />
-              <select
-                className="stInput stSelect"
-                style={{ paddingLeft: 30 }}
-                value={form.data_region}
-                disabled={!isAdmin}
-                onChange={e => handleChange("data_region", e.target.value)}
-              >
-                {DATA_REGIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
-            </div>
-          </Field>
-        </div>
-        <div style={{ marginTop: 12, padding: 12, background: "#F0F9FF", borderRadius: 8, fontSize: 12, color: "#0369A1", border: "1px solid #BAE6FD" }}>
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl text-xs text-blue-700 dark:text-blue-400 font-medium">
           ⓘ Data region determines where your organization data is stored. Changing this requires a data migration and cannot be done self-serve.
         </div>
-      </div>
+      </Card>
 
       {isAdmin && (
-        <div>
-          <button className="stPrimaryBtn" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 size={13} style={{ animation: "spin .7s linear infinite" }} /> : <Save size={13} />}
-            {saving ? "Saving..." : "Save workspace settings"}
-          </button>
+        <div className="flex justify-end pt-6 border-t border-stroke dark:border-slate-800">
+          <Button onClick={handleSave} disabled={saving} className="min-w-[200px] py-4 rounded-xl text-base shadow-lg shadow-indigo-500/10">
+            {saving ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
+            {saving ? "Saving..." : "Save Workspace Changes"}
+          </Button>
         </div>
       )}
-    </div>
-  )
-}
-
-function Field({ label, children, half }) {
-  return (
-    <div style={{ gridColumn: half ? undefined : "1 / -1" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{label}</div>
-      {children}
     </div>
   )
 }

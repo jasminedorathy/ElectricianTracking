@@ -261,12 +261,15 @@ export function AppShell() {
         <div className="flex items-center gap-6">
           <button
             type="button"
-            className="hidden md:flex items-center gap-3 px-4 py-2 bg-slate-100/50 dark:bg-slate-800/50 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 transition-all duration-300 w-64 group"
+            className="hidden md:flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-black hover:bg-slate-50 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm text-slate-500 dark:text-white/80 hover:text-slate-900 dark:hover:text-white transition-all duration-300 w-72 group shadow-sm dark:shadow-lg dark:shadow-black/20 active:scale-[0.98]"
             onClick={() => setCmdOpen(true)}
           >
-            <Search size={16} className="group-hover:text-blue-500 transition-colors" />
-            <span className="flex-1 text-left font-medium opacity-70">Search...</span>
-            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">⌘K</span>
+            <Search size={16} className="text-blue-500 group-hover:scale-110 transition-transform" />
+            <span className="flex-1 text-left font-black tracking-tight opacity-70 group-hover:opacity-100">Quick search...</span>
+            <div className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 dark:text-white/40 group-hover:text-slate-600 dark:group-hover:text-white/60 transition-colors uppercase tracking-widest">
+              <span>⌘</span>
+              <span>K</span>
+            </div>
           </button>
 
           <div className="flex items-center gap-3">
@@ -436,7 +439,7 @@ export function AppShell() {
         </AnimatePresence>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-bg relative scroll-smooth">
+        <main className="flex-1 overflow-y-auto bg-bg relative scroll-smooth">
           <div className="absolute inset-0 bg-grid-slate-900/[0.02] dark:bg-grid-white/[0.02] pointer-events-none"></div>
           <div className="relative z-10 min-h-full">
             <Outlet />

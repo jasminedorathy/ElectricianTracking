@@ -274,8 +274,8 @@ export default function IntegrationsApiSection({ showToast, SectionHeader }) {
 
   useEffect(() => {
     if (!isAdmin) return
-    apiRequest("/settings/api-keys/").then(res => setApiKeys(res?.data || [])).catch(() => {}).finally(() => setKeysLoading(false))
-    apiRequest("/settings/webhooks/").then(res => setWebhooks(res?.data || [])).catch(() => {}).finally(() => setWhLoading(false))
+    apiRequest("/settings/api-keys/").then(res => setApiKeys(res?.data || [])).catch(() => { }).finally(() => setKeysLoading(false))
+    apiRequest("/settings/webhooks/").then(res => setWebhooks(res?.data || [])).catch(() => { }).finally(() => setWhLoading(false))
   }, [isAdmin])
 
   const handleRevokeKey = async (id) => {

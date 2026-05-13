@@ -13,13 +13,13 @@ import {
 // ---------------------------------------------------------------------------
 function SectionHeader({ icon, title, sub }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-      <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface2)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--stroke)" }}>
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 rounded-xl bg-surface2 dark:bg-slate-950/40 flex items-center justify-center border border-stroke dark:border-slate-800 shadow-sm">
         {icon}
       </div>
       <div>
-        <div className="professional-title text-[15px] text-[var(--fg)]">{title}</div>
-        {sub && <div className="professional-subtitle text-[11px] text-[var(--muted)] mt-0.5">{sub}</div>}
+        <div className="professional-title text-base text-slate-900 dark:text-white leading-tight">{title}</div>
+        {sub && <div className="professional-subtitle text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest">{sub}</div>}
       </div>
     </div>
   )
@@ -40,11 +40,8 @@ function Stat3DCard({ label, value, colorClass }) {
     const y = e.clientY - rect.top
     const centerX = rect.width / 2
     const centerY = rect.height / 2
-    
-    // Calculate rotation (-15 to 15 degrees)
     const rotateX = ((y - centerY) / centerY) * -15
     const rotateY = ((x - centerX) / centerX) * 15
-    
     setRotation({ x: rotateX, y: rotateY })
   }
 
@@ -54,27 +51,27 @@ function Stat3DCard({ label, value, colorClass }) {
       onMouseMove={handleMouseMove}
       onMouseLeave={() => { setIsHovered(false); setRotation({ x: 0, y: 0 }) }}
       onMouseEnter={() => setIsHovered(true)}
-      style={{ perspective: "800px" }}
+      style={{ perspective: "1000px" }}
       className="relative group cursor-default flex-1 min-w-[140px] max-w-[200px]"
     >
       <div
-        className="relative h-[110px] rounded-2xl p-4 bg-[var(--surface)] border border-[var(--stroke)] shadow-lg overflow-hidden transition-all duration-200 ease-out"
+        className="relative h-[110px] rounded-2xl p-4 bg-surface dark:bg-slate-900/80 border border-stroke dark:border-slate-800 shadow-lg overflow-hidden transition-all duration-200 ease-out"
         style={{
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
           transformStyle: "preserve-3d",
-          boxShadow: isHovered ? "0 20px 40px -10px rgba(0,0,0,0.15)" : "0 10px 20px -10px rgba(0,0,0,0.05)"
+          boxShadow: isHovered ? "0 25px 50px -12px rgba(0,0,0,0.25)" : "0 10px 20px -10px rgba(0,0,0,0.1)"
         }}
       >
         <div 
-          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/80 to-white/0 opacity-0 transition-opacity duration-300 pointer-events-none"
+          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 dark:via-white/2 to-white/0 opacity-0 transition-opacity duration-300 pointer-events-none"
           style={{ opacity: isHovered ? 1 : 0 }}
         />
-        <div className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${colorClass} opacity-10 blur-2xl group-hover:opacity-30 transition-opacity duration-500`} />
-        <div className="flex flex-col items-center justify-center h-full relative z-10" style={{ transform: "translateZ(20px)" }}>
+        <div className={`absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br ${colorClass} opacity-10 dark:opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-500`} />
+        <div className="flex flex-col items-center justify-center h-full relative z-10" style={{ transform: "translateZ(30px)" }}>
           <div className={`text-4xl professional-title drop-shadow-sm mb-1 bg-clip-text text-transparent bg-gradient-to-br ${colorClass}`}>
             {value}
           </div>
-          <div className="text-[10px] professional-subtitle text-[var(--muted)] text-center leading-tight mt-1">
+          <div className="text-[10px] professional-subtitle text-slate-400 dark:text-slate-500 text-center leading-tight mt-2 uppercase tracking-widest">
             {label}
           </div>
         </div>
@@ -121,25 +118,27 @@ function OTRiskPanel() {
           </div>
 
           {alerts.length > 0 ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div className="flex flex-wrap gap-2">
               {alerts.map((a, i) => (
-                <div key={i} style={{
-                  background: a.alert_type?.includes("double") ? "rgba(220,38,38,0.1)" : a.alert_type?.includes("approaching") ? "rgba(217,119,6,0.1)" : "rgba(251,146,60,0.1)",
-                  border: `1px solid ${a.alert_type?.includes("double") ? "#dc262644" : a.alert_type?.includes("approaching") ? "#d9770644" : "#fb923c44"}`,
-                  borderRadius: 8, padding: "6px 12px", fontSize: 12,
-                }}>
-                  <span style={{ fontWeight: 700, color: a.alert_type?.includes("double") ? "#dc2626" : "#d97706" }}>
+                <div key={i} className={`rounded-xl px-4 py-2 text-xs font-bold border transition-all ${
+                  a.alert_type?.includes("double") 
+                    ? "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400" 
+                    : a.alert_type?.includes("approaching") 
+                      ? "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400" 
+                      : "bg-indigo-50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400"
+                }`}>
+                  <span className="font-black uppercase tracking-tight">
                     {a.employee_name || a.employee_id}
                   </span>
-                  <span style={{ color: "var(--muted)", marginLeft: 6 }}>
+                  <span className="opacity-60 ml-2 font-medium">
                     {a.hours_worked?.toFixed(1)}h — {a.alert_type?.replace(/_/g, " ")}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ color: "#059669", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-              <CheckCircle size={15} /> No overtime risk this week
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/20 px-4 py-3 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+              <CheckCircle size={16} /> No overtime risk this week
             </div>
           )}
         </>
@@ -180,31 +179,31 @@ function UK48HrPanel() {
             <Stat3DCard label="Breaching" value={breaching} colorClass="from-red-500 to-rose-600" />
           </div>
           {employees.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <div className="overflow-x-auto rounded-xl border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid var(--stroke)", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    <th style={{ padding: "6px 10px", textAlign: "left" }}>Employee</th>
-                    <th style={{ padding: "6px 10px", textAlign: "right" }}>Avg hrs/wk</th>
-                    <th style={{ padding: "6px 10px", textAlign: "right" }}>Headroom</th>
-                    <th style={{ padding: "6px 10px", textAlign: "center" }}>Opt-out</th>
-                    <th style={{ padding: "6px 10px", textAlign: "center" }}>Status</th>
+                  <tr className="bg-bg2 dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                    <th className="px-6 py-4">Employee</th>
+                    <th className="px-6 py-4 text-right">Avg hrs/wk</th>
+                    <th className="px-6 py-4 text-right">Headroom</th>
+                    <th className="px-6 py-4 text-center">Opt-out</th>
+                    <th className="px-6 py-4 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-stroke dark:divide-slate-800">
                   {employees.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: "1px solid var(--stroke2)" }}>
-                      <td style={{ padding: "8px 10px", fontWeight: 600 }}>{e.employee_name || e.employee_id}</td>
-                      <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: !e.is_compliant ? "#dc2626" : "var(--fg)" }}>
+                    <tr key={i} className="hover:bg-surface dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{e.employee_name || e.employee_id}</td>
+                      <td className={`px-6 py-4 text-right font-black ${!e.is_compliant ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
                         {e.average_hours?.toFixed(1)}h
                       </td>
-                      <td style={{ padding: "8px 10px", textAlign: "right", color: "var(--muted)" }}>
+                      <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-medium">
                         {e.headroom_hours >= 0 ? `${e.headroom_hours?.toFixed(1)}h` : "—"}
                       </td>
-                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                        {e.has_opt_out ? <Pill tone="good">Yes</Pill> : <span style={{ color: "var(--muted)", fontSize: 11 }}>No</span>}
+                      <td className="px-6 py-4 text-center">
+                        {e.has_opt_out ? <Pill tone="good">Yes</Pill> : <span className="text-[10px] font-bold text-slate-300 dark:text-slate-700">No</span>}
                       </td>
-                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                      <td className="px-6 py-4 text-center">
                         {e.is_compliant
                           ? <Pill tone="good">OK</Pill>
                           : <Pill tone="bad">BREACH</Pill>}
@@ -294,57 +293,69 @@ function RTWPanel() {
       </div>
 
       {alertResult && (
-        <div style={{ marginBottom: 12, padding: "8px 12px", borderRadius: 8, background: alertResult.ok ? "rgba(5,150,105,0.1)" : "rgba(220,38,38,0.1)", border: `1px solid ${alertResult.ok ? "#05966944" : "#dc262644"}`, fontSize: 13, color: alertResult.ok ? "#059669" : "#dc2626" }}>
-          {alertResult.ok ? `✓ ${alertResult.count} RTW alert email(s) sent.` : "Failed to send alerts."}
+        <div className={`mb-4 px-4 py-3 rounded-xl border flex items-center gap-2 text-sm font-bold transition-all ${
+          alertResult.ok 
+            ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400" 
+            : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400"
+        }`}>
+          {alertResult.ok ? <CheckCircle size={16} /> : <XCircle size={16} />}
+          {alertResult.ok ? `${alertResult.count} RTW alert email(s) sent.` : "Failed to send alerts."}
         </div>
       )}
 
       {expiring.length > 0 && (
-        <div style={{ marginBottom: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div className="mb-4 flex flex-wrap gap-2">
           {expiring.map((e, i) => (
-            <div key={i} style={{ background: "rgba(234,88,12,0.1)", border: "1px solid #ea580c44", borderRadius: 8, padding: "5px 10px", fontSize: 12 }}>
-              <span style={{ fontWeight: 700, color: "#ea580c" }}>⚠ {e.employee_name}</span>
-              <span style={{ color: "var(--muted)", marginLeft: 6 }}>expires in {e.days_until_expiry}d</span>
+            <div key={i} className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <span className="animate-pulse">⚠</span>
+              <span>{e.employee_name}</span>
+              <span className="opacity-60 font-medium font-[Manrope]">expires in {e.days_until_expiry}d</span>
             </div>
           ))}
         </div>
       )}
 
-      {loading ? <div className="muted">Loading…</div> : docs.length > 0 ? (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      {loading ? <div className="text-slate-400 animate-pulse font-bold tracking-widest text-[10px] uppercase">Loading RTW Records…</div> : docs.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-stroke dark:border-slate-800 bg-bg dark:bg-slate-950/40">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr style={{ borderBottom: "2px solid var(--stroke)", fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                <th style={{ padding: "6px 10px", textAlign: "left" }}>Employee</th>
-                <th style={{ padding: "6px 10px", textAlign: "left" }}>Document</th>
-                <th style={{ padding: "6px 10px", textAlign: "left" }}>Reference</th>
-                <th style={{ padding: "6px 10px", textAlign: "left" }}>Expiry</th>
-                <th style={{ padding: "6px 10px", textAlign: "center" }}>Status</th>
-                <th style={{ padding: "6px 10px", textAlign: "center" }}>Verified by</th>
+              <tr className="bg-bg2 dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                <th className="px-6 py-4">Employee</th>
+                <th className="px-6 py-4">Document</th>
+                <th className="px-6 py-4">Reference</th>
+                <th className="px-6 py-4">Expiry</th>
+                <th className="px-6 py-4 text-center">Status</th>
+                <th className="px-6 py-4 text-center">Verified by</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-stroke dark:divide-slate-800">
               {docs.map(d => (
-                <tr key={d.id} style={{ borderBottom: "1px solid var(--stroke2)" }}>
-                  <td style={{ padding: "8px 10px", fontWeight: 600 }}>{d.employee_name || d.employee}</td>
-                  <td style={{ padding: "8px 10px" }}>{d.document_type_display || d.document_type}</td>
-                  <td style={{ padding: "8px 10px", color: "var(--muted)", fontFamily: "monospace", fontSize: 12 }}>{d.document_reference || "—"}</td>
-                  <td style={{ padding: "8px 10px" }}>
+                <tr key={d.id} className="hover:bg-surface dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{d.employee_name || d.employee}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium">{d.document_type_display || d.document_type}</td>
+                  <td className="px-6 py-4 text-slate-400 dark:text-slate-500 font-mono text-[11px] tracking-tighter">{d.document_reference || "—"}</td>
+                  <td className="px-6 py-4">
                     {d.expiry_date ? (
-                      <span style={{ color: d.days_until_expiry != null && d.days_until_expiry < 30 ? "#dc2626" : "var(--fg)" }}>
-                        {d.expiry_date}
+                      <div className="flex flex-col">
+                        <span className={`font-bold ${d.days_until_expiry != null && d.days_until_expiry < 30 ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white"}`}>
+                          {d.expiry_date}
+                        </span>
                         {d.days_until_expiry != null && d.days_until_expiry < 60 && (
-                          <span style={{ marginLeft: 4, fontSize: 10, color: "#d97706" }}>({d.days_until_expiry}d)</span>
+                          <span className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest mt-0.5">Expires in {d.days_until_expiry}d</span>
                         )}
-                      </span>
-                    ) : "—"}
+                      </div>
+                    ) : <span className="text-slate-300 dark:text-slate-700">—</span>}
                   </td>
-                  <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: STATUS_COLOR[d.status] || "var(--muted)", textTransform: "uppercase" }}>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border ${
+                      d.status === 'verified' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400' :
+                      d.status === 'expired' || d.status === 'rejected' ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400' :
+                      'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400'
+                    }`}>
                       {d.status}
                     </span>
                   </td>
-                  <td style={{ padding: "8px 10px", textAlign: "center", fontSize: 11, color: "var(--muted)" }}>
+                  <td className="px-6 py-4 text-center text-[11px] font-bold text-slate-400 dark:text-slate-600">
                     {d.verified_by_name || "—"}
                   </td>
                 </tr>
@@ -873,7 +884,7 @@ export function CompliancePage() {
   if (user?.role !== "admin") {
     return (
       <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-slate-50 overflow-hidden">
-        <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
           <div className="flex items-center gap-6">
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight font-[Manrope] flex items-center gap-3">

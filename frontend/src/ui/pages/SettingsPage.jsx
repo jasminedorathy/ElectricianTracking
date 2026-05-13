@@ -21,6 +21,7 @@ const IntegrationsApiSection = lazy(() => import("./settings/IntegrationsApiSect
 const WorkspaceSection      = lazy(() => import("./settings/WorkspaceSection.jsx"))
 const PrivacyDataSection    = lazy(() => import("./settings/PrivacyDataSection.jsx"))
 const DangerZoneSection     = lazy(() => import("./settings/DangerZoneSection.jsx"))
+const AccessControlSection  = lazy(() => import("./settings/AccessControlSection.jsx"))
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function Toast({ message, type = "success", onDismiss }) {
@@ -36,17 +37,17 @@ function Toast({ message, type = "success", onDismiss }) {
 
 function SectionHeader({ title, subtitle }) {
   return (
-    <div style={{ marginBottom: 32 }}>
-      <h3 style={{ fontSize: 22, fontWeight: 800, color: "var(--fg)", marginBottom: 6 }}>{title}</h3>
-      <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>{subtitle}</p>
+    <div className="mb-10">
+      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">{title}</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">{subtitle}</p>
     </div>
   )
 }
 
 export function Field({ label, children, half }) {
   return (
-    <div style={{ width: half ? "50%" : "100%", display: "flex", flexDirection: "column", gap: 6 }}>
-      <label style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+    <div className={`flex flex-col gap-2 ${half ? "w-1/2" : "w-full"}`}>
+      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] ml-1">
         {label}
       </label>
       {children}
@@ -124,6 +125,14 @@ const TABS = [
     to: routes.settings_data,
   },
   {
+    id: "rbac",
+    label: "Access Control",
+    subtitle: "Module visibility, data modification rights, and role-based permissions.",
+    icon: <ShieldCheck size={15} />,
+    adminOnly: true,
+    to: routes.settings_rbac,
+  },
+  {
     id: "danger",
     label: "Danger Zone",
     subtitle: "Transfer ownership, delete workspace, and irreversible actions.",
@@ -167,54 +176,35 @@ export function SettingsPage({ section: sectionProp }) {
   const activeSub = filteredTabs.find(s => s.id === activeSection) || filteredTabs[0]
 
   const Loader = () => (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
-      <div style={{ width: 32, height: 32, border: "3px solid var(--stroke)", borderTopColor: "#5d5fef", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div className="flex items-center justify-center py-20">
+      <div className="w-8 h-8 border-2 border-indigo-100 dark:border-slate-800 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
     </div>
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+    <div className="flex min-h-screen bg-bg dark:bg-slate-950/20">
 
       {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside style={{
-        width: 240,
-        flexShrink: 0,
-        borderRight: "1px solid var(--stroke)",
-        background: "var(--surface)",
-        padding: "32px 0",
-        overflowY: "auto",
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-      }}>
-        <div style={{ padding: "0 16px 20px", fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-          Settings
+      <aside className="w-[280px] shrink-0 border-r border-stroke dark:border-slate-800 bg-surface dark:bg-slate-900/40 py-10 sticky top-0 h-screen overflow-y-auto">
+        <div className="px-8 pb-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+          User Settings
         </div>
-        <nav style={{ display: "flex", flexDirection: "column", gap: 2, padding: "0 8px" }}>
+        <nav className="flex flex-col gap-1 px-4">
           {filteredTabs.map(tab => {
             const isActive = activeSection === tab.id
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveSection(tab.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  borderRadius: 8,
-                  border: "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontSize: 13,
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? "#5d5fef" : "var(--fg)",
-                  background: isActive ? "rgba(93,95,239,0.08)" : "transparent",
-                  transition: "all 0.15s",
-                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                  isActive 
+                    ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm shadow-indigo-100/20 dark:shadow-none" 
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-white"
+                }`}
               >
-                <span style={{ color: isActive ? "#5d5fef" : "var(--muted)", flexShrink: 0 }}>{tab.icon}</span>
+                <span className={`${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"} shrink-0`}>
+                  {tab.icon}
+                </span>
                 {tab.label}
               </button>
             )
@@ -223,13 +213,13 @@ export function SettingsPage({ section: sectionProp }) {
       </aside>
 
       {/* ── Content ──────────────────────────────────────────────── */}
-      <main style={{ flex: 1, overflowY: "auto", padding: "48px 56px" }}>
+      <main className="flex-1 px-14 py-12 overflow-y-auto">
 
         {/* Breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 32 }}>
-          <span style={{ opacity: 0.5 }}>Settings</span>
-          <ChevronRight size={10} />
-          <span style={{ color: "#5d5fef" }}>{activeSub?.label}</span>
+        <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-10">
+          <span className="opacity-50">Settings</span>
+          <ChevronRight size={12} className="opacity-30" />
+          <span className="text-indigo-600 dark:text-indigo-400">{activeSub?.label}</span>
         </div>
 
         {/* Animated section */}
@@ -251,6 +241,7 @@ export function SettingsPage({ section: sectionProp }) {
               {activeSection === "integrations"  && <IntegrationsApiSection showToast={showToast} SectionHeader={SectionHeader} />}
               {activeSection === "organization"  && <WorkspaceSection showToast={showToast} SectionHeader={SectionHeader} />}
               {activeSection === "data"          && <PrivacyDataSection showToast={showToast} SectionHeader={SectionHeader} />}
+              {activeSection === "rbac"          && <AccessControlSection />}
               {activeSection === "danger"        && <DangerZoneSection showToast={showToast} SectionHeader={SectionHeader} />}
             </Suspense>
           </motion.div>
@@ -263,38 +254,27 @@ export function SettingsPage({ section: sectionProp }) {
               initial={{ y: 80, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 80, opacity: 0 }}
-              style={{ position: "fixed", bottom: 32, left: "50%", transform: "translateX(-50%)", zIndex: 50 }}
+              className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50"
             >
-              <div style={{
-                display: "flex", alignItems: "center", gap: 16,
-                padding: "14px 20px", background: "var(--surface)",
-                border: "1px solid var(--stroke)", borderRadius: 16,
-                boxShadow: "0 8px 32px rgba(0,0,0,.18)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b", animation: "pulse 1.5s ease-in-out infinite" }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>Unsaved changes</span>
+              <div className="flex items-center gap-6 px-6 py-4 bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">You have unsaved changes</span>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     onClick={() => setDirty(false)}
-                    style={{ padding: "7px 14px", fontSize: 12, fontWeight: 600, color: "var(--muted)", background: "transparent", border: "none", cursor: "pointer", borderRadius: 8 }}
+                    className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     Discard
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 6,
-                      padding: "7px 16px", fontSize: 12, fontWeight: 700,
-                      color: "#fff", background: "#5d5fef",
-                      border: "none", borderRadius: 8, cursor: "pointer",
-                      opacity: saving ? 0.7 : 1,
-                    }}
+                    className="flex items-center gap-2 px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-50"
                   >
-                    {saving ? <RefreshCcw size={13} style={{ animation: "spin 0.7s linear infinite" }} /> : <Save size={13} />}
-                    {saving ? "Saving..." : "Save changes"}
+                    {saving ? <RefreshCcw size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </div>

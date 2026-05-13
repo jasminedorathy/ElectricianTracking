@@ -6,6 +6,7 @@ import {
 } from "lucide-react"
 import { apiRequest } from "../../../api/client.js"
 import { useAuth } from "../../../state/auth/useAuth.js"
+import { Input } from "../../components/kit.jsx"
 
 function Toggle({ checked, onChange }) {
   return (
@@ -185,24 +186,20 @@ export default function AccountSecuritySection({ markDirty, showToast, Field, Se
           Current: <strong style={{ color: "var(--fg)" }}>{user?.email || "Not set"}</strong>
         </div>
         <div className="stFormGrid">
-          <Field label="New email address">
-            <input
-              className="stInput"
-              type="email"
-              placeholder="new@example.com"
-              value={emailForm.new_email}
-              onChange={e => setEmailForm(p => ({ ...p, new_email: e.target.value }))}
-            />
-          </Field>
-          <Field label="Confirm with password">
-            <input
-              className="stInput"
-              type="password"
-              placeholder="Current password"
-              value={emailForm.password}
-              onChange={e => setEmailForm(p => ({ ...p, password: e.target.value }))}
-            />
-          </Field>
+          <Input 
+            label="New email address" 
+            type="email" 
+            placeholder="new@example.com" 
+            value={emailForm.new_email} 
+            onChange={e => setEmailForm(p => ({ ...p, new_email: e.target.value }))} 
+          />
+          <Input 
+            label="Confirm with password" 
+            type="password" 
+            placeholder="Current password" 
+            value={emailForm.password} 
+            onChange={e => setEmailForm(p => ({ ...p, password: e.target.value }))} 
+          />
         </div>
         <div className="stCardActions">
           <button className="stPrimaryBtn" onClick={handleEmailChange} disabled={emailSaving}>
@@ -224,24 +221,21 @@ export default function AccountSecuritySection({ markDirty, showToast, Field, Se
             { label: "New password", key: "new_password", showKey: "new" },
             { label: "Confirm new password", key: "confirm_password", showKey: "confirm" },
           ].map(({ label, key, showKey }) => (
-            <Field key={key} label={label}>
-              <div style={{ position: "relative" }}>
-                <input
-                  className="stInput"
-                  type={showPw[showKey] ? "text" : "password"}
-                  placeholder={label}
-                  value={pwForm[key]}
-                  style={{ paddingRight: 36 }}
-                  onChange={e => setPwForm(p => ({ ...p, [key]: e.target.value }))}
-                />
-                <button
-                  onClick={() => setShowPw(p => ({ ...p, [showKey]: !p[showKey] }))}
-                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 0 }}
-                >
-                  {showPw[showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </Field>
+            <div key={key} style={{ position: "relative" }}>
+              <Input 
+                label={label} 
+                type={showPw[showKey] ? "text" : "password"} 
+                placeholder={label} 
+                value={pwForm[key]} 
+                onChange={e => setPwForm(p => ({ ...p, [key]: e.target.value }))} 
+              />
+              <button
+                onClick={() => setShowPw(p => ({ ...p, [showKey]: !p[showKey] }))}
+                style={{ position: "absolute", right: 10, top: 40, background: "none", border: "none", color: "var(--muted)", cursor: "pointer", padding: 0 }}
+              >
+                {showPw[showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           ))}
           {pwForm.new_password && (
             <div style={{ gridColumn: "1 / -1" }}>
@@ -307,16 +301,14 @@ export default function AccountSecuritySection({ markDirty, showToast, Field, Se
                 </code>
               </div>
             </div>
-            <Field label="Enter 6-digit code from app">
-              <input
-                className="stInput"
-                placeholder="000000"
-                maxLength={6}
-                value={twofa.verifyCode}
-                onChange={e => setTwofa(prev => ({ ...prev, verifyCode: e.target.value.replace(/\D/g, "") }))}
-                style={{ letterSpacing: 6, fontSize: 18, fontWeight: 700 }}
-              />
-            </Field>
+            <Input 
+              label="Enter 6-digit code from app" 
+              placeholder="000000" 
+              maxLength={6} 
+              value={twofa.verifyCode} 
+              onChange={e => setTwofa(prev => ({ ...prev, verifyCode: e.target.value.replace(/\D/g, "") }))} 
+              style={{ letterSpacing: 6, fontSize: 18, fontWeight: 700 }} 
+            />
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button className="stPrimaryBtn" onClick={handle2FAVerify} disabled={tfaSaving || twofa.verifyCode.length !== 6}>
                 {tfaSaving ? <Loader2 size={13} style={{ animation: "spin .7s linear infinite" }} /> : <Check size={13} />}
@@ -445,13 +437,12 @@ function Disable2FAPanel({ onDisable, saving }) {
         </button>
       ) : (
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
-          <input
-            className="stInput"
-            type="password"
-            placeholder="Confirm password"
-            value={pw}
-            onChange={e => setPw(e.target.value)}
-            style={{ maxWidth: 220 }}
+          <Input 
+            type="password" 
+            placeholder="Confirm password" 
+            value={pw} 
+            onChange={e => setPw(e.target.value)} 
+            style={{ maxWidth: 220 }} 
           />
           <button className="stDangerBtn" onClick={() => onDisable(pw)} disabled={saving || !pw}>
             {saving ? <Loader2 size={11} style={{ animation: "spin .7s linear infinite" }} /> : null}

@@ -316,19 +316,19 @@ function Skeleton({ w = "100%", h = "16px", r = "8px", className = "" }) {
 function StatCard({ icon, label, value, sub, color = "#6366F1", pulse }) {
   const isOT = sub && sub.includes("OT")
   return (
-    <Card className={`flex-1 p-6 relative overflow-hidden group transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 ${isOT ? 'border-red-100 bg-red-50/30' : ''}`}>
+    <Card className={`flex-1 p-6 relative overflow-hidden group transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/60 ${isOT ? 'border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10' : 'bg-surface dark:bg-slate-900/60 border-stroke dark:border-slate-800/50'}`}>
       <div className="flex items-start justify-between">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg transition-colors ${isOT ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
+            <div className={`p-2 rounded-lg transition-colors ${isOT ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-slate-50 dark:bg-slate-950 text-slate-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
               {React.cloneElement(icon, { size: 16 })}
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${isOT ? 'text-red-400' : 'text-slate-400'}`}>{label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-widest ${isOT ? 'text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{label}</span>
           </div>
           <div className="space-y-1">
-            <div className={`text-2xl font-black tracking-tight ${isOT ? 'text-red-600' : 'text-slate-900'}`}>{value}</div>
+            <div className={`text-2xl font-black tracking-tight ${isOT ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>{value}</div>
             {sub && (
-              <div className={`text-[10px] font-bold ${isOT ? 'text-red-500' : 'text-slate-400'}`}>
+              <div className={`text-[10px] font-bold ${isOT ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
                 {sub}
               </div>
             )}
@@ -343,7 +343,7 @@ function StatCard({ icon, label, value, sub, color = "#6366F1", pulse }) {
       </div>
 
       {/* Decorative background element */}
-      <div className={`absolute bottom-[-20%] right-[-10%] w-24 h-24 rounded-full opacity-[0.03] transition-transform duration-500 group-hover:scale-150 ${isOT ? 'bg-red-600' : 'bg-indigo-600'}`}></div>
+      <div className={`absolute bottom-[-20%] right-[-10%] w-24 h-24 rounded-full opacity-[0.03] dark:opacity-[0.08] transition-transform duration-500 group-hover:scale-150 ${isOT ? 'bg-red-600' : 'bg-indigo-600'}`}></div>
     </Card>
   )
 }
@@ -446,18 +446,18 @@ function AdminTimePage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
   const monthThemes = [
-    { nav: "text-blue-600 shadow-[0_4px_0_#BFDBFE,0_8px_20px_rgba(59,130,246,0.2)] border-blue-100", calBg: "hover:bg-blue-50 hover:border-blue-200 hover:shadow-blue-500/20", calText: "group-hover:text-blue-700", dot: "bg-blue-200 group-hover:bg-blue-500", badge: "bg-blue-500" },
-    { nav: "text-rose-600 shadow-[0_4px_0_#FECDD3,0_8px_20px_rgba(225,29,72,0.2)] border-rose-100", calBg: "hover:bg-rose-50 hover:border-rose-200 hover:shadow-rose-500/20", calText: "group-hover:text-rose-700", dot: "bg-rose-200 group-hover:bg-rose-500", badge: "bg-rose-500" },
-    { nav: "text-emerald-600 shadow-[0_4px_0_#A7F3D0,0_8px_20px_rgba(16,185,129,0.2)] border-emerald-100", calBg: "hover:bg-emerald-50 hover:border-emerald-200 hover:shadow-emerald-500/20", calText: "group-hover:text-emerald-700", dot: "bg-emerald-200 group-hover:bg-emerald-500", badge: "bg-emerald-500" },
-    { nav: "text-violet-600 shadow-[0_4px_0_#DDD6FE,0_8px_20px_rgba(139,92,246,0.2)] border-violet-100", calBg: "hover:bg-violet-50 hover:border-violet-200 hover:shadow-violet-500/20", calText: "group-hover:text-violet-700", dot: "bg-violet-200 group-hover:bg-violet-500", badge: "bg-violet-500" },
-    { nav: "text-amber-600 shadow-[0_4px_0_#FDE68A,0_8px_20px_rgba(245,158,11,0.2)] border-amber-100", calBg: "hover:bg-amber-50 hover:border-amber-200 hover:shadow-amber-500/20", calText: "group-hover:text-amber-700", dot: "bg-amber-200 group-hover:bg-amber-500", badge: "bg-amber-500" },
-    { nav: "text-cyan-600 shadow-[0_4px_0_#CFFAFE,0_8px_20px_rgba(6,182,212,0.2)] border-cyan-100", calBg: "hover:bg-cyan-50 hover:border-cyan-200 hover:shadow-cyan-500/20", calText: "group-hover:text-cyan-700", dot: "bg-cyan-200 group-hover:bg-cyan-500", badge: "bg-cyan-500" },
-    { nav: "text-red-600 shadow-[0_4px_0_#FECACA,0_8px_20px_rgba(239,68,68,0.2)] border-red-100", calBg: "hover:bg-red-50 hover:border-red-200 hover:shadow-red-500/20", calText: "group-hover:text-red-700", dot: "bg-red-200 group-hover:bg-red-500", badge: "bg-red-500" },
-    { nav: "text-orange-600 shadow-[0_4px_0_#FFEDD5,0_8px_20px_rgba(249,115,22,0.2)] border-orange-100", calBg: "hover:bg-orange-50 hover:border-orange-200 hover:shadow-orange-500/20", calText: "group-hover:text-orange-700", dot: "bg-orange-200 group-hover:bg-orange-500", badge: "bg-orange-500" },
-    { nav: "text-teal-600 shadow-[0_4px_0_#CCFBF1,0_8px_20px_rgba(20,184,166,0.2)] border-teal-100", calBg: "hover:bg-teal-50 hover:border-teal-200 hover:shadow-teal-500/20", calText: "group-hover:text-teal-700", dot: "bg-teal-200 group-hover:bg-teal-500", badge: "bg-teal-500" },
-    { nav: "text-fuchsia-600 shadow-[0_4px_0_#F5D0FE,0_8px_20px_rgba(217,70,239,0.2)] border-fuchsia-100", calBg: "hover:bg-fuchsia-50 hover:border-fuchsia-200 hover:shadow-fuchsia-500/20", calText: "group-hover:text-fuchsia-700", dot: "bg-fuchsia-200 group-hover:bg-fuchsia-500", badge: "bg-fuchsia-500" },
-    { nav: "text-yellow-600 shadow-[0_4px_0_#FEF08A,0_8px_20px_rgba(234,179,8,0.2)] border-yellow-100", calBg: "hover:bg-yellow-50 hover:border-yellow-200 hover:shadow-yellow-500/20", calText: "group-hover:text-yellow-700", dot: "bg-yellow-200 group-hover:bg-yellow-500", badge: "bg-yellow-500" },
-    { nav: "text-indigo-600 shadow-[0_4px_0_#C7D2FE,0_8px_20px_rgba(79,70,229,0.2)] border-indigo-100", calBg: "hover:bg-indigo-50 hover:border-indigo-200 hover:shadow-indigo-500/20", calText: "group-hover:text-indigo-700", dot: "bg-indigo-200 group-hover:bg-indigo-500", badge: "bg-indigo-500" },
+    { nav: "text-blue-600 dark:text-blue-400 shadow-[0_4px_0_#BFDBFE,0_8px_20px_rgba(59,130,246,0.2)] dark:shadow-[0_4px_0_#1E3A8A,0_8px_20px_rgba(0,0,0,0.4)] border-blue-100 dark:border-blue-900/30", calBg: "hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-blue-500/20", calText: "group-hover:text-blue-700 dark:group-hover:text-blue-300", dot: "bg-blue-200 dark:bg-blue-800 group-hover:bg-blue-500", badge: "bg-blue-500" },
+    { nav: "text-rose-600 dark:text-rose-400 shadow-[0_4px_0_#FECDD3,0_8px_20px_rgba(225,29,72,0.2)] dark:shadow-[0_4px_0_#881337,0_8px_20px_rgba(0,0,0,0.4)] border-rose-100 dark:border-rose-900/30", calBg: "hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:border-rose-200 dark:hover:border-rose-800 hover:shadow-rose-500/20", calText: "group-hover:text-rose-700 dark:group-hover:text-rose-300", dot: "bg-rose-200 dark:bg-rose-800 group-hover:bg-rose-500", badge: "bg-rose-500" },
+    { nav: "text-emerald-600 dark:text-emerald-400 shadow-[0_4px_0_#A7F3D0,0_8px_20px_rgba(16,185,129,0.2)] dark:shadow-[0_4px_0_#064E3B,0_8px_20px_rgba(0,0,0,0.4)] border-emerald-100 dark:border-emerald-900/30", calBg: "hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800 hover:shadow-emerald-500/20", calText: "group-hover:text-emerald-700 dark:group-hover:text-emerald-300", dot: "bg-emerald-200 dark:bg-emerald-800 group-hover:bg-emerald-500", badge: "bg-emerald-500" },
+    { nav: "text-violet-600 dark:text-violet-400 shadow-[0_4px_0_#DDD6FE,0_8px_20px_rgba(139,92,246,0.2)] dark:shadow-[0_4px_0_#4C1D95,0_8px_20px_rgba(0,0,0,0.4)] border-violet-100 dark:border-violet-900/30", calBg: "hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:border-violet-200 dark:hover:border-violet-800 hover:shadow-violet-500/20", calText: "group-hover:text-violet-700 dark:group-hover:text-violet-300", dot: "bg-violet-200 dark:bg-violet-800 group-hover:bg-violet-500", badge: "bg-violet-500" },
+    { nav: "text-amber-600 dark:text-amber-400 shadow-[0_4px_0_#FDE68A,0_8px_20px_rgba(245,158,11,0.2)] dark:shadow-[0_4px_0_#78350F,0_8px_20px_rgba(0,0,0,0.4)] border-amber-100 dark:border-amber-900/30", calBg: "hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:border-amber-200 dark:hover:border-amber-800 hover:shadow-amber-500/20", calText: "group-hover:text-amber-700 dark:group-hover:text-amber-300", dot: "bg-amber-200 dark:bg-amber-800 group-hover:bg-amber-500", badge: "bg-amber-500" },
+    { nav: "text-cyan-600 dark:text-cyan-400 shadow-[0_4px_0_#CFFAFE,0_8px_20px_rgba(6,182,212,0.2)] dark:shadow-[0_4px_0_#164E63,0_8px_20px_rgba(0,0,0,0.4)] border-cyan-100 dark:border-cyan-900/30", calBg: "hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:border-cyan-200 dark:hover:border-cyan-800 hover:shadow-cyan-500/20", calText: "group-hover:text-cyan-700 dark:group-hover:text-cyan-300", dot: "bg-cyan-200 dark:bg-cyan-800 group-hover:bg-cyan-500", badge: "bg-cyan-500" },
+    { nav: "text-red-600 dark:text-red-400 shadow-[0_4px_0_#FECACA,0_8px_20px_rgba(239,68,68,0.2)] dark:shadow-[0_4px_0_#7F1D1D,0_8px_20px_rgba(0,0,0,0.4)] border-red-100 dark:border-red-900/30", calBg: "hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 hover:shadow-red-500/20", calText: "group-hover:text-red-700 dark:group-hover:text-red-300", dot: "bg-red-200 dark:bg-red-800 group-hover:bg-red-500", badge: "bg-red-500" },
+    { nav: "text-orange-600 dark:text-orange-400 shadow-[0_4px_0_#FFEDD5,0_8px_20px_rgba(249,115,22,0.2)] dark:shadow-[0_4px_0_#7C2D12,0_8px_20px_rgba(0,0,0,0.4)] border-orange-100 dark:border-orange-900/30", calBg: "hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-200 dark:hover:border-orange-800 hover:shadow-orange-500/20", calText: "group-hover:text-orange-700 dark:group-hover:text-orange-300", dot: "bg-orange-200 dark:bg-orange-800 group-hover:bg-orange-500", badge: "bg-orange-500" },
+    { nav: "text-teal-600 dark:text-teal-400 shadow-[0_4px_0_#CCFBF1,0_8px_20px_rgba(20,184,166,0.2)] dark:shadow-[0_4px_0_#134E4A,0_8px_20px_rgba(0,0,0,0.4)] border-teal-100 dark:border-teal-900/30", calBg: "hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:border-teal-200 dark:hover:border-teal-800 hover:shadow-teal-500/20", calText: "group-hover:text-teal-700 dark:group-hover:text-teal-300", dot: "bg-teal-200 dark:bg-teal-800 group-hover:bg-teal-500", badge: "bg-teal-500" },
+    { nav: "text-fuchsia-600 dark:text-fuchsia-400 shadow-[0_4px_0_#F5D0FE,0_8px_20px_rgba(217,70,239,0.2)] dark:shadow-[0_4px_0_#701A75,0_8px_20px_rgba(0,0,0,0.4)] border-fuchsia-100 dark:border-fuchsia-900/30", calBg: "hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 hover:border-fuchsia-200 dark:hover:border-fuchsia-800 hover:shadow-fuchsia-500/20", calText: "group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-300", dot: "bg-fuchsia-200 dark:bg-fuchsia-800 group-hover:bg-fuchsia-500", badge: "bg-fuchsia-500" },
+    { nav: "text-yellow-600 dark:text-yellow-400 shadow-[0_4px_0_#FEF08A,0_8px_20px_rgba(234,179,8,0.2)] dark:shadow-[0_4px_0_#715805,0_8px_20px_rgba(0,0,0,0.4)] border-yellow-100 dark:border-yellow-900/30", calBg: "hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:border-yellow-200 dark:hover:border-yellow-800 hover:shadow-yellow-500/20", calText: "group-hover:text-yellow-700 dark:group-hover:text-yellow-300", dot: "bg-yellow-200 dark:bg-yellow-800 group-hover:bg-yellow-500", badge: "bg-yellow-500" },
+    { nav: "text-indigo-600 dark:text-indigo-400 shadow-[0_4px_0_#C7D2FE,0_8px_20px_rgba(79,70,229,0.2)] dark:shadow-[0_4px_0_#312E81,0_8px_20px_rgba(0,0,0,0.4)] border-indigo-100 dark:border-indigo-900/30", calBg: "hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-indigo-500/20", calText: "group-hover:text-indigo-700 dark:group-hover:text-indigo-300", dot: "bg-indigo-200 dark:bg-indigo-800 group-hover:bg-indigo-500", badge: "bg-indigo-500" },
   ]
 
   const load = useCallback(async () => {
@@ -569,27 +569,27 @@ function AdminTimePage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-white overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-bg dark:bg-bg overflow-hidden">
       {/* ── HEADER ── */}
-      <div className="h-24 bg-white border-b border-slate-100 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+      <div className="h-24 bg-surface dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
         <div className="flex items-center gap-6">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight font-[Manrope]">Attendance Intelligence</h1>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope]">Attendance Intelligence</h1>
             <div className="flex items-center gap-3 mt-2">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse" />
-              <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Enterprise Administrative Ledger</span>
+              <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Enterprise Administrative Ledger</span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-            <Users size={18} className="text-slate-400" />
-            <span className="text-[13px] font-black text-slate-700 tracking-tight">{employees.length} Personnel Managed</span>
+          <div className="flex items-center gap-3 px-6 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+            <Users size={18} className="text-slate-400 dark:text-slate-500" />
+            <span className="text-[13px] font-black text-slate-700 dark:text-slate-300 tracking-tight">{employees.length} Personnel Managed</span>
           </div>
           <button
             onClick={load}
-            className="w-12 h-12 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 rounded-2xl border border-slate-100 shadow-sm transition-all flex items-center justify-center group"
+            className="w-12 h-12 bg-surface dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-800 rounded-2xl border border-stroke dark:border-slate-700 shadow-sm transition-all flex items-center justify-center group"
           >
             <RefreshCw size={20} className={`${loading ? "animate-spin" : "group-hover:rotate-180 transition-transform duration-500"}`} />
           </button>
@@ -607,13 +607,13 @@ function AdminTimePage() {
         <div className="flex flex-col xl:flex-row gap-8">
           {/* Left Panel: Insights & Roster */}
           <div className="w-full xl:w-[340px] shrink-0 space-y-8">
-            <div className="p-8 bg-yellow-400 text-yellow-950 rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(250,204,21,0.4)] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-700" />
+            <div className="p-8 bg-yellow-400 dark:bg-yellow-500/90 text-yellow-950 dark:text-yellow-50 rounded-[2.5rem] shadow-[0_20px_50px_-12px_rgba(250,204,21,0.4)] dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] relative overflow-hidden group border border-yellow-300/50 dark:border-yellow-400/20">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 dark:bg-white/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-700" />
               <div className="relative z-10">
-                <div className="text-[11px] font-black text-yellow-900/60 uppercase tracking-widest mb-2">Monthly Compliance</div>
+                <div className="text-[11px] font-black text-yellow-900/60 dark:text-yellow-100/60 uppercase tracking-widest mb-2">Monthly Compliance</div>
                 <div className="text-5xl font-black tracking-tight">{monthStats.attendancePct}%</div>
-                <div className="mt-4 text-[13px] font-bold text-yellow-900/80">{monthNames[selectedMonth]} Operational Efficiency</div>
-                <div className="mt-8 h-2.5 w-full bg-yellow-500/30 rounded-full overflow-hidden">
+                <div className="mt-4 text-[13px] font-bold text-yellow-900/80 dark:text-yellow-100/80">{monthNames[selectedMonth]} Operational Efficiency</div>
+                <div className="mt-8 h-2.5 w-full bg-yellow-500/30 dark:bg-yellow-900/30 rounded-full overflow-hidden border border-yellow-600/10">
                   <div className="h-full bg-white rounded-full shadow-[0_0_12px_rgba(255,255,255,0.5)] transition-all duration-1000" style={{ width: `${monthStats.attendancePct}%` }}></div>
                 </div>
               </div>
@@ -621,8 +621,8 @@ function AdminTimePage() {
 
             <div className="space-y-6">
               <div className="flex items-center justify-between px-2">
-                <h2 className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Personnel Directory</h2>
-                <div className="px-2.5 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">{employees.length} Members</div>
+                <h2 className="text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">Personnel Directory</h2>
+                <div className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 rounded-lg text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{employees.length} Members</div>
               </div>
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar scrollbar-hide">
                 {empStatus.map(e => {
@@ -631,28 +631,28 @@ function AdminTimePage() {
                   const pct = monthStats.workDaysInMonth > 0 ? Math.round((presentCount / monthStats.workDaysInMonth) * 100) : 0
 
                   return (
-                    <div key={e.id} className="group p-5 bg-white rounded-[2rem] border border-slate-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/50 hover:-translate-y-1 transition-all cursor-pointer">
+                    <div key={e.id} className="group p-5 bg-surface dark:bg-slate-900/60 rounded-[2rem] border border-stroke dark:border-slate-800/80 hover:border-indigo-100 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-50/50 dark:hover:shadow-black/60 hover:-translate-y-1 transition-all cursor-pointer">
                       <div className="flex items-center gap-4 mb-4">
                         <div className="relative">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center font-black text-slate-400 text-sm group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all shadow-sm">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800/50 flex items-center justify-center font-black text-slate-400 dark:text-slate-600 text-sm group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:border-indigo-100 dark:group-hover:border-indigo-800 transition-all shadow-sm">
                             {e.avatarLetter}
                           </div>
                           {e.log && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4 border-white bg-emerald-500 animate-pulse shadow-sm"></div>
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-4 border-surface dark:border-slate-900 bg-emerald-500 animate-pulse shadow-sm"></div>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[14px] font-black text-slate-900 truncate tracking-tight">{e.name}</div>
-                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">@{e.username}</div>
+                          <div className="text-[14px] font-black text-slate-900 dark:text-white truncate tracking-tight">{e.name}</div>
+                          <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">@{e.username}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-[13px] font-black text-slate-900 leading-none">{pct}%</div>
-                          <div className="text-[9px] font-black text-slate-300 uppercase mt-1">Score</div>
+                          <div className="text-[13px] font-black text-slate-900 dark:text-white leading-none">{pct}%</div>
+                          <div className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase mt-1">Score</div>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="px-4 py-2 bg-slate-50 rounded-xl text-[10px] font-black text-slate-400 uppercase tracking-tight text-center">Duty: {presentCount}</div>
-                        <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight text-center ${pct > 80 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                        <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tight text-center">Duty: {presentCount}</div>
+                        <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight text-center ${pct > 80 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
                           {pct > 80 ? 'Optimal' : 'Standard'}
                         </div>
                       </div>
@@ -666,14 +666,14 @@ function AdminTimePage() {
           {/* Main Content Area */}
           <div className="flex-1 space-y-8">
             {/* Month Navigation */}
-            <div className="bg-slate-50 p-3 rounded-[2.5rem] flex items-center gap-2 overflow-x-auto scrollbar-hide border border-slate-200/60 shadow-inner">
+            <div className="bg-slate-50 dark:bg-slate-950/40 p-3 rounded-[2.5rem] flex items-center gap-2 overflow-x-auto scrollbar-hide border border-slate-200/60 dark:border-slate-800/80 shadow-inner">
               {monthNames.map((m, idx) => (
                 <button
                   key={m}
                   onClick={() => setSelectedMonth(idx)}
                   className={`px-8 py-3.5 rounded-2xl text-[11px] font-black transition-all duration-200 uppercase tracking-widest shrink-0 border ${selectedMonth === idx
-                      ? `bg-white -translate-y-1 ${monthThemes[idx].nav}`
-                      : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:text-slate-700 hover:shadow-[0_4px_0_#E2E8F0,0_6px_15px_rgba(0,0,0,0.05)] hover:-translate-y-1 hover:border-slate-100 active:shadow-none active:translate-y-0'
+                    ? `bg-surface dark:bg-slate-800 -translate-y-1 ${monthThemes[idx].nav}`
+                    : 'bg-transparent text-slate-400 dark:text-slate-600 border-transparent hover:bg-surface dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 hover:shadow-[0_4px_0_#E2E8F0,0_6px_15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_4px_0_#1E293B,0_6px_15px_rgba(0,0,0,0.4)] hover:-translate-y-1 hover:border-slate-100 dark:hover:border-slate-700 active:shadow-none active:translate-y-0'
                     }`}
                 >
                   {m}
@@ -684,12 +684,12 @@ function AdminTimePage() {
             {/* Calendar & KPIs Row */}
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Calendar Grid — The Temporal Matrix */}
-              <div className="flex-1 p-8 bg-white border border-slate-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] rounded-[2.5rem]">
+              <div className="flex-1 p-8 bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800/80 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] dark:shadow-none rounded-[2.5rem]">
                 <div className="grid gap-2" style={{ gridTemplateColumns: "50px repeat(7, 1fr)" }}>
                   {/* Header */}
-                  <div className="py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center opacity-60">WEEK</div>
+                  <div className="py-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest text-center opacity-60">WEEK</div>
                   {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-                    <div key={day} className="py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">{day}</div>
+                    <div key={day} className="py-4 text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest text-center">{day}</div>
                   ))}
 
                   {/* Dynamic Weeks */}
@@ -703,7 +703,7 @@ function AdminTimePage() {
 
                     return weeks.map((week, wIdx) => (
                       <React.Fragment key={`w-${wIdx}`}>
-                        <div className="flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest bg-slate-50/50 rounded-2xl">W{wIdx + 1}</div>
+                        <div className="flex items-center justify-center text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest bg-slate-50/50 dark:bg-slate-950/30 rounded-2xl">W{wIdx + 1}</div>
                         {week.map((day, dIdx) => {
                           const dateStr = day ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null
                           const dayLogs = day ? logs.filter(l => l.work_date === dateStr) : []
@@ -712,7 +712,7 @@ function AdminTimePage() {
                           const isToday = day && dateStr === todayStr
 
                           return (
-                            <div key={`d-${wIdx}-${dIdx}`} className={`group flex flex-col items-center justify-center min-h-[90px] rounded-[1.5rem] p-2 relative transition-all duration-300 ${!day ? 'bg-transparent' : isToday ? 'bg-white shadow-[0_15px_30px_-5px_rgba(0,0,0,0.1)] ring-1 ring-slate-100 scale-[1.05] z-20 cursor-pointer' : `bg-slate-50 border border-transparent hover:scale-105 hover:bg-white z-10 cursor-pointer ${monthThemes[selectedMonth].calBg}`}`}>
+                            <div key={`d-${wIdx}-${dIdx}`} className={`group flex flex-col items-center justify-center min-h-[90px] rounded-[1.5rem] p-2 relative transition-all duration-300 ${!day ? 'bg-transparent' : isToday ? 'bg-surface dark:bg-slate-800 shadow-[0_15px_30px_-5px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.4)] ring-1 ring-slate-100 dark:ring-slate-700 scale-[1.05] z-20 cursor-pointer' : `bg-slate-50 dark:bg-slate-950/50 border border-transparent hover:scale-105 hover:bg-surface dark:hover:bg-slate-800 z-10 cursor-pointer ${monthThemes[selectedMonth].calBg}`}`}>
                               {day && (
                                 <>
                                   {isToday && (
@@ -720,7 +720,7 @@ function AdminTimePage() {
                                       Today
                                     </div>
                                   )}
-                                  <span className={`text-lg font-black tracking-tight transition-colors ${isToday ? 'text-slate-900' : isWeekend ? 'text-slate-400' : `text-slate-800 ${monthThemes[selectedMonth].calText}`}`}>{day}</span>
+                                  <span className={`text-lg font-black tracking-tight transition-colors ${isToday ? 'text-slate-900 dark:text-white' : isWeekend ? 'text-slate-400 dark:text-slate-600' : `text-slate-800 dark:text-slate-300 ${monthThemes[selectedMonth].calText}`}`}>{day}</span>
                                   <div className="mt-1 flex flex-col items-center gap-1.5 min-h-[16px]">
                                     {dayLogs.length > 0 ? (
                                       <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)] transition-colors ${isToday ? monthThemes[selectedMonth].badge : attendancePct > 80 ? 'bg-emerald-500' : attendancePct > 50 ? 'bg-amber-500' : 'bg-rose-500'}`}></div>
@@ -728,7 +728,7 @@ function AdminTimePage() {
                                       <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isToday ? monthThemes[selectedMonth].badge : monthThemes[selectedMonth].dot}`}></div>
                                     )}
                                     {dayLogs.length > 0 && (
-                                      <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-slate-400' : `text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ${monthThemes[selectedMonth].calText}`}`}>
+                                      <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest ${isToday ? 'text-slate-400 dark:text-slate-500' : `text-slate-400 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity ${monthThemes[selectedMonth].calText}`}`}>
                                         {attendancePct}%
                                       </span>
                                     )}
@@ -748,42 +748,42 @@ function AdminTimePage() {
               {/* KPI Summary Cards */}
               <div className="w-full lg:w-[320px] flex flex-col gap-4 shrink-0">
                 {/* Card 1 */}
-                <div className="relative p-6 bg-slate-50 border border-slate-100/50 rounded-[2rem] flex items-center justify-between group hover:bg-white hover:border-indigo-100 hover:shadow-[0_10px_40px_-10px_rgba(79,70,229,0.15)] hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="relative p-6 bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800/80 rounded-[2rem] flex items-center justify-between group hover:bg-surface dark:hover:bg-slate-800 hover:border-indigo-100 dark:hover:border-indigo-500/30 hover:shadow-[0_10px_40px_-10px_rgba(79,70,229,0.15)] dark:hover:shadow-black/60 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-indigo-500/20 border border-indigo-500/50 group-hover:bg-indigo-500 group-hover:animate-pulse"></div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Logs</div>
+                      <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Total Logs</div>
                     </div>
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Monthly Captured</div>
+                    <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Monthly Captured</div>
                   </div>
-                  <div className="text-4xl font-black text-slate-900 tracking-tight">{monthStats.totalDays}</div>
+                  <div className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{monthStats.totalDays}</div>
                 </div>
 
                 {/* Card 2 */}
-                <div className="relative p-6 bg-slate-50 border border-slate-100/50 rounded-[2rem] flex items-center justify-between group hover:bg-white hover:border-emerald-100 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.15)] hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="relative p-6 bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800/80 rounded-[2rem] flex items-center justify-between group hover:bg-surface dark:hover:bg-slate-800 hover:border-emerald-100 dark:hover:border-emerald-500/30 hover:shadow-[0_10px_40px_-10px_rgba(16,185,129,0.15)] dark:hover:shadow-black/60 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500/20 border border-emerald-500/50 group-hover:bg-emerald-500 group-hover:animate-pulse"></div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Roster</div>
+                      <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Active Roster</div>
                     </div>
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Unique Personnel</div>
+                    <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Unique Personnel</div>
                   </div>
-                  <div className="text-4xl font-black text-slate-900 tracking-tight">{monthStats.totalAttendance}</div>
+                  <div className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{monthStats.totalAttendance}</div>
                 </div>
 
                 {/* Card 3 */}
-                <div className="relative p-6 bg-slate-50 border border-slate-100/50 rounded-[2rem] flex items-center justify-between group hover:bg-white hover:border-amber-100 hover:shadow-[0_10px_40px_-10px_rgba(245,158,11,0.15)] hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div className="relative p-6 bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800/80 rounded-[2rem] flex items-center justify-between group hover:bg-surface dark:hover:bg-slate-800 hover:border-amber-100 dark:hover:border-amber-500/30 hover:shadow-[0_10px_40px_-10px_rgba(245,158,11,0.15)] dark:hover:shadow-black/40 hover:-translate-y-1 transition-all duration-300 overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-amber-500/20 border border-amber-500/50 group-hover:bg-amber-500 group-hover:animate-pulse"></div>
-                      <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">System Target</div>
+                      <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">System Target</div>
                     </div>
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">Expected Records</div>
+                    <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">Expected Records</div>
                   </div>
-                  <div className="text-4xl font-black text-slate-900 tracking-tight">{monthStats.totalWorkingDays}</div>
+                  <div className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{monthStats.totalWorkingDays}</div>
                 </div>
               </div>
             </div>
@@ -796,7 +796,7 @@ function AdminTimePage() {
             <div className="flex items-center gap-5">
               <div className="w-2 h-10 bg-indigo-600 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.4)]"></div>
               <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight font-[Manrope]">Audit Ledger</h2>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope]">Audit Ledger</h2>
                 <div className="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-1">{filteredLogs.length} Records synchronized</div>
               </div>
             </div>
@@ -804,7 +804,7 @@ function AdminTimePage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setLogsOpen(!logsOpen)}
-                className={`p-2 rounded-xl border transition-all ${logsOpen ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-400 border-slate-200'}`}
+                className={`p-2 rounded-xl border transition-all ${logsOpen ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'}`}
               >
                 <Filter size={18} />
               </button>
@@ -814,28 +814,28 @@ function AdminTimePage() {
           {logsOpen && (
             <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
               {/* Table Filters */}
-              <div className="flex flex-col xl:flex-row items-center justify-between gap-4 p-3 bg-slate-50/50 border border-slate-100 rounded-3xl">
+              <div className="flex flex-col xl:flex-row items-center justify-between gap-4 p-3 bg-slate-50/50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/80 rounded-3xl">
 
                 {/* Search Bar */}
-                <div className="flex items-center gap-3 bg-white rounded-2xl px-5 py-3 border border-slate-200/60 shadow-sm w-full xl:w-auto xl:flex-1 xl:max-w-md focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                <div className="flex items-center gap-3 bg-surface dark:bg-slate-900 rounded-2xl px-5 py-3 border border-stroke dark:border-slate-800 shadow-sm w-full xl:w-auto xl:flex-1 xl:max-w-md focus-within:border-indigo-300 dark:focus-within:border-indigo-500/50 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
                   <Search size={18} className="text-indigo-400" />
                   <input
                     type="text"
                     placeholder="Search personnel by name or ID..."
                     value={searchQ}
                     onChange={e => setSearchQ(e.target.value)}
-                    className="bg-transparent border-none text-[13px] font-bold text-slate-700 outline-none w-full placeholder:text-slate-400"
+                    className="bg-transparent border-none text-[13px] font-bold text-slate-700 dark:text-slate-300 outline-none w-full placeholder:text-slate-400 dark:placeholder:text-slate-600"
                   />
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
                   {/* Status Filter Segmented Control */}
-                  <div className="flex items-center bg-white border border-slate-200/60 rounded-2xl p-1 shadow-sm w-full md:w-auto overflow-x-auto scrollbar-hide">
+                  <div className="flex items-center bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 rounded-2xl p-1 shadow-sm w-full md:w-auto overflow-x-auto scrollbar-hide">
                     {["all", "live", "submitted", "done"].map(status => (
                       <button
                         key={status}
                         onClick={() => setStatusFilter(status)}
-                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${statusFilter === status ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${statusFilter === status ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                       >
                         {status === "all" ? "All" : status === "live" ? "Active" : status === "submitted" ? "Review" : "Completed"}
                       </button>
@@ -843,43 +843,43 @@ function AdminTimePage() {
                   </div>
 
                   {/* Date Range Filter */}
-                  <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-2xl p-1.5 shadow-sm w-full md:w-auto">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 group hover:border-indigo-200 transition-colors cursor-text">
-                      <Calendar size={14} className="text-slate-400 group-hover:text-indigo-500" />
-                      <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer" />
+                  <div className="flex items-center gap-2 bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 rounded-2xl p-1.5 shadow-sm w-full md:w-auto">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800/50 group hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-colors cursor-text">
+                      <Calendar size={14} className="text-slate-400 dark:text-slate-600 group-hover:text-indigo-500" />
+                      <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none cursor-pointer dark:[color-scheme:dark]" />
                     </div>
-                    <ChevronRight size={14} className="text-slate-300" />
-                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 group hover:border-indigo-200 transition-colors cursor-text">
-                      <Calendar size={14} className="text-slate-400 group-hover:text-indigo-500" />
-                      <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer" />
+                    <ChevronRight size={14} className="text-slate-300 dark:text-slate-700" />
+                    <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800/50 group hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-colors cursor-text">
+                      <Calendar size={14} className="text-slate-400 dark:text-slate-600 group-hover:text-indigo-500" />
+                      <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="bg-transparent text-[11px] font-black text-slate-700 dark:text-slate-300 outline-none cursor-pointer dark:[color-scheme:dark]" />
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Data Table */}
-              <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm">
+              <div className="overflow-hidden rounded-3xl border border-stroke dark:border-slate-800/80 bg-surface dark:bg-slate-900/60 shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="p-6 professional-subtitle text-slate-400">Employee</th>
-                        <th className="p-6 professional-subtitle text-slate-400">Shift Date</th>
-                        <th className="p-6 professional-subtitle text-slate-400">Timeline</th>
-                        <th className="p-6 professional-subtitle text-slate-400">Photos</th>
-                        <th className="p-6 professional-subtitle text-slate-400">Verification</th>
-                        <th className="p-6 professional-subtitle text-slate-400 text-right">Duration</th>
-                        <th className="p-6 professional-subtitle text-slate-400 text-right">Action</th>
+                      <tr className="bg-slate-50/50 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500">Employee</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500">Shift Date</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500">Timeline</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500">Photos</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500">Verification</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500 text-right">Duration</th>
+                        <th className="p-6 professional-subtitle text-slate-400 dark:text-slate-500 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                       {filteredLogs.map(l => (
                         <AdminLogRow key={l.id} log={l} onAction={load} />
                       ))}
                       {filteredLogs.length === 0 && (
                         <tr>
                           <td colSpan={7} className="p-20 text-center">
-                            <div className="flex flex-col items-center gap-4 text-slate-400">
+                            <div className="flex flex-col items-center gap-4 text-slate-400 dark:text-slate-600">
                               <FileText size={48} className="opacity-10" />
                               <div className="font-bold">No attendance records found</div>
                             </div>
@@ -920,32 +920,32 @@ function AdminLogRow({ log, onAction }) {
   const workedSeconds = isLive ? elapsed : log.worked_seconds
 
   return (
-    <tr className={`group hover:bg-slate-50/50 transition-colors ${isLive ? 'bg-indigo-50/30' : ''}`}>
+    <tr className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${isLive ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
       <td className="p-6">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${isLive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${isLive ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
             {(log.employee_name || "?").charAt(0)}
           </div>
           <div>
-            <div className="text-sm font-black text-slate-900">{log.employee_name}</div>
-            <div className="text-[10px] font-bold text-slate-400">@{log.employee_username}</div>
+            <div className="text-sm font-black text-slate-900 dark:text-white">{log.employee_name}</div>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">@{log.employee_username}</div>
           </div>
         </div>
       </td>
       <td className="p-6">
-        <div className="text-sm font-bold text-slate-700">{log.work_date}</div>
+        <div className="text-sm font-bold text-slate-700 dark:text-slate-300">{log.work_date}</div>
       </td>
       <td className="p-6">
         <div className="flex items-center gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase">In</span>
-              <span className="text-sm font-bold text-slate-700">{formatDateTime(log.clock_in).split(",")[1]}</span>
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">In</span>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDateTime(log.clock_in).split(",")[1]}</span>
             </div>
             {log.clock_out && (
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase">Out</span>
-                <span className="text-sm font-bold text-slate-700">{formatDateTime(log.clock_out).split(",")[1]}</span>
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Out</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDateTime(log.clock_out).split(",")[1]}</span>
               </div>
             )}
           </div>
@@ -957,16 +957,16 @@ function AdminLogRow({ log, onAction }) {
       <td className="p-6">
         <div className="flex items-center gap-2">
           {log.clock_in_photo && (
-            <a href={log.clock_in_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm hover:scale-110 transition-transform">
+            <a href={log.clock_in_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:scale-110 transition-transform">
               <img src={log.clock_in_photo} className="w-full h-full object-cover" />
             </a>
           )}
           {log.clock_out_photo && (
-            <a href={log.clock_out_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 shadow-sm hover:scale-110 transition-transform">
+            <a href={log.clock_out_photo} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm hover:scale-110 transition-transform">
               <img src={log.clock_out_photo} className="w-full h-full object-cover" />
             </a>
           )}
-          {!log.clock_in_photo && !log.clock_out_photo && <span className="text-[10px] font-bold text-slate-300">N/A</span>}
+          {!log.clock_in_photo && !log.clock_out_photo && <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600">N/A</span>}
         </div>
       </td>
       <td className="p-6">
@@ -983,7 +983,7 @@ function AdminLogRow({ log, onAction }) {
         </div>
       </td>
       <td className="p-6 text-right">
-        <div className={`text-sm font-black ${workedSeconds > 8 * 3600 ? 'text-red-600' : 'text-slate-900'}`}>
+        <div className={`text-sm font-black ${workedSeconds > 8 * 3600 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
           {formatDuration(workedSeconds)}
         </div>
         {workedSeconds > 8 * 3600 && (
@@ -1446,7 +1446,7 @@ function EmployeeTimePage() {
       {showMoodSurvey && createPortal(
         <div className="modal-overlay">
           <div className="modal-sheet max-w-md w-full p-10 text-center">
-            <h2 className="text-2xl font-black text-slate-900 mb-8 tracking-tight">How was work today?</h2>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-8 tracking-tight">How was work today?</h2>
             <div className="flex justify-center gap-4 mb-10">
               {[
                 { key: 'tough', emoji: '😞', label: 'Tough' },
@@ -1495,18 +1495,18 @@ function EmployeeTimePage() {
       )}
 
       {/* ═══ MAIN PAGE ═══ */}
-      <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-white overflow-hidden">
+      <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-bg dark:bg-bg overflow-hidden">
         {/* Header Row */}
-        <div className="h-20 bg-white border-b border-slate-100 px-8 flex items-center justify-between shrink-0">
+        <div className="h-20 bg-surface dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 dark:shadow-none">
               <Clock size={24} className={openLog ? 'animate-pulse' : ''} />
             </div>
             <div>
-              <h1 className="text-xl professional-title text-slate-900">Personal Timesheets</h1>
+              <h1 className="text-xl professional-title text-slate-900 dark:text-white">Personal Timesheets</h1>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${openLog ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                <span className="text-[10px] professional-subtitle text-slate-400">
+                <div className={`w-2 h-2 rounded-full ${openLog ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}></div>
+                <span className="text-[10px] professional-subtitle text-slate-400 dark:text-slate-500">
                   {openLog ? (openLog.task ? `Working on: ${openLog.task.title}` : (openBreak ? 'Currently on Break' : 'On Active Duty')) : 'System Standby'}
                 </span>
               </div>
@@ -1515,7 +1515,7 @@ function EmployeeTimePage() {
 
           <div className="flex items-center gap-4">
             {openLog && (
-              <div className="flex items-center bg-slate-900 text-white rounded-2xl px-1.5 py-1.5 shadow-xl shadow-slate-200">
+              <div className="flex items-center bg-slate-900 dark:bg-slate-800 text-white rounded-2xl px-1.5 py-1.5 shadow-xl shadow-slate-200 dark:shadow-none border border-slate-800 dark:border-slate-700">
                 <div className="px-4 py-1">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block leading-none">Session</span>
                   <span className="text-lg font-black tabular-nums">{formatDuration(elapsed)}</span>
@@ -1523,9 +1523,9 @@ function EmployeeTimePage() {
                 <div className="flex items-center gap-1 ml-2">
                   {!openBreak ? (
                     <>
-                      <button onClick={() => action("/time/break/start/")} className="p-2.5 bg-slate-800 hover:bg-amber-500 text-white rounded-xl transition-all" title="Start Break"><Coffee size={16} /></button>
-                      <button onClick={() => setPanelOpen(true)} className="p-2.5 bg-slate-800 hover:bg-emerald-500 text-white rounded-xl transition-all" title="Job Photo"><Camera size={16} /></button>
-                      <button onClick={handleClockOut} className="p-2.5 bg-slate-800 hover:bg-red-500 text-white rounded-xl transition-all" title="Clock Out"><Square size={14} fill="currentColor" /></button>
+                      <button onClick={() => action("/time/break/start/")} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-amber-500 text-white rounded-xl transition-all" title="Start Break"><Coffee size={16} /></button>
+                      <button onClick={() => setPanelOpen(true)} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-emerald-500 text-white rounded-xl transition-all" title="Job Photo"><Camera size={16} /></button>
+                      <button onClick={handleClockOut} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-red-500 text-white rounded-xl transition-all" title="Clock Out"><Square size={14} fill="currentColor" /></button>
                       <button
                         onClick={handleSOS}
                         disabled={sosSending}
@@ -1648,15 +1648,15 @@ function EmployeeTimePage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-1.5 h-6 bg-indigo-600 rounded-full"></div>
-                <h2 className="text-lg font-black text-slate-900">Personal Ledger</h2>
-                <span className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-widest">{logs.length} Entries</span>
+                <div className="w-1.5 h-6 bg-indigo-600 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.4)]"></div>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight font-[Manrope]">Personal Ledger</h2>
+                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-900 rounded-full text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200/60 dark:border-slate-800">{logs.length} Entries</span>
               </div>
 
-              <div className="flex items-center gap-3 bg-slate-50 p-1 rounded-xl border border-slate-100">
-                <button onClick={() => { setFilterFrom(todayStr); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest">Today</button>
-                <button onClick={() => { setFilterFrom(weekAgo); setFilterTo(todayStr) }} className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-[10px] font-black text-indigo-600 uppercase tracking-widest">Week</button>
-                <button onClick={() => { const m = new Date(); m.setDate(1); setFilterFrom(m.toLocaleDateString("en-CA")); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest">Month</button>
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950/40 p-1 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                <button onClick={() => { setFilterFrom(todayStr); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-widest">Today</button>
+                <button onClick={() => { setFilterFrom(weekAgo); setFilterTo(todayStr) }} className="px-4 py-1.5 bg-white dark:bg-slate-800 shadow-sm dark:shadow-none rounded-lg text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest border border-transparent dark:border-slate-700">Week</button>
+                <button onClick={() => { const m = new Date(); m.setDate(1); setFilterFrom(m.toLocaleDateString("en-CA")); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-widest">Month</button>
               </div>
             </div>
 
@@ -1682,29 +1682,29 @@ function EmployeeTimePage() {
       {/* ═══ SLIDE-OUT OPERATION PANEL ═══ */}
       {panelOpen && (
         <div className="fixed inset-0 z-[1000] flex justify-end animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-500">
+          <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
+          <div className="relative w-full max-w-md bg-surface dark:bg-slate-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 border-l border-stroke dark:border-slate-800">
             {/* Header */}
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-8 border-b border-stroke dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">{openLog ? 'Complete Shift' : 'Initiate Session'}</h3>
-                {openLog && <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Started {formatDateTime(openLog.clock_in).split(",")[1]}</div>}
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{openLog ? 'Complete Shift' : 'Initiate Session'}</h3>
+                {openLog && <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Started {formatDateTime(openLog.clock_in).split(",")[1]}</div>}
               </div>
-              <button onClick={() => setPanelOpen(false)} className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 flex items-center justify-center transition-all">✕</button>
+              <button onClick={() => setPanelOpen(false)} className="w-10 h-10 rounded-xl bg-bg dark:bg-slate-950 text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all border border-stroke dark:border-slate-800">✕</button>
             </div>
 
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
               {/* Telemetry Status */}
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                  <MapPin size={18} className="text-indigo-600" />
+              <div className="p-5 bg-bg dark:bg-slate-950 rounded-2xl border border-stroke dark:border-slate-800/80 flex items-center gap-4 shadow-inner">
+                <div className="w-10 h-10 rounded-xl bg-surface dark:bg-slate-900 flex items-center justify-center shadow-sm border border-stroke dark:border-slate-800">
+                  <MapPin size={18} className="text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black text-slate-900 truncate">{resolvedAddr || "Locating precision coordinates..."}</div>
-                  {currentGPS && <div className="text-[10px] font-bold text-slate-400 mt-0.5">{currentGPS.lat.toFixed(5)}, {currentGPS.lon.toFixed(5)}</div>}
+                  <div className="text-xs font-black text-slate-900 dark:text-slate-300 truncate">{resolvedAddr || "Locating precision coordinates..."}</div>
+                  {currentGPS && <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{currentGPS.lat.toFixed(5)}, {currentGPS.lon.toFixed(5)}</div>}
                 </div>
-                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${gpsStatus === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${gpsStatus === 'ok' ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>
                   {gpsStatus === 'ok' ? 'LOCKED' : 'LINKING'}
                 </div>
               </div>
@@ -1718,15 +1718,15 @@ function EmployeeTimePage() {
               {/* Task Selection (Clock-in only) */}
               {!openLog && (
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Assigned Task (Optional)</label>
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Assigned Task (Optional)</label>
                   <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors">
                       <CheckSquare size={18} />
                     </div>
                     <select
                       value={selectedTaskId}
                       onChange={e => setSelectedTaskId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 focus:border-indigo-500 outline-none appearance-none transition-all"
+                      className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none appearance-none transition-all shadow-sm"
                     >
                       <option value="">— No specific task —</option>
                       {assignedTasks
@@ -1751,17 +1751,17 @@ function EmployeeTimePage() {
               {/* Identity Verification (Clock-in only) */}
               {!openLog && (
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Verification</label>
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Identity Verification</label>
                   <button
                     onClick={() => setShowSelfie(true)}
-                    className={`w-full h-40 rounded-3xl border-2 border-dashed transition-all overflow-hidden relative ${selfiePreview ? 'border-indigo-600' : 'border-slate-200 hover:border-indigo-400 bg-slate-50'}`}
+                    className={`w-full h-40 rounded-3xl border-2 border-dashed transition-all overflow-hidden relative ${selfiePreview ? 'border-indigo-600 dark:border-indigo-500' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-bg dark:bg-slate-950 shadow-sm'}`}
                   >
                     {selfiePreview ? (
                       <img src={selfiePreview} className="w-full h-full object-cover" />
                     ) : (
                       <div className="flex flex-col items-center gap-3">
-                        <Camera size={32} className="text-slate-300" />
-                        <span className="text-xs font-black text-slate-400">TAP TO CAPTURE SELFIE</span>
+                        <Camera size={32} className="text-slate-300 dark:text-slate-700" />
+                        <span className="text-xs font-black text-slate-400 dark:text-slate-600">TAP TO CAPTURE SELFIE</span>
                       </div>
                     )}
                   </button>
@@ -1775,12 +1775,12 @@ function EmployeeTimePage() {
 
               {/* Operation Notes */}
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operation Notes</label>
+                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Operation Notes</label>
                 <textarea
                   value={sessionNotes}
                   onChange={e => setSessionNotes(e.target.value)}
                   placeholder={openLog ? "Summary of completed tasks..." : "Briefly describe your objectives..."}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm"
                   rows={4}
                 />
               </div>
@@ -1864,7 +1864,7 @@ function EmployeeTimePage() {
                             key={t}
                             disabled={busy}
                             onClick={() => setBreakType(t)}
-                            className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 ${breakType === t ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-lg shadow-indigo-100' : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'}`}
+                            className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 ${breakType === t ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-100 dark:shadow-none' : 'border-bg dark:border-slate-800 bg-surface dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-700'}`}
                           >
                             {t === 'tea' && <Coffee size={16} />}
                             {t === 'lunch' && <Clock size={16} />}
@@ -1883,31 +1883,31 @@ function EmployeeTimePage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-3xl border-2 border-amber-100 p-6 shadow-xl shadow-amber-50 space-y-6 animate-in zoom-in duration-300">
+                    <div className="bg-surface dark:bg-slate-950 rounded-3xl border-2 border-amber-100 dark:border-amber-900/30 p-6 shadow-xl shadow-amber-50 dark:shadow-none space-y-6 animate-in zoom-in duration-300">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100 dark:shadow-none">
                             <Coffee size={24} className="animate-bounce" />
                           </div>
                           <div>
-                            <div className="text-lg font-black text-slate-900">{openBreak.break_type?.toUpperCase()} BREAK</div>
-                            <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest">In Progress</div>
+                            <div className="text-lg font-black text-slate-900 dark:text-white">{openBreak.break_type?.toUpperCase()} BREAK</div>
+                            <div className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">In Progress</div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-black text-slate-900 tabular-nums leading-none">{formatDuration(breakElapsed)}</div>
-                          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Timer</div>
+                          <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{formatDuration(breakElapsed)}</div>
+                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Live Timer</div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 py-4 border-y border-slate-50">
+                      <div className="grid grid-cols-2 gap-4 py-4 border-y border-stroke dark:border-slate-800">
                         <div className="space-y-1">
-                          <div className="text-[9px] font-black text-slate-400 uppercase">Started At</div>
-                          <div className="text-sm font-bold text-slate-700">{formatDateTime(openBreak.break_start).split(",")[1]}</div>
+                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Started At</div>
+                          <div className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDateTime(openBreak.break_start).split(",")[1]}</div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-[9px] font-black text-slate-400 uppercase">Current Status</div>
-                          <div className="flex items-center gap-1.5 text-amber-600 font-bold text-xs">
+                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Current Status</div>
+                          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs">
                             <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             ON BREAK
                           </div>
@@ -1927,22 +1927,22 @@ function EmployeeTimePage() {
 
                   {completedBreaks.length > 0 && (
                     <div className="space-y-3">
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Sessions</div>
+                      <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Recent Sessions</div>
                       <div className="space-y-2">
                         {completedBreaks.slice(-2).reverse().map(b => (
-                          <div key={b.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                          <div key={b.id} className="p-3 bg-bg dark:bg-slate-950 rounded-xl border border-stroke dark:border-slate-800 flex items-center justify-between shadow-sm">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400">
+                              <div className="w-8 h-8 rounded-lg bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600">
                                 <Coffee size={14} />
                               </div>
                               <div>
-                                <div className="text-xs font-bold text-slate-700">{b.break_type?.toUpperCase()}</div>
-                                <div className="text-[9px] font-medium text-slate-400">{formatDateTime(b.break_start).split(",")[1]} - {formatDateTime(b.break_end).split(",")[1]}</div>
+                                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{b.break_type?.toUpperCase()}</div>
+                                <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500">{formatDateTime(b.break_start).split(",")[1]} - {formatDateTime(b.break_end).split(",")[1]}</div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-xs font-black text-slate-900">{Math.round(b.duration_seconds / 60)}m</div>
-                              <div className="text-[9px] font-black text-emerald-600 uppercase">Done</div>
+                              <div className="text-xs font-black text-slate-900 dark:text-white">{Math.round(b.duration_seconds / 60)}m</div>
+                              <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase">Done</div>
                             </div>
                           </div>
                         ))}
@@ -1983,10 +1983,10 @@ function EmployeeTimePage() {
                 </div>
               )}
             </div>
-            <div className="px-8 pb-8 bg-slate-50/50 flex gap-4">
+            <div className="px-8 pb-8 bg-slate-50/50 dark:bg-slate-950/20 flex gap-4">
               <button
                 onClick={() => setPanelOpen(false)}
-                className="flex-1 py-4 rounded-2xl text-sm font-black text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-all"
+                className="flex-1 py-4 rounded-2xl text-sm font-black text-slate-600 dark:text-slate-400 bg-surface dark:bg-slate-800 border border-stroke dark:border-slate-700 hover:bg-bg dark:hover:bg-slate-950/40 transition-all"
               >
                 Cancel
               </button>

@@ -58,7 +58,6 @@ function Stat3DCard({ label, value, colorClass }) {
       className="relative group cursor-default flex-1 min-w-[140px] max-w-[200px]"
     >
       <div
-      <div
         className="relative h-[110px] rounded-2xl p-4 bg-[var(--surface)] border border-[var(--stroke)] shadow-lg overflow-hidden transition-all duration-200 ease-out"
         style={{
           transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,

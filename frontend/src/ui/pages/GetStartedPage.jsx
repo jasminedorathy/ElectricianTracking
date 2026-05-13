@@ -1,322 +1,505 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
-    CalendarRange, Clock, MapPin, Tag, Users,
-    CheckCircle2, ArrowRight, X, Sparkles, Rocket,
-    Target, Layout, Zap, ChevronRight, Plus
+  MapPin, Clock, CalendarRange, Bell,
+  CheckCircle2, ArrowRight, ChevronRight, Rocket,
+  Building2, UserPlus, Settings2, Timer, Zap, Users,
 } from "lucide-react"
 import { useAuth } from "../../state/auth/useAuth.js"
 import { routes } from "../routes.js"
-import { Card, Button, Pill } from "../components/kit.jsx"
-import { BauhausCard } from "../components/ui/bauhaus-card.jsx"
+import { CalTrackLogo } from "../components/CalTrackLogo.jsx"
+import { apiRequest } from "../../api/client.js"
 
-/* ── Setup steps data ─────────────────────────────────────────── */
-const STEPS = [
-    {
-        id: "schedule",
-        title: "Mission Timeline",
-        desc: "Configure team operational hours and tactical break intervals.",
-        icon: <CalendarRange size={24} />,
-        time: "3m",
-        color: "primary",
-        to: routes.settings_schedules,
-    },
-    {
-        id: "timetracking",
-        title: "Operational Rules",
-        desc: "Define the protocols for deployment and retrieval sequences.",
-        icon: <Clock size={24} />,
-        time: "5m",
-        color: "orange-500",
-        to: routes.settings_timetracking,
-    },
-    {
-        id: "projects",
-        title: "Project Matrix",
-        desc: "Initialize the activity clusters and strategic project nodes.",
-        icon: <Tag size={24} />,
-        time: "2m",
-        color: "indigo-500",
-        to: routes.settings_projects,
-    },
-    {
-        id: "locations",
-        title: "Work Geofences",
-        desc: "Map out the precise coordinates for mission deployment.",
-        icon: <MapPin size={24} />,
-        time: "2m",
-        color: "emerald-500",
-        to: routes.settings_locations,
-    },
-    {
-        id: "people",
-        title: "Personnel Influx",
-        desc: "Authorize and onboard the initial workforce contingent.",
-        icon: <Users size={24} />,
-        time: "5m",
-        color: "sky-500",
-        to: routes.settings_people,
-    },
-]
-
-/* ── Progress Component ───────────────────────────────────────── */
-function CircularProgress({ pct }) {
-    const r = 32, circ = 2 * Math.PI * r
-    return (
-        <div className="relative w-20 h-20 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90 transform">
-                <circle cx="40" cy="40" r={r} fill="transparent" stroke="currentColor" strokeWidth="6" className="text-[var(--stroke2)]" />
-                <motion.circle 
-                    cx="40" cy="40" r={r} fill="transparent" stroke="currentColor" strokeWidth="6" 
-                    strokeDasharray={circ} initial={{ strokeDashoffset: circ }} animate={{ strokeDashoffset: circ - (pct / 100) * circ }}
-                    transition={{ duration: 1.5, ease: "circOut" }}
-                    className="text-blue-500" strokeLinecap="round"
-                />
-            </svg>
-            <span className="absolute text-sm font-black text-[var(--fg)] font-sans select-none">{pct}%</span>
-        </div>
-    )
+/* ── CalTrack brand tokens (from logo) ───────────────────────── */
+const C = {
+  navy:       "#0B2B6F",
+  blue:       "#1A56DB",
+  blueMid:    "#2563EB",
+  blueLight:  "#60A5FA",
+  amber:      "#F59E0B",
+  amberDark:  "#D97706",
+  amberLight: "#FDE68A",
 }
 
-export function GetStartedPage() {
-    const { user } = useAuth()
-    const navigate = useNavigate()
-    const [completed, setCompleted] = useState(new Set(["people"]))
-    const [dismissed, setDismissed] = useState(false)
+/* ── Setup steps ─────────────────────────────────────────────── */
+const STEPS = [
+  {
+    id: "location",
+    icon: <MapPin size={20} />,
+    title: "Add a Work Location",
+    desc: "Set up your office or site address. CalTrack uses this to create GPS geofences for clock-in verification.",
+    action: "Set up location",
+    to: routes.locations,
+    color: C.blue,
+    bg: "#EFF6FF",
+    est: "2 min",
+  },
+  {
+    id: "employees",
+    icon: <UserPlus size={20} />,
+    title: "Add Your Team",
+    desc: "Invite employees and assign roles. They'll get an email to create their account and start tracking time.",
+    action: "Add employees",
+    to: routes.employees,
+    color: "#7C3AED",
+    bg: "#F5F3FF",
+    est: "5 min",
+  },
+  {
+    id: "schedules",
+    icon: <CalendarRange size={20} />,
+    title: "Set Work Schedules",
+    desc: "Define working days and hours so leave requests and payroll calculations stay accurate.",
+    action: "Configure schedules",
+    to: routes.settings_schedules,
+    color: C.amberDark,
+    bg: "#FFFBEB",
+    est: "3 min",
+  },
+  {
+    id: "timetracking",
+    icon: <Clock size={20} />,
+    title: "Configure Time Tracking",
+    desc: "Choose how your team clocks in — web, mobile, or kiosk. Set overtime and break rules.",
+    action: "Set up time tracking",
+    to: routes.settings_timetracking,
+    color: "#059669",
+    bg: "#ECFDF5",
+    est: "4 min",
+  },
+  {
+    id: "notifications",
+    icon: <Bell size={20} />,
+    title: "Turn On Notifications",
+    desc: "Get alerts for leave approvals, payroll readiness, shift reminders, and security events.",
+    action: "Set notifications",
+    to: routes.settings_notifications,
+    color: "#DC2626",
+    bg: "#FEF2F2",
+    est: "2 min",
+  },
+]
 
-    const username = user?.username || "Commander"
-    const displayName = username.charAt(0).toUpperCase() + username.slice(1)
+const STORAGE_KEY = "caltrack.onboarding.completed"
 
-    const doneCount = completed.size
-    const total = STEPS.length
-    const pct = Math.round((doneCount / total) * 100)
+function loadCompleted() {
+  try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]")) }
+  catch { return new Set() }
+}
 
-    const containerVars = {
-        hidden: { opacity: 0 },
-        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-    }
+function saveCompleted(set) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]))
+}
 
-    const itemVars = {
-        hidden: { y: 20, opacity: 0 },
-        show: { y: 0, opacity: 1 }
-    }
+/* ── Progress ring ───────────────────────────────────────────── */
+function ProgressRing({ pct }) {
+  const r = 38, circ = 2 * Math.PI * r
+  return (
+    <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
+      <svg width="92" height="92" style={{ transform: "rotate(-90deg)" }}>
+        <circle cx="46" cy="46" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="7" />
+        <motion.circle
+          cx="46" cy="46" r={r}
+          fill="none"
+          stroke={C.amber}
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ * (1 - pct / 100) }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+        />
+      </svg>
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{ fontSize: 20, fontWeight: 900, color: "#fff", lineHeight: 1 }}>{pct}%</span>
+        <span style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>done</span>
+      </div>
+    </div>
+  )
+}
 
-    if (dismissed) {
-        navigate(routes.dashboard)
-        return null
-    }
+/* ── Step card ───────────────────────────────────────────────── */
+function StepCard({ step, index, done, onToggle, onGo }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.08 * index + 0.3, duration: 0.35 }}
+      style={{
+        background: done ? "#F0FDF4" : "var(--surface)",
+        border: `1.5px solid ${done ? "#BBF7D0" : "var(--stroke2)"}`,
+        borderRadius: 14,
+        padding: "18px 22px 18px 26px",
+        display: "flex",
+        alignItems: "center",
+        gap: 18,
+        position: "relative",
+        overflow: "hidden",
+        opacity: done ? 0.8 : 1,
+        transition: "opacity 0.3s, border-color 0.3s, background 0.3s",
+      }}
+    >
+      {/* Left color stripe */}
+      <div style={{
+        position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+        background: done ? "#22C55E" : step.color,
+        transition: "background 0.3s",
+      }} />
 
-    return (
-        <div className="min-h-screen bg-[var(--bg)] p-8 flex flex-col gap-12 overflow-x-hidden font-sans transition-colors duration-300">
-            {/* ── CINEMATIC HERO ── */}
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="relative h-[440px] rounded-[3.5rem] overflow-hidden group border border-slate-200 shadow-2xl"
-            >
-                {/* Dynamic Background (Darker & More Vibrant) */}
-                <div className="absolute inset-0 bg-[#0E1116]">
-                    <div className="absolute inset-0 opacity-15 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-                    
-                    {/* Animated Blobs */}
-                    <motion.div 
-                        animate={{ 
-                            scale: [1, 1.2, 1],
-                            rotate: [0, 90, 0],
-                            x: [0, 100, 0],
-                            y: [0, 50, 0] 
-                        }} 
-                        transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute -top-40 -right-20 w-[40rem] h-[40rem] bg-indigo-600/40 blur-[140px] rounded-full" 
-                    />
-                    <motion.div 
-                        animate={{ 
-                            scale: [1, 1.1, 1],
-                            rotate: [0, -45, 0],
-                            x: [0, -120, 0],
-                            y: [0, 80, 0] 
-                        }} 
-                        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute -bottom-60 -left-40 w-[50rem] h-[50rem] bg-blue-500/30 blur-[160px] rounded-full" 
-                    />
-                    
-                    {/* Glass Overlay for Depth */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0E1116] via-transparent to-transparent opacity-80" />
-                </div>
+      {/* Icon */}
+      <div style={{
+        width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+        background: done ? "#DCFCE7" : step.bg,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: done ? "#16A34A" : step.color,
+        transition: "background 0.3s, color 0.3s",
+      }}>
+        {done ? <CheckCircle2 size={20} /> : step.icon}
+      </div>
 
-
-
-                {/* Unique Background Watermark (Full Cover Outline) */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06] select-none overflow-hidden">
-                    <h1 
-                        className="text-[22vw] font-black leading-none whitespace-nowrap tracking-[-0.05em] text-transparent font-sans uppercase"
-                        style={{ WebkitTextStroke: '1.5px white' }}
-                    >
-                        INITIATE
-                    </h1>
-                </div>
-
-                {/* Hero Card Content */}
-                <div className="absolute inset-0 flex items-center px-20">
-                    <motion.div 
-                        initial={{ x: -60, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: 0.4, type: "spring", stiffness: 100 }}
-                        className="max-w-2xl space-y-10"
-                    >
-                        <div className="space-y-6">
-
-                            
-                            <div className="space-y-3">
-                                <h1 className="text-7xl font-black text-white tracking-tighter leading-[1.1] font-sans">
-                                    Welcome, <span className="bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">{displayName}.</span>
-                                </h1>
-                                <p className="text-xl text-slate-300 font-medium leading-relaxed max-w-lg italic opacity-90 font-sans">
-                                    "Your mission intelligence is ready. Complete the initial protocols to synchronize workforce operations."
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-6">
-                            <Button 
-                                variant="primary" 
-                                className="!bg-[var(--surface)] !text-[var(--fg)] hover:bg-[var(--surface2)] border border-[var(--stroke)] px-14 py-6 text-base font-black rounded-2xl shadow-2xl shadow-black/50 tracking-tight font-sans"
-                                onClick={() => document.getElementById('onboarding-grid')?.scrollIntoView({ behavior: 'smooth' })}
-                            >
-                                Initialize Sequence <ArrowRight className="ml-3" size={20} />
-                            </Button>
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Relocated Social Stack (Bottom-Right Corner) */}
-                <div className="absolute bottom-12 right-12 flex flex-col items-end gap-3 pointer-events-none select-none">
-                    <div className="flex -space-x-3">
-                        <div className="w-10 h-10 rounded-full border-2 border-[#0E1116] bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl z-30 font-sans">JD</div>
-                        <div className="w-10 h-10 rounded-full border-2 border-[#0E1116] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[10px] font-black text-white shadow-xl z-20 font-sans">RK</div>
-                        <div className="w-10 h-10 rounded-full border-2 border-[#0E1116] bg-slate-800 flex items-center justify-center text-[10px] font-black text-blue-400 border-dashed z-10 font-sans">
-                            <Plus size={12} />
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                        <span className="text-[9px] font-black text-white uppercase tracking-[0.2em] leading-tight font-sans">12+ Lead Sync</span>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest opacity-60 font-sans">Verified</span>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* ── PROGRESS TERMINAL ── */}
-            <motion.div 
-                initial={{ y: 40, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="max-w-6xl mx-auto w-full flex flex-col md:flex-row items-center gap-12 p-10 bg-[var(--surface)] rounded-[3.5rem] border border-[var(--stroke)] shadow-xl relative group"
-            >
-                <div className="relative">
-                    <CircularProgress pct={pct} />
-                    <div className="absolute -inset-2 bg-primary/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                
-                <div className="flex-1 space-y-4 w-full">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-black text-[var(--fg)] tracking-tight flex items-center gap-3 font-sans uppercase">
-                            Organization Neural Sync
-                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                        </h3>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] font-sans">{doneCount} / {total} Nodes Synchronized</span>
-                    </div>
-                    
-                    <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }} 
-                            animate={{ width: `${pct}%` }} 
-                            transition={{ duration: 2, delay: 1, ease: "circOut" }}
-                            className="h-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-full" 
-                        />
-                    </div>
-                </div>
-
-                {/* Simplified Right-Side Social View */}
-                <div className="hidden lg:flex items-center gap-6 pl-10 border-l border-[var(--stroke)]">
-                    <div className="flex -space-x-3">
-                        <div className="w-10 h-10 rounded-full border-2 border-white bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-[9px] font-black text-white shadow-md z-30 font-sans">JD</div>
-                        <div className="w-10 h-10 rounded-full border-2 border-white bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[9px] font-black text-white shadow-md z-20 font-sans">RK</div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</div>
-                        <Pill tone={pct > 50 ? "good" : "neutral"} className="px-3 py-1 rounded-lg text-[9px] font-black font-sans uppercase">
-                            {pct === 100 ? "Active" : "Syncing"}
-                        </Pill>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* ── LINEAR PROTOCOL TIMELINE (Bauhaus Edition) ── */}
-            <div className="relative max-w-[98vw] mx-auto w-full px-8 overflow-x-auto custom-scrollbar pb-16">
-                {/* Global Connection Line */}
-                <div className="absolute top-[180px] left-32 right-32 h-[1px] bg-slate-300 z-0 opacity-20 hidden xl:block" />
-                
-                <motion.div 
-                    id="onboarding-grid"
-                    variants={containerVars}
-                    initial="hidden"
-                    animate="show"
-                    className="flex flex-nowrap lg:grid lg:grid-cols-5 gap-8 min-w-[1400px] lg:min-w-0"
-                >
-                    {STEPS.map((step, idx) => {
-                        const done = completed.has(step.id)
-                        const stepNum = (idx + 1).toString().padStart(2, '0')
-                        
-                        return (
-                            <motion.div key={step.id} variants={itemVars} className="relative flex-shrink-0 w-[320px] lg:w-auto h-full">
-                                <BauhausCard
-                                    id={step.id}
-                                    accentColor={done ? "#10b981" : "#156ef6"}
-                                    backgroundColor="var(--bauhaus-card-bg)"
-                                    separatorColor="var(--bauhaus-card-separator)"
-                                    topInscription={`Protocol Node ${stepNum}`}
-                                    mainText={step.title}
-                                    subMainText={step.desc}
-                                    progressBarInscription="Network Sync Status:"
-                                    progress={done ? 100 : 0}
-                                    progressValue={done ? "Synchronized" : `Queue: ${step.time}`}
-                                    filledButtonInscription={done ? "Initialized" : "Begin"}
-                                    onFilledButtonClick={() => !done && navigate(step.to)}
-                                    onMoreOptionsClick={() => console.log('Options for', step.id)}
-                                    textColorTop="var(--bauhaus-card-inscription-top)"
-                                    textColorMain="var(--bauhaus-card-inscription-main)"
-                                    textColorSub="var(--bauhaus-card-inscription-sub)"
-                                    textColorProgressLabel="var(--bauhaus-card-inscription-progress-label)"
-                                    textColorProgressValue="var(--bauhaus-card-inscription-progress-value)"
-                                    progressBarBackground="var(--bauhaus-card-progress-bar-bg)"
-                                    chronicleButtonBg="var(--bauhaus-chronicle-bg)"
-                                    chronicleButtonFg="var(--bauhaus-chronicle-fg)"
-                                    chronicleButtonHoverFg="var(--bauhaus-chronicle-hover-fg)"
-                                />
-                            </motion.div>
-                        )
-                    })}
-                </motion.div>
-            </div>
-
-            {/* ── FOOTER ACTIONS ── */}
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.8 }}
-                className="flex flex-col items-center gap-6 py-16 border-t border-[var(--stroke)]"
-            >
-                <div className="flex items-center gap-3 text-slate-400 text-sm font-bold uppercase tracking-[0.2em] opacity-60">
-                    Deployment Safeguard Active
-                </div>
-                <button 
-                    onClick={() => setDismissed(true)}
-                    className="flex items-center gap-3 px-10 py-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-xs font-black text-slate-500 hover:text-[#0E1116] uppercase tracking-widest border border-transparent hover:border-slate-200"
-                >
-                    <X size={16} /> Bypass Onboarding Process
-                </button>
-            </motion.div>
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span style={{
+            fontSize: 14, fontWeight: 700,
+            color: done ? "#15803D" : "var(--fg)",
+            textDecoration: done ? "line-through" : "none",
+            opacity: done ? 0.75 : 1,
+            transition: "all 0.3s",
+          }}>
+            {step.title}
+          </span>
+          <span style={{
+            fontSize: 10, fontWeight: 700, color: "var(--muted)",
+            background: "var(--bg2)", borderRadius: 6,
+            padding: "2px 6px", textTransform: "uppercase",
+            letterSpacing: "0.06em", flexShrink: 0,
+          }}>
+            ~{step.est}
+          </span>
         </div>
-    )
+        <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.65, margin: 0 }}>
+          {step.desc}
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        {!done && (
+          <button
+            onClick={() => onGo(step)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", borderRadius: 9,
+              background: step.color, color: "#fff",
+              border: "none", fontSize: 12, fontWeight: 700,
+              cursor: "pointer", whiteSpace: "nowrap",
+              transition: "filter 0.15s, transform 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.1)"; e.currentTarget.style.transform = "translateY(-1px)" }}
+            onMouseLeave={e => { e.currentTarget.style.filter = ""; e.currentTarget.style.transform = "" }}
+          >
+            {step.action} <ChevronRight size={13} />
+          </button>
+        )}
+
+        {/* Check toggle */}
+        <button
+          onClick={() => onToggle(step.id)}
+          title={done ? "Mark incomplete" : "Mark complete"}
+          style={{
+            width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+            border: `2px solid ${done ? "#22C55E" : "var(--stroke2)"}`,
+            background: done ? "#22C55E" : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { if (!done) e.currentTarget.style.borderColor = C.blue }}
+          onMouseLeave={e => { if (!done) e.currentTarget.style.borderColor = "var(--stroke2)" }}
+        >
+          {done && <CheckCircle2 size={14} style={{ color: "#fff" }} />}
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
+/* ── Page ────────────────────────────────────────────────────── */
+export function GetStartedPage() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [completed, setCompleted] = useState(loadCompleted)
+  const [orgName, setOrgName] = useState(() => localStorage.getItem("quicktims.orgName") || "")
+  const [employees, setEmployees] = useState(0)
+
+  const displayName = user?.username
+    ? user.username.charAt(0).toUpperCase() + user.username.slice(1)
+    : "there"
+
+  const doneCount = completed.size
+  const total = STEPS.length
+  const pct = Math.round((doneCount / total) * 100)
+  const allDone = doneCount === total
+
+  useEffect(() => {
+    apiRequest("/employees/")
+      .then(r => setEmployees(r?.data?.length ?? r?.count ?? 0))
+      .catch(() => {})
+    apiRequest("/company/me")
+      .then(r => {
+        if (r?.company_name) {
+          setOrgName(r.company_name)
+          localStorage.setItem("quicktims.orgName", r.company_name)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const toggle = (id) => {
+    setCompleted(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      saveCompleted(next)
+      return next
+    })
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
+
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <div style={{
+        background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 58%, ${C.blueMid} 100%)`,
+        padding: "52px 64px 44px",
+        position: "relative",
+        overflow: "hidden",
+      }}>
+        {/* Amber radial glow */}
+        <div style={{
+          position: "absolute", top: -120, right: -120,
+          width: 420, height: 420, borderRadius: "50%",
+          background: `radial-gradient(circle, ${C.amber}28 0%, transparent 70%)`,
+          pointerEvents: "none",
+        }} />
+        {/* Subtle grid */}
+        <div style={{
+          position: "absolute", inset: 0, opacity: 0.035,
+          backgroundImage: `repeating-linear-gradient(0deg,transparent,transparent 39px,${C.blueLight} 40px),
+                            repeating-linear-gradient(90deg,transparent,transparent 39px,${C.blueLight} 40px)`,
+          pointerEvents: "none",
+        }} />
+
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, x: -28 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          style={{ marginBottom: 36 }}
+        >
+          <CalTrackLogo size="md" showTagline theme="dark" />
+        </motion.div>
+
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+
+          {/* Headline */}
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              style={{
+                fontSize: 40, fontWeight: 900, color: "#fff",
+                margin: "0 0 6px", letterSpacing: "-0.02em", lineHeight: 1.15,
+              }}
+            >
+              Welcome, {displayName}!
+            </motion.h1>
+            <motion.h2
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              style={{
+                fontSize: 32, fontWeight: 800, color: C.amberLight,
+                margin: "0 0 16px", letterSpacing: "-0.02em", lineHeight: 1.2,
+              }}
+            >
+              Let's set up CalTrack.
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+              style={{
+                fontSize: 15, color: "rgba(255,255,255,0.65)",
+                maxWidth: 460, lineHeight: 1.7, margin: 0,
+              }}
+            >
+              Complete these steps to get your team tracking time, managing leave, and running payroll — all in one place.
+            </motion.p>
+          </div>
+
+          {/* Progress ring + CTA */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+            style={{ display: "flex", alignItems: "center", gap: 24, flexShrink: 0 }}
+          >
+            <ProgressRing pct={pct} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>
+                {doneCount} of {total} steps complete
+              </div>
+              {allDone ? (
+                <button
+                  onClick={() => navigate(routes.dashboard)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 18px", background: C.amber,
+                    color: C.navy, border: "none", borderRadius: 10,
+                    fontSize: 13, fontWeight: 800, cursor: "pointer",
+                  }}
+                >
+                  <Rocket size={14} /> Go to Dashboard
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(routes.dashboard)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "8px 14px",
+                    background: "rgba(255,255,255,0.09)",
+                    color: "rgba(255,255,255,0.62)",
+                    border: "1px solid rgba(255,255,255,0.16)",
+                    borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.16)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.09)"}
+                >
+                  Skip for now <ArrowRight size={12} />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Meta chips */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
+          style={{ display: "flex", gap: 10, marginTop: 32, flexWrap: "wrap" }}
+        >
+          {[
+            { icon: <Building2 size={13} />, label: orgName || "Organization not set" },
+            { icon: <Users size={13} />, label: `${employees} team member${employees !== 1 ? "s" : ""}` },
+            { icon: <Timer size={13} />, label: "~16 min to complete" },
+            { icon: <Zap size={13} style={{ color: C.amber }} />, label: `${doneCount}/${total} steps done` },
+          ].map((chip, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 7,
+              padding: "6px 14px",
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.13)",
+              borderRadius: 20,
+              fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.68)",
+            }}>
+              {chip.icon} {chip.label}
+            </div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* ── Body ─────────────────────────────────────────────── */}
+      <div style={{ flex: 1, padding: "36px 64px 48px", maxWidth: 860 }}>
+
+        {/* Section header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <Zap size={14} style={{ color: C.amber }} />
+          <span style={{
+            fontSize: 11, fontWeight: 800, color: "var(--muted)",
+            textTransform: "uppercase", letterSpacing: "0.12em",
+          }}>
+            Setup checklist
+          </span>
+          <div style={{ flex: 1, height: 1, background: "var(--stroke)" }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)" }}>
+            {doneCount}/{total} complete
+          </span>
+        </div>
+
+        {/* Step cards */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {STEPS.map((step, i) => (
+            <StepCard
+              key={step.id}
+              step={step}
+              index={i}
+              done={completed.has(step.id)}
+              onToggle={toggle}
+              onGo={(s) => navigate(s.to)}
+            />
+          ))}
+        </div>
+
+        {/* All-done banner */}
+        {allDone && (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{
+              marginTop: 24, padding: "24px 28px",
+              background: `linear-gradient(135deg, ${C.navy} 0%, ${C.blue} 100%)`,
+              borderRadius: 14, display: "flex", alignItems: "center", gap: 20,
+            }}
+          >
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+              background: C.amber,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <CheckCircle2 size={24} style={{ color: C.navy }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 3 }}>
+                You're all set — CalTrack is ready!
+              </div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>
+                Your team can now clock in, request leave, and run payroll from one place.
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(routes.dashboard)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "11px 20px", background: C.amber,
+                color: C.navy, border: "none", borderRadius: 11,
+                fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0,
+              }}
+            >
+              <Rocket size={14} /> Open Dashboard
+            </button>
+          </motion.div>
+        )}
+
+        {/* Tip */}
+        <div style={{
+          marginTop: 20, padding: "13px 18px",
+          background: "var(--surface)", borderRadius: 10,
+          border: "1px solid var(--stroke)",
+          display: "flex", alignItems: "flex-start", gap: 10,
+        }}>
+          <Settings2 size={14} style={{ color: C.blue, marginTop: 1, flexShrink: 0 }} />
+          <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, margin: 0 }}>
+            <strong style={{ color: "var(--fg)" }}>Tip:</strong> Return here anytime from the sidebar. Your progress is saved automatically and survives page refreshes.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
 }

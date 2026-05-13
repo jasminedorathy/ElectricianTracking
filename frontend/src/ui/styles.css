@@ -5872,6 +5872,12 @@ h6 {
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
+:root[data-theme="dark"] body {
+  background-color: #0F1117;
+  background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E");
+  color: #F0F4FF;
+}
+
 :root[data-theme="dark"] .topbar {
   background: var(--surface);
 }

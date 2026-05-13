@@ -1,89 +1,73 @@
-"use client";
+import { MoonIcon, SunIcon } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { loadPrefs, savePrefs, applyTheme } from "../../ui/theme.js"
 
-import { MoonIcon, SunIcon } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { useTheme } from "next-themes";
-import { useCallback, useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+function isDarkResolved() {
+  const prefs = loadPrefs()
+  const theme = prefs.theme || "system"
+  if (theme === "dark") return true
+  if (theme === "light") return false
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+}
 
-const ThemeSwitch = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => {
-  const { resolvedTheme, setTheme } = useTheme();
-  const [checked, setChecked] = useState(false);
-  const [mounted, setMounted] = useState(false);
+export default function ThemeSwitch({ style = {}, ...props }) {
+  const [isDark, setIsDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => setMounted(true), []);
-  useEffect(() => setChecked(resolvedTheme === "dark"), [resolvedTheme]);
+  useEffect(() => {
+    setMounted(true)
+    setIsDark(isDarkResolved())
+  }, [])
 
-  const handleCheckedChange = useCallback(
-    (isChecked: boolean) => {
-      setChecked(isChecked);
-      setTheme(isChecked ? "dark" : "light");
-    },
-    [setTheme],
-  );
+  const toggle = useCallback(() => {
+    const next = isDark ? "light" : "dark"
+    setIsDark(!isDark)
+    applyTheme(next)
+    const prefs = loadPrefs()
+    savePrefs({ ...prefs, theme: next })
+  }, [isDark])
 
-  if (!mounted) return null;
+  if (!mounted) return null
 
   return (
     <div
-      className={cn(
-        "relative flex items-center justify-center", // center the whole control
-        "h-9 w-20", // track sized to hug the icons
-        className
-      )}
+      onClick={toggle}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        width: 52,
+        height: 28,
+        borderRadius: 14,
+        background: isDark ? "#5d5fef" : "#e2e8f0",
+        cursor: "pointer",
+        transition: "background 0.25s",
+        flexShrink: 0,
+        userSelect: "none",
+        ...style,
+      }}
       {...props}
     >
-      {/* The real shadcn Switch (full-size, same structure) */}
-      <Switch
-        checked={checked}
-        onCheckedChange={handleCheckedChange}
-        className={cn(
-          // root (track)
-          "peer absolute inset-0 h-full w-full rounded-full bg-input/50 transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          // tune the default thumb size & z-index so it slides over icons
-          "[&>span]:h-7 [&>span]:w-7 [&>span]:rounded-full [&>span]:bg-background [&>span]:shadow [&>span]:z-10",
-          // override default translate distances so the thumb moves across 20px track padding + icon spacing
-          "data-[state=unchecked]:[&>span]:translate-x-1",
-          "data-[state=checked]:[&>span]:translate-x-[44px]" // 44 ≈ w-20(80) - padding - thumb(28)
-        )}
-      />
-
-      {/* Icons overlaid inside the track, perfectly centered left/right */}
-      <span
-        className={cn(
-          "pointer-events-none absolute left-2 inset-y-0 z-0",
-          "flex items-center justify-center"
-        )}
-      >
-        <SunIcon
-          size={16}
-          className={cn(
-            "transition-all duration-200 ease-out",
-            checked ? "text-muted-foreground/70" : "text-foreground scale-110"
-          )}
-        />
-      </span>
-
-      <span
-        className={cn(
-          "pointer-events-none absolute right-2 inset-y-0 z-0",
-          "flex items-center justify-center"
-        )}
-      >
-        <MoonIcon
-          size={16}
-          className={cn(
-            "transition-all duration-200 ease-out",
-            checked ? "text-foreground scale-110" : "text-muted-foreground/70"
-          )}
-        />
+      <span style={{
+        position: "absolute",
+        left: isDark ? 26 : 4,
+        top: 4,
+        width: 20,
+        height: 20,
+        borderRadius: "50%",
+        background: "#fff",
+        boxShadow: "0 1px 4px rgba(0,0,0,.25)",
+        transition: "left 0.25s",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        {isDark
+          ? <MoonIcon size={11} style={{ color: "#5d5fef" }} />
+          : <SunIcon size={11} style={{ color: "#f59e0b" }} />
+        }
       </span>
     </div>
-  );
-};
-
-export default ThemeSwitch;
+  )
+}

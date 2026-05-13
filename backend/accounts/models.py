@@ -63,6 +63,17 @@ class User(AbstractBaseUser):
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.EMPLOYEE)
 
+    # Extended profile fields
+    bio = models.TextField(blank=True, default="")
+    phone = models.CharField(max_length=30, blank=True, default="")
+    timezone = models.CharField(max_length=60, default="UTC")
+    language = models.CharField(max_length=10, default="en")
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+
+    # 2FA
+    totp_secret = models.CharField(max_length=100, blank=True, default="")
+    two_fa_enabled = models.BooleanField(default=False)
+
     objects = UserManager()
 
     USERNAME_FIELD = "username"

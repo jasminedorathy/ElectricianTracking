@@ -15,12 +15,8 @@ import { NotificationService } from "../../utils/notifications.js"
 
 import {
   Home, Clock, CheckSquare, CalendarDays, Banknote, CalendarRange,
-  Users, BarChart3, MapPin, Settings, Search, LogOut, User,
-  SlidersHorizontal, MoreHorizontal, CreditCard, X, ChevronDown,
-  ChevronUp, ChevronLeft, ChevronRight, History, Sun, Briefcase,
-  Tag, Plug, Timer, Rocket, Bell, ShieldCheck, ScrollText,
-  Workflow, Shield, Smartphone, Palette, Terminal, Database,
-  ShieldAlert,
+  Users, BarChart3, MapPin, Settings, Search, LogOut,
+  ChevronLeft, ChevronRight, Rocket, ShieldAlert,
 } from "lucide-react"
 
 const NAV = [
@@ -36,38 +32,7 @@ const NAV = [
   { label: "Employees", to: routes.employees, icon: <Users size={20} />, adminOnly: true, color: "#D946EF" },
   { label: "Reports", to: routes.reports, icon: <BarChart3 size={20} />, adminOnly: true, color: "#FACC15" },
   { label: "Compliance", to: routes.compliance, icon: <ShieldAlert size={20} />, adminOnly: true, color: "#2563EB" },
-  {
-    to: routes.settings,
-    icon: <Settings size={20} />,
-    color: "#64748B",
-    children: [
-      { label: "My Profile", to: routes.settings_profile, icon: <User size={16} />, color: "#6366F1" },
-      { label: "Preferences", to: routes.settings_preferences, icon: <SlidersHorizontal size={16} />, color: "#8B5CF6" },
-      { label: "People", to: routes.settings_people, icon: <Users size={16} />, adminOnly: true, color: "#10B981" },
-      { label: "Time Tracking", to: routes.settings_timetracking, icon: <Clock size={16} />, color: "#F59E0B" },
-      { label: "Attendance Policies", to: routes.settings_attendance, icon: <SlidersHorizontal size={16} />, color: "#EF4444" },
-      { label: "Work Schedules", to: routes.settings_schedules, icon: <Sun size={16} />, color: "#FACC15" },
-      { label: "Shift Planning", to: routes.settings_shiftplanner, icon: <CalendarRange size={16} />, adminOnly: true, color: "#0EA5E9" },
-      { label: "Time Off & Holidays", to: routes.settings_holidays, icon: <Briefcase size={16} />, color: "#EC4899" },
-      { label: "Payroll", to: routes.settings_payroll, icon: <Banknote size={16} />, adminOnly: true, color: "#6366F1" },
-      { label: "Expenses", to: routes.settings_expenses, icon: <CreditCard size={16} />, adminOnly: true, color: "#14B8A6" },
-      { label: "Approval Workflows", to: routes.settings_workflows, icon: <Workflow size={16} />, adminOnly: true, color: "#38BDF8" },
-      { label: "Productivity", to: routes.settings_productivity, icon: <Timer size={16} />, adminOnly: true, color: "#10B981" },
-      { label: "Reports & Analytics", to: routes.settings_reports, icon: <BarChart3 size={16} />, adminOnly: true, color: "#FACC15" },
-      { label: "Notifications", to: routes.settings_notifications, icon: <Bell size={16} />, color: "#EF4444" },
-      { label: "Security", to: routes.settings_security, icon: <Shield size={16} />, color: "#64748B" },
-      { label: "Permissions / RBAC", to: routes.settings_rbac, icon: <ShieldCheck size={16} />, adminOnly: true, color: "#2563EB" },
-      { label: "Audit Log", to: routes.settings_audit, icon: <ScrollText size={16} />, adminOnly: true, color: "#64748B" },
-      { label: "Devices", to: routes.settings_devices, icon: <Smartphone size={16} />, adminOnly: true, color: "#0EA5E9" },
-      { label: "Location Tracking", to: routes.settings_location, icon: <MapPin size={16} />, adminOnly: true, color: "#8B5CF6" },
-      { label: "Branding", to: routes.settings_branding, icon: <Palette size={16} />, adminOnly: true, color: "#EC4899" },
-      { label: "Organization", to: routes.settings_organization, icon: <Settings size={16} />, adminOnly: true, color: "#64748B" },
-      { label: "Integrations", to: routes.settings_integrations, icon: <Plug size={16} />, color: "#14B8A6" },
-      { label: "Developer / API", to: routes.settings_developer, icon: <Terminal size={16} />, adminOnly: true, color: "#64748B" },
-      { label: "Billing", to: routes.settings_billing, icon: <CreditCard size={16} />, adminOnly: true, color: "#38BDF8" },
-      { label: "Data & Backups", to: routes.settings_data, icon: <Database size={16} />, adminOnly: true, color: "#10B981" },
-    ],
-  },
+  { label: "Settings", to: routes.settings, icon: <Settings size={20} />, color: "#64748B" },
 ]
 
 const THEME_STORAGE_KEY = "quicktims.theme"
@@ -175,6 +140,10 @@ export function AppShell() {
   }, [sidebarCollapsed])
 
   useEffect(() => {
+    if (location.pathname.startsWith("/settings")) {
+      setDrillDownParent(null)
+      return
+    }
     const parent = items.find(item => item.children && location.pathname.startsWith(item.to))
     if (parent) setDrillDownParent(parent)
   }, [location.pathname, items])

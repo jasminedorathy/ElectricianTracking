@@ -37,6 +37,7 @@ TENANT_APPS = [
     "tasks",
     "live_locations",
     "compliance",
+    "settings_hub",
 ]
 
 INSTALLED_APPS = list(set(SHARED_APPS + TENANT_APPS))

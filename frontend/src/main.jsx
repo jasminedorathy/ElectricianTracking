@@ -7,7 +7,10 @@ import { Provider as ReduxProvider } from "react-redux"
 import { store } from "./store/store.js"
 import { AuthProvider } from "./state/auth/AuthProvider.jsx"
 import { App } from "./ui/App.jsx"
+import { initTheme } from "./ui/theme.js"
 import "./ui/styles.css"
+
+initTheme()
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 

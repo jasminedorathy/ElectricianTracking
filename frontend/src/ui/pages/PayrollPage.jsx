@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react"
 
 import { apiRequest, unwrapResults } from "../../api/client.js"
 import { useAuth } from "../../state/auth/useAuth.js"
+import { useRole } from "../../state/auth/useRole.js"
 import { Button, Card, Input, Pill } from "../components/kit.jsx"
+import { Banknote } from "lucide-react"
 
 function formatEmployeeId(value) {
   if (!value) return ""
@@ -24,7 +26,7 @@ export function PayrollPage() {
   const [start, setStart] = useState("")
   const [end, setEnd] = useState("")
 
-  const isAdmin = user?.role === "admin"
+  const { isAdmin } = useRole()
 
   const employeeOptions = useMemo(() => {
     return employees.map((e) => ({ id: e.id, label: `${e.employee_id} (${e.user?.username ?? "user"})` }))
@@ -70,13 +72,25 @@ export function PayrollPage() {
   }
 
   return (
-    <div className="stackLg">
-      <div className="pageHeader">
-        <div>
-          <h1 className="pageTitle">Payroll</h1>
-          <div className="pageSub">Transparent pay: regular, overtime, and leave all reconciled.</div>
+    <div className="flex flex-col h-[calc(100vh-var(--header-height,64px))] w-full bg-bg dark:bg-bg overflow-hidden">
+      {/* ── HEADER ── */}
+      <div className="h-24 bg-surface dark:bg-slate-900/60 border-b border-stroke dark:border-slate-800 px-10 flex items-center justify-between shrink-0 relative overflow-hidden">
+        <div className="flex items-center gap-6">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight font-[Manrope] flex items-center gap-3">
+              <Banknote className="text-indigo-600 dark:text-indigo-400" size={24} />
+              Payroll
+            </h1>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                Transparent pay: regular, overtime, and leave all reconciled.
+              </span>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto p-10 space-y-10">
 
       {error ? <div className="errorBox">{error}</div> : null}
 
@@ -109,73 +123,75 @@ export function PayrollPage() {
         {loading ? (
           <div className="muted">Loading…</div>
         ) : records.length ? (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div className="overflow-x-auto rounded-2xl border border-stroke dark:border-slate-800 bg-surface dark:bg-slate-900/60 shadow-sm">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr style={{ borderBottom: "2px solid var(--stroke)", textTransform: "uppercase", fontSize: 11, color: "var(--muted)", letterSpacing: "0.05em" }}>
-                  <th style={{ padding: "8px 10px", textAlign: "left" }}>Employee</th>
-                  <th style={{ padding: "8px 10px", textAlign: "left" }}>Period</th>
-                  <th style={{ padding: "8px 10px", textAlign: "left" }}>Region</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Gross</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Net</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Regular hrs</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>OT hrs</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Daily OT</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Double Time</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Tax (UK)</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Emp NI</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Employer NI</th>
-                  <th style={{ padding: "8px 10px", textAlign: "right" }}>Holiday Accrual</th>
-                  <th style={{ padding: "8px 10px", textAlign: "center" }}>Flags</th>
+                <tr className="bg-surface2 dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  <th className="p-4">Employee</th>
+                  <th className="p-4">Period</th>
+                  <th className="p-4">Region</th>
+                  <th className="p-4 text-right">Gross</th>
+                  <th className="p-4 text-right">Net</th>
+                  <th className="p-4 text-right">Regular hrs</th>
+                  <th className="p-4 text-right">OT hrs</th>
+                  <th className="p-4 text-right">Daily OT</th>
+                  <th className="p-4 text-right">Double Time</th>
+                  <th className="p-4 text-right">Tax (UK)</th>
+                  <th className="p-4 text-right">Emp NI</th>
+                  <th className="p-4 text-right">Employer NI</th>
+                  <th className="p-4 text-right">Holiday</th>
+                  <th className="p-4 text-center">Flags</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-stroke dark:divide-slate-800">
                 {records.map((r) => {
                   const isUK = r.region && r.region.includes("UK")
                   const curr = isUK ? "£" : "$"
                   return (
-                    <tr key={r.id} style={{ borderBottom: "1px solid var(--stroke2)" }}>
-                      <td style={{ padding: "10px 10px", fontWeight: 600 }}>
-                        {r.employee ? formatEmployeeId(r.employee) : "—"}
-                        {r.employee_name && <div style={{ fontSize: 11, color: "var(--muted)" }}>{r.employee_name}</div>}
+                    <tr key={r.id} className="hover:bg-bg dark:hover:bg-slate-950/40 transition-colors">
+                      <td className="p-4">
+                        <div className="font-black text-slate-900 dark:text-white text-sm">{r.employee ? formatEmployeeId(r.employee) : "—"}</div>
+                        {r.employee_name && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.employee_name}</div>}
                       </td>
-                      <td style={{ padding: "10px 10px", color: "var(--muted)", fontSize: 12 }}>
-                        {r.period?.start_date} → {r.period?.end_date}
+                      <td className="p-4">
+                        <div className="text-[11px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+                          {r.period?.start_date} → {r.period?.end_date}
+                        </div>
                       </td>
-                      <td style={{ padding: "10px 10px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#6366f1" }}>{r.region || "—"}</span>
-                        {r.is_exempt && <div style={{ fontSize: 10, color: "#059669", fontWeight: 700 }}>FLSA EXEMPT</div>}
-                        {isUK && r.uk_tax_code && <div style={{ fontSize: 10, color: "var(--muted)" }}>Tax: {r.uk_tax_code} · NI: {r.uk_ni_category}</div>}
+                      <td className="p-4">
+                        <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{r.region || "—"}</span>
+                        {r.is_exempt && <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mt-0.5">FLSA EXEMPT</div>}
+                        {isUK && r.uk_tax_code && <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Tax: {r.uk_tax_code} · NI: {r.uk_ni_category}</div>}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", fontWeight: 600 }}>{curr}{r.gross_pay}</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right" }}>
+                      <td className="p-4 text-right font-black text-slate-900 dark:text-white">{curr}{r.gross_pay}</td>
+                      <td className="p-4 text-right">
                         <Pill tone="good">{curr}{r.net_pay}</Pill>
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right" }}>{r.regular_hours}h</td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: Number(r.overtime_hours) > 0 ? "#d97706" : "var(--fg)", fontWeight: Number(r.overtime_hours) > 0 ? 700 : 400 }}>
+                      <td className="p-4 text-right text-slate-700 dark:text-slate-300 font-bold">{r.regular_hours}h</td>
+                      <td className={`p-4 text-right font-black ${Number(r.overtime_hours) > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-600"}`}>
                         {r.overtime_hours}h
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: Number(r.daily_ot_hours) > 0 ? "#ea580c" : "var(--muted)" }}>
+                      <td className={`p-4 text-right font-black ${Number(r.daily_ot_hours) > 0 ? "text-orange-600 dark:text-orange-400" : "text-slate-400 dark:text-slate-600"}`}>
                         {Number(r.daily_ot_hours) > 0 ? `${r.daily_ot_hours}h` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: Number(r.double_time_hours) > 0 ? "#dc2626" : "var(--muted)", fontWeight: Number(r.double_time_hours) > 0 ? 700 : 400 }}>
+                      <td className={`p-4 text-right font-black ${Number(r.double_time_hours) > 0 ? "text-rose-600 dark:text-rose-500" : "text-slate-400 dark:text-slate-600"}`}>
                         {Number(r.double_time_hours) > 0 ? `${r.double_time_hours}h` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: "var(--muted)" }}>
+                      <td className="p-4 text-right text-slate-500 dark:text-slate-500 font-bold">
                         {isUK && Number(r.uk_income_tax) > 0 ? `£${r.uk_income_tax}` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: "var(--muted)" }}>
+                      <td className="p-4 text-right text-slate-500 dark:text-slate-500 font-bold">
                         {isUK && Number(r.uk_employee_ni) > 0 ? `£${r.uk_employee_ni}` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: "var(--muted)" }}>
+                      <td className="p-4 text-right text-slate-500 dark:text-slate-500 font-bold">
                         {isUK && Number(r.uk_employer_ni) > 0 ? `£${r.uk_employer_ni}` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "right", color: Number(r.holiday_hours_accrued) > 0 ? "#059669" : "var(--muted)" }}>
+                      <td className={`p-4 text-right font-black ${Number(r.holiday_hours_accrued) > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-slate-400 dark:text-slate-600"}`}>
                         {Number(r.holiday_hours_accrued) > 0 ? `${r.holiday_hours_accrued}h` : "—"}
                       </td>
-                      <td style={{ padding: "10px 10px", textAlign: "center" }}>
+                      <td className="p-4 text-center">
                         {!r.wage_floor_compliant && (
-                          <span style={{ fontSize: 10, background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 4, padding: "2px 6px", fontWeight: 700 }}>
+                          <span className="px-2 py-1 rounded-md bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase tracking-widest border border-rose-200 dark:border-rose-900/40">
                             MIN WAGE
                           </span>
                         )}
@@ -190,6 +206,7 @@ export function PayrollPage() {
           <div className="muted">No payroll records yet.</div>
         )}
       </Card>
+      </div>
     </div>
   )
 }

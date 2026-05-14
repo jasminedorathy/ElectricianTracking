@@ -1,18 +1,19 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search, Home, Clock, CheckSquare, CalendarDays, Banknote, CalendarRange, Users, BarChart3, Settings, LogOut } from "lucide-react"
+import { Search, Home, Clock, CheckSquare, CalendarDays, Banknote, CalendarRange, Users, BarChart3, Settings, LogOut, Command, ChevronRight } from "lucide-react"
 import { routes } from "../routes.js"
+import { motion, AnimatePresence } from "framer-motion"
 
 const ACTIONS = [
-  { id: "dashboard", label: "Go to Dashboard", shortcut: "G D", icon: <Home size={16} />, to: routes.dashboard },
-  { id: "time", label: "Track Time", shortcut: "G T", icon: <Clock size={16} />, to: routes.time },
-  { id: "tasks", label: "Manage Tasks", shortcut: "G K", icon: <CheckSquare size={16} />, to: routes.tasks },
-  { id: "leaves", label: "Request Leave", shortcut: "G L", icon: <CalendarDays size={16} />, to: routes.leaves },
-  { id: "payroll", label: "View Payroll", shortcut: "G P", icon: <Banknote size={16} />, to: routes.payroll },
-  { id: "scheduling", label: "Team Schedule", shortcut: "G S", icon: <CalendarRange size={16} />, to: routes.scheduling },
-  { id: "employees", label: "Employee Directory", shortcut: "G E", icon: <Users size={16} />, to: routes.employees },
-  { id: "reports", label: "Analytics & Reports", shortcut: "G R", icon: <BarChart3 size={16} />, to: routes.reports },
-  { id: "settings", label: "Enterprise Settings", shortcut: "G ,", icon: <Settings size={16} />, to: routes.settings },
+  { id: "dashboard", label: "Go to Dashboard", shortcut: ["G", "D"], icon: <Home size={18} />, to: routes.dashboard, color: "text-emerald-500" },
+  { id: "time", label: "Track Time", shortcut: ["G", "T"], icon: <Clock size={18} />, to: routes.time, color: "text-amber-500" },
+  { id: "tasks", label: "Manage Tasks", shortcut: ["G", "K"], icon: <CheckSquare size={18} />, to: routes.tasks, color: "text-teal-500" },
+  { id: "leaves", label: "Request Leave", shortcut: ["G", "L"], icon: <CalendarDays size={18} />, to: routes.leaves, color: "text-rose-500" },
+  { id: "payroll", label: "View Payroll", shortcut: ["G", "P"], icon: <Banknote size={18} />, to: routes.payroll, color: "text-indigo-500" },
+  { id: "scheduling", label: "Team Schedule", shortcut: ["G", "S"], icon: <CalendarRange size={18} />, to: routes.scheduling, color: "text-sky-500" },
+  { id: "employees", label: "Employee Directory", shortcut: ["G", "E"], icon: <Users size={18} />, to: routes.employees, color: "text-fuchsia-500" },
+  { id: "reports", label: "Analytics & Reports", shortcut: ["G", "R"], icon: <BarChart3 size={18} />, to: routes.reports, color: "text-yellow-500" },
+  { id: "settings", label: "Enterprise Settings", shortcut: ["G", ","], icon: <Settings size={18} />, to: routes.settings, color: "text-slate-500" },
 ]
 
 export function CommandPalette({ open, setOpen }) {
@@ -37,13 +38,18 @@ export function CommandPalette({ open, setOpen }) {
     if (open) {
       setQuery("")
       setSelectedIndex(0)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
 
   const filtered = ACTIONS.filter((a) => a.label.toLowerCase().includes(query.toLowerCase()))
 
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [query])
+
   const handleExecute = (a) => {
+    if (!a) return
     navigate(a.to)
     setOpen(false)
   }
@@ -63,63 +69,110 @@ export function CommandPalette({ open, setOpen }) {
     }
   }
 
-  if (!open) return null
-
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "10vh", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", animation: "fadeIn 0.15s ease" }} onClick={() => setOpen(false)}>
-      <div 
-        style={{ width: "100%", maxWidth: 640, background: "var(--surface)", borderRadius: 16, boxShadow: "0 20px 40px rgba(0,0,0,0.2), 0 0 0 1px var(--stroke)", overflow: "hidden", display: "flex", flexDirection: "column", transform: "scale(1)", animation: "slideDown 0.2s cubic-bezier(0.16,1,0.3,1)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: "flex", alignItems: "center", padding: "0 20px", borderBottom: "1px solid var(--stroke)" }}>
-          <Search size={20} color="var(--muted)" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Search pages, settings, or actions..."
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0) }}
-            onKeyDown={handleKeyDown}
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", padding: "20px 16px", fontSize: 16, color: "var(--fg)" }}
-          />
-          <div style={{ background: "var(--surface2)", padding: "4px 8px", borderRadius: 6, fontSize: 11, fontWeight: 800, color: "var(--muted)", letterSpacing: 0.5 }}>ESC</div>
-        </div>
-
-        <div style={{ maxHeight: 360, overflowY: "auto", padding: 12 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 32, textAlign: "center", color: "var(--muted)", fontSize: 14 }}>No results found for "{query}"</div>
-          ) : (
-            filtered.map((item, i) => (
-              <div
-                key={item.id}
-                onMouseEnter={() => setSelectedIndex(i)}
-                onClick={() => handleExecute(item)}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "12px 16px", borderRadius: 10, cursor: "pointer",
-                  background: selectedIndex === i ? "var(--primary)" : "transparent",
-                  color: selectedIndex === i ? "#fff" : "var(--fg)",
-                  transition: "none"
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ color: selectedIndex === i ? "#fff" : "var(--muted)", display: "flex" }}>{item.icon}</div>
-                  <span style={{ fontSize: 14, fontWeight: selectedIndex === i ? 700 : 500 }}>{item.label}</span>
-                </div>
-                {item.shortcut && (
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {item.shortcut.split(" ").map((k) => (
-                      <div key={k} style={{ background: selectedIndex === i ? "rgba(255,255,255,0.2)" : "var(--surface2)", color: selectedIndex === i ? "#fff" : "var(--muted)", padding: "2px 6px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
-                        {k}
-                      </div>
-                    ))}
-                  </div>
-                )}
+    <AnimatePresence>
+      {open && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-start justify-center pt-[12vh] p-4 bg-slate-950/80 backdrop-blur-md"
+          onClick={() => setOpen(false)}
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0, y: -20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: -20 }}
+            className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Search Input Area - Theme Aware */}
+            <div className="relative flex items-center px-8 bg-white dark:bg-black border-b border-slate-200 dark:border-slate-800">
+              <Search size={22} className="text-slate-400 dark:text-slate-500" />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search actions, pages, or settings..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="flex-1 bg-transparent border-none outline-none py-7 px-5 text-lg font-black text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 tracking-tight"
+              />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] shadow-inner">
+                ESC
               </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+            </div>
+
+            {/* Results Area */}
+            <div className="max-h-[440px] overflow-y-auto p-4 custom-scrollbar">
+              {filtered.length === 0 ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4">
+                  <div className="p-4 rounded-3xl bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600">
+                    <Command size={32} />
+                  </div>
+                  <div>
+                    <p className="text-slate-600 dark:text-slate-400 font-bold tracking-tight text-lg">No results for "{query}"</p>
+                    <p className="text-slate-400 dark:text-slate-600 text-sm mt-1">Try searching for "Dashboard" or "Settings"</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filtered.map((item, i) => {
+                    const active = selectedIndex === i
+                    return (
+                      <button
+                        key={item.id}
+                        onMouseEnter={() => setSelectedIndex(i)}
+                        onClick={() => handleExecute(item)}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all duration-200 group relative ${
+                          active 
+                            ? "bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 translate-x-1" 
+                            : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2.5 rounded-xl transition-colors ${
+                            active ? "bg-white/20 text-white" : `bg-slate-100 dark:bg-slate-800/50 ${item.color}`
+                          }`}>
+                            {item.icon}
+                          </div>
+                          <span className={`text-sm font-black tracking-tight ${active ? "text-white" : "text-slate-700 dark:text-slate-300"}`}>
+                            {item.label}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                          <div className="flex gap-1.5">
+                            {item.shortcut.map((k) => (
+                              <span key={k} className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                active 
+                                  ? "bg-white/10 border-white/20 text-white" 
+                                  : "bg-white dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600"
+                              }`}>
+                                {k}
+                              </span>
+                            ))}
+                          </div>
+                          <ChevronRight size={16} className={`transition-transform duration-300 ${active ? "translate-x-1 opacity-100" : "opacity-0 -translate-x-2"}`} />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest px-8">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5"><kbd className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 leading-none">↑↓</kbd> Navigate</span>
+                <span className="flex items-center gap-1.5"><kbd className="p-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 leading-none">↵</kbd> Select</span>
+              </div>
+              <span>CalTrack Intelligence search</span>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }

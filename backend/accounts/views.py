@@ -66,6 +66,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class LoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    
+    def post(self, request, *args, **kwargs):
+        print(f"DEBUG: LoginView - POST request received: {request.data}")
+        return super().post(request, *args, **kwargs)
 
 
 class RefreshView(TokenRefreshView):
@@ -122,6 +126,7 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        print(f"DEBUG: RegisterView - POST request received: {request.data}")
         username = request.data.get("username")
         password = request.data.get("password")
         email = request.data.get("email", "")
@@ -211,4 +216,113 @@ class MeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
+
+
+class ProfileUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [__import__("rest_framework").parsers.MultiPartParser, __import__("rest_framework").parsers.FormParser, __import__("rest_framework").parsers.JSONParser]
+
+    def patch(self, request):
+        from .serializers import ProfileUpdateSerializer
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"success": True, "data": UserSerializer(request.user, context={"request": request}).data})
+        return Response({"success": False, "message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        current = request.data.get("current_password", "")
+        new_pw = request.data.get("new_password", "")
+        confirm = request.data.get("confirm_password", "")
+
+        if not request.user.check_password(current):
+            return Response({"success": False, "message": "Current password is incorrect."}, status=400)
+        if len(new_pw) < 8:
+            return Response({"success": False, "message": "Password must be at least 8 characters."}, status=400)
+        if new_pw != confirm:
+            return Response({"success": False, "message": "Passwords do not match."}, status=400)
+
+        request.user.set_password(new_pw)
+        request.user.save(update_fields=["password"])
+        return Response({"success": True, "message": "Password updated successfully."})
+
+
+class EmailChangeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        new_email = (request.data.get("new_email") or "").strip()
+        password = request.data.get("password", "")
+
+        if not new_email:
+            return Response({"success": False, "message": "Email is required."}, status=400)
+        if not request.user.check_password(password):
+            return Response({"success": False, "message": "Password is incorrect."}, status=400)
+
+        User = get_user_model()
+        if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+            return Response({"success": False, "message": "That email is already in use."}, status=400)
+
+        request.user.email = new_email
+        request.user.save(update_fields=["email"])
+        return Response({"success": True, "message": "Email updated."})
+
+
+class TwoFactorSetupView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            import pyotp, qrcode, io, base64
+        except ImportError:
+            return Response({"success": False, "message": "2FA library not installed."}, status=500)
+
+        secret = pyotp.random_base32()
+        request.user.totp_secret = secret
+        request.user.save(update_fields=["totp_secret"])
+
+        uri = pyotp.totp.TOTP(secret).provisioning_uri(
+            name=request.user.email or request.user.username,
+            issuer_name="QuickTIMS"
+        )
+        img = qrcode.make(uri)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return Response({"success": True, "data": {"secret": secret, "qr_code": f"data:image/png;base64,{qr_b64}"}})
+
+    def post(self, request):
+        try:
+            import pyotp
+        except ImportError:
+            return Response({"success": False, "message": "2FA library not installed."}, status=500)
+
+        code = request.data.get("code", "")
+        if not request.user.totp_secret:
+            return Response({"success": False, "message": "No 2FA setup in progress."}, status=400)
+
+        totp = pyotp.TOTP(request.user.totp_secret)
+        if not totp.verify(code):
+            return Response({"success": False, "message": "Invalid verification code."}, status=400)
+
+        request.user.two_fa_enabled = True
+        request.user.save(update_fields=["two_fa_enabled"])
+
+        import secrets as _s
+        backup_codes = [_s.token_hex(4).upper() for _ in range(8)]
+        return Response({"success": True, "message": "2FA enabled.", "data": {"backup_codes": backup_codes}})
+
+    def delete(self, request):
+        password = request.data.get("password", "")
+        if not request.user.check_password(password):
+            return Response({"success": False, "message": "Incorrect password."}, status=400)
+        request.user.two_fa_enabled = False
+        request.user.totp_secret = ""
+        request.user.save(update_fields=["two_fa_enabled", "totp_secret"])
+        return Response({"success": True, "message": "2FA disabled."})

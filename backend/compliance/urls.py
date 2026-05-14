@@ -27,7 +27,6 @@ router.register("wtr-optout", WTROptOutViewSet, basename="wtr-optout")
 urlpatterns = [
     path("rtw/expiry-check/", RTWExpiryCheckView.as_view(), name="rtw-expiry-check"),
     path("rtw/send-alerts/", RTWAlertEmailView.as_view(), name="rtw-send-alerts"),
-    path("", include(router.urls)),
     path("ot-risk/", OTRiskDashboardView.as_view(), name="ot-risk-dashboard"),
     path("uk-48hr/", UK48HrMonitorView.as_view(), name="uk-48hr-monitor"),
     path("uk-48hr/<int:employee_id>/", UK48HrMonitorView.as_view(), name="uk-48hr-employee"),
@@ -39,4 +38,5 @@ urlpatterns = [
     path("exempt-status/<int:employee_id>/", ExemptStatusView.as_view(), name="exempt-status"),
     path("break-compliance/", BreakComplianceReportView.as_view(), name="break-compliance"),
     path("rti-fps/", RTIFPSExportView.as_view(), name="rti-fps-export"),
+    path("", include(router.urls)),
 ]

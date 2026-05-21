@@ -16,6 +16,11 @@ import traceback
 from django.db import transaction
 from companies.models import Company
 from settings_hub.models import TeamInvite
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 
@@ -470,3 +475,60 @@ class AcceptInviteView(APIView):
             "user": UserSerializer(user).data,
             "message": "Login successfully"
         }, status=status.HTTP_201_CREATED)
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"detail": "Email is required"}, status=400)
+            
+        User = get_user_model()
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            token_generator = PasswordResetTokenGenerator()
+            token = token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Fallback frontend URL if not defined
+            frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+            reset_url = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+            
+            try:
+                send_mail(
+                    "Password Reset Request",
+                    f"Click the link below to reset your password:\n\n{reset_url}\n\nIf you did not request this, please ignore this email.",
+                    "noreply@caltrack.com",
+                    [email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"Failed to send email: {e}")
+        
+        # Always return success to prevent email enumeration
+        return Response({"detail": "If an account exists with that email, a password reset link has been sent."})
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        uidb64 = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+        
+        if not uidb64 or not token or not new_password:
+            return Response({"detail": "Missing required fields"}, status=400)
+            
+        User = get_user_model()
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+            
+        if user is not None and PasswordResetTokenGenerator().check_token(user, token):
+            user.set_password(new_password)
+            user.save()
+            return Response({"detail": "Password has been reset successfully."})
+        return Response({"detail": "Invalid or expired token"}, status=400)

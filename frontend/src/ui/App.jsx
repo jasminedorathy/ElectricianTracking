@@ -16,6 +16,10 @@ const DashboardPage = lazy(() =>
   import("./pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage }))
 )
 
+const ResetPasswordPage = lazy(() =>
+  import("./pages/ResetPasswordPage.jsx").then(m => ({ default: m.ResetPasswordPage }))
+)
+
 const LocationsPage = lazy(() =>
   import("./pages/LocationsPage.jsx").then(m => ({ default: m.LocationsPage }))
 )
@@ -164,6 +168,13 @@ export function App() {
           <Route
             path={routes.onboarding}
             element={<Navigate to={routes.login} replace />}
+          />
+          
+          <Route
+            path={routes.reset_password}
+            element={
+              user ? <Navigate to={routes.dashboard} replace /> : <ResetPasswordPage />
+            }
           />
 
           <Route

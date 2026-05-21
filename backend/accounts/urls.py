@@ -3,13 +3,15 @@ from django.urls import path
 from .views import (
     LoginView, MeView, RefreshView, GoogleLoginView, RegisterView,
     ProfileUpdateView, PasswordChangeView, EmailChangeView, TwoFactorSetupView,
-    AcceptInviteView
+    AcceptInviteView, PasswordResetRequestView, PasswordResetConfirmView
 )
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="jwt-login"),
     path("register/", RegisterView.as_view(), name="jwt-register"),
     path("google/", GoogleLoginView.as_view(), name="google-login"),
+    path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
     path("refresh/", RefreshView.as_view(), name="jwt-refresh"),
     path("me/", MeView.as_view(), name="me"),
     path("profile/", ProfileUpdateView.as_view(), name="profile-update"),

@@ -879,16 +879,27 @@ function HealthCard({ title, subtitle, status, detail, children }) {
   }[status] || { border: "var(--stroke)", bg: "var(--surface)", dot: "#94a3b8", label: "—" }
 
   return (
-    <div style={{ border: `1.5px solid ${tone.border}`, borderRadius: 14, padding: 18, background: tone.bg, display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div className="health-card-3d" style={{
+      border: `1.5px solid ${tone.border}`,
+      borderRadius: 14,
+      padding: 18,
+      background: tone.bg,
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      transformStyle: "preserve-3d",
+      perspective: "1000px",
+      transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", transform: "translateZ(15px)", transition: "transform 0.4s" }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: "var(--fg)" }}>{title}</div>
         <span style={{ fontSize: 10, fontWeight: 900, color: tone.dot, background: `${tone.dot}18`, padding: "2px 8px", borderRadius: 20, letterSpacing: "0.08em", textTransform: "uppercase" }}>
           {tone.label}
         </span>
       </div>
-      <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>{subtitle}</div>
-      {detail && <div style={{ fontSize: 12, color: "var(--fg)", marginTop: 2 }}>{detail}</div>}
-      {children}
+      <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", transform: "translateZ(10px)", transition: "transform 0.4s" }}>{subtitle}</div>
+      {detail && <div style={{ fontSize: 12, color: "var(--fg)", marginTop: 2, transform: "translateZ(5px)", transition: "transform 0.4s" }}>{detail}</div>}
+      <div style={{ transform: "translateZ(20px)", transition: "transform 0.4s" }}>{children}</div>
     </div>
   )
 }
@@ -1284,6 +1295,15 @@ export function CompliancePage() {
 
       {/* Audit Trail tab */}
       {tab === "audit" && <AuditTrailPanel />}
+      <style>{`
+        .health-card-3d:hover {
+          transform: translateY(-8px) rotateX(6deg) rotateY(-3deg) scale(1.03) !important;
+          box-shadow: 0 20px 32px rgba(99, 102, 241, 0.12), 0 8px 16px rgba(0,0,0,0.03) !important;
+        }
+        .health-card-3d:hover div {
+          transform: translateZ(25px) !important;
+        }
+      `}</style>
       </div>
     </div>
   )

@@ -242,6 +242,7 @@ export function App() {
             {/* ── Admin-only settings (employees redirected to /settings/profile) ── */}
             <Route element={<RequireAdminSettings />}>
               <Route path={routes.settings_people}        element={<SettingsPage section="people" />} />
+              <Route path={routes.settings_team}          element={<SettingsPage section="team" />} />
               <Route path={routes.settings_timetracking}  element={<SettingsPage section="time-tracking" />} />
               <Route path={routes.settings_attendance}    element={<SettingsPage section="attendance" />} />
               <Route path={routes.settings_schedules}     element={<SettingsPage section="schedules" />} />

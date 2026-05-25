@@ -7,10 +7,13 @@ import { useAuth } from "../../state/auth/useAuth.js"
 import {
   User, Shield, Palette, Bell, CreditCard, Users2, Plug,
   Building2, Database, AlertTriangle, ShieldCheck, RefreshCcw,
-  CheckCircle2, X, Save, ChevronRight, FileText,
+  CheckCircle2, X, Save, ChevronRight, FileText, Calendar,
 } from "lucide-react"
 
 /* ── Lazy section imports ─────────────────────────────────────── */
+const WorkSchedulesSettingsSection = lazy(() =>
+  import("./WorkSchedulesSettingsPage.jsx").then(m => ({ default: m.WorkSchedulesSettingsPage }))
+)
 const ProfileSection        = lazy(() => import("./settings/ProfileSection.jsx"))
 const AccountSecuritySection = lazy(() => import("./settings/AccountSecuritySection.jsx"))
 const AppearanceSection     = lazy(() => import("./settings/AppearanceSection.jsx"))
@@ -112,6 +115,14 @@ const TABS = [
     icon: <Users2 size={15} />,
     adminOnly: true,
     to: routes.settings_team,
+  },
+  {
+    id: "schedules",
+    label: "Work Schedules",
+    subtitle: "Manage daily shifts, flexible working hours, and weekend configurations.",
+    icon: <Calendar size={15} />,
+    adminOnly: true,
+    to: routes.settings_schedules,
   },
   {
     id: "invoices",
@@ -259,6 +270,7 @@ export function SettingsPage({ section: sectionProp }) {
               {activeSection === "billing"       && <BillingSection showToast={showToast} SectionHeader={SectionHeader} />}
               {activeSection === "people"        && <MembersSettingsSection />}
               {activeSection === "team"          && <TeamMembersSection showToast={showToast} SectionHeader={SectionHeader} />}
+              {activeSection === "schedules"     && <WorkSchedulesSettingsSection />}
               {activeSection === "invoices"      && <InvoicesSection />}
               {activeSection === "integrations"  && <IntegrationsApiSection showToast={showToast} SectionHeader={SectionHeader} />}
               {activeSection === "organization"  && <WorkspaceSection showToast={showToast} SectionHeader={SectionHeader} />}

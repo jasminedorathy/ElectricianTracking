@@ -41,7 +41,7 @@ const STEPS = [
     title: "Define rules for time tracking",
     desc: "Take control of how your team members clock in and out.",
     est: "5 min",
-    to: routes.settings_timetracking,
+    to: routes.time,
     color: "#f59e0b",
     bg: "#fffbeb",
   },
@@ -71,7 +71,7 @@ const STEPS = [
     title: "Invite your team",
     desc: "Add your first team members to get started.",
     est: "5 min",
-    to: routes.employees,
+    to: routes.settings_team,
     color: "#3b82f6",
     bg: "#eff6ff",
   },
@@ -84,7 +84,7 @@ const STORAGE_KEY = "caltrack.onboarding.dismissed"
 export function GetStartedPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [completedSteps, setCompletedSteps] = useState(new Set(["employees"])) // Demo: one step completed
+  const [completedSteps, setCompletedSteps] = useState(new Set())
 
   const displayName = user?.username ? user.username.charAt(0).toUpperCase() + user.username.slice(1) : "Rohit"
   const totalSteps = STEPS.length

@@ -15,6 +15,7 @@ export const routes = {
   settings_profile: "/settings/profile",
   settings_preferences: "/settings/preferences",
   settings_people: "/settings/people",
+  settings_team: "/settings/team",
   settings_timetracking: "/settings/time-tracking",
   settings_attendance: "/settings/attendance",
   settings_schedules: "/settings/schedules",

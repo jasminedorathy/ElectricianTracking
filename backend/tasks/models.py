@@ -108,6 +108,22 @@ class Task(models.Model):
     require_selfie   = models.BooleanField(default=False)
     require_before_after_photos = models.BooleanField(default=False)
 
+    # Task Verification Photos & Score
+    start_photo      = models.ImageField(upload_to="tasks/start_photos/", null=True, blank=True)
+    end_photo        = models.ImageField(upload_to="tasks/end_photos/", null=True, blank=True)
+    face_match_percentage = models.FloatField(null=True, blank=True)
+    face_match_status = models.CharField(
+        max_length=20,
+        default="pending",
+        choices=[
+            ("pending", "Pending"),
+            ("verified", "Verified"),
+            ("failed", "Failed"),
+            ("skipped", "Skipped")
+        ]
+    )
+    submission_time  = models.DateTimeField(null=True, blank=True)
+
     # Time tracking link
     time_log = models.OneToOneField(
         'time_tracking.TimeLog',
@@ -131,6 +147,7 @@ class Task(models.Model):
         choices=AcceptanceStatus.choices,
         default=AcceptanceStatus.PENDING_ACCEPTANCE,
     )
+    accepted_at    = models.DateTimeField(null=True, blank=True)
     decline_reason = models.TextField(blank=True)
     declined_at    = models.DateTimeField(null=True, blank=True)
     declined_by    = models.ForeignKey(

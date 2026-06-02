@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo, useMemo } from "react"
+import React, { useEffect, useRef, useState, memo, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { useNavigate } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from "react-leaflet"
@@ -16,8 +16,9 @@ import { apiRequest, unwrapResults } from "../../api/client.js"
 import { useAuth } from "../../state/auth/useAuth.js"
 import { useRole } from "../../state/auth/useRole.js"
 import { Pill, Button, Card, Input, Select, TextArea } from "../components/kit.jsx"
-import { ClipboardList, Clock, CheckCircle2, AlertCircle, MapPin, Calendar as CalIcon, Play, Save, Trash2, Tag, Loader2, Paperclip, User, Flag, ListChecks, Plus, X, Building2, Camera, ThumbsUp, ThumbsDown, RefreshCw, UserCheck, AlertTriangle, DollarSign, Battery, Wifi, ShieldAlert, Sparkles, Navigation, Upload, Activity, Search } from "lucide-react"
+import { ClipboardList, Clock, CheckCircle2, AlertCircle, MapPin, Calendar as CalIcon, Play, Save, Trash2, Tag, Loader2, Paperclip, User, Flag, ListChecks, Plus, X, Building2, Camera, ThumbsUp, ThumbsDown, RefreshCw, UserCheck, AlertTriangle, DollarSign, Battery, Wifi, ShieldAlert, Sparkles, Navigation, Upload, Activity, Search, ChevronRight, ChevronDown, Phone, Car, Wrench, MessageSquare, Compass, MoreHorizontal, Hammer, ChevronLeft } from "lucide-react"
 import { SelfieCapture, getPosition } from "./TimePage.jsx"
+import { verifyFaces } from "../../utils/faceVerify.js"
 
 // ─── Constants & Helpers ─────────────────────────────────────
 const CATEGORIES = [
@@ -765,15 +766,15 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
 
   function startContinuousTracking() {
     if (watchIdRef.current) return;
-    
+
     setAcquiringGps(true)
     setGpsError("")
-    
+
     // Connect to employee tracking WebSocket
     const WS_BASE =
       (typeof import.meta !== "undefined" && import.meta.env?.VITE_WS_BASE_URL) ||
       "ws://localhost:8000"
-    
+
     try {
       const ws = new WebSocket(`${WS_BASE}/ws/live/employee/`)
       wsRef.current = ws
@@ -789,14 +790,14 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
     } catch (err) {
       console.warn("[LiveTracking] Failed to connect traveling WebSocket:", err);
     }
-    
+
     if (navigator.geolocation) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         async (position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
           const accuracy = Math.round(position.coords.accuracy);
-          
+
           setPrecGPS({ lat, lon, accuracy });
           setGpsLocked(true);
           setAcquiringGps(false);
@@ -912,7 +913,7 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       setBeforePhoto(file)
-      
+
       const reader = new FileReader()
       reader.onloadend = () => {
         setBeforePhotoPreview(reader.result)
@@ -964,16 +965,73 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
 
   // Complete flow state
   const [afterPhoto, setAfterPhoto] = useState(null)
+  const [afterPhotoPreview, setAfterPhotoPreview] = useState(null)
+  const [faceVerifyScore, setFaceVerifyScore] = useState(null)
+  const [faceVerifyStatus, setFaceVerifyStatus] = useState(null) // 'verifying', 'matched', 'mismatch', 'no_face', 'skipped'
+  const [faceVerifyError, setFaceVerifyError] = useState("")
+  const [showEndSelfieCamera, setShowEndSelfieCamera] = useState(false)
+
+  async function performFaceMatching(endingPhotoPreview) {
+    setFaceVerifyStatus("verifying")
+    setFaceVerifyError("")
+    
+    let startPhotoUrl = task.start_photo
+    if (startPhotoUrl && startPhotoUrl.startsWith('/')) {
+      const host = "http://localhost:8000"
+      startPhotoUrl = `${host}${startPhotoUrl}`;
+    }
+
+    if (!startPhotoUrl) {
+      setFaceVerifyStatus("skipped")
+      setFaceVerifyScore(100)
+      return
+    }
+
+    try {
+      const result = await verifyFaces(startPhotoUrl, endingPhotoPreview)
+      setFaceVerifyScore(result.score)
+      if (result.status === 'mismatch') {
+        setFaceVerifyStatus('mismatch')
+        setFaceVerifyError('Face verification failed. Please retake the photo.')
+      } else if (result.status === 'no_face') {
+        setFaceVerifyStatus('no_face')
+        setFaceVerifyError('No face detected in the photos! Please retake.')
+      } else {
+        setFaceVerifyStatus('matched')
+      }
+    } catch (err) {
+      console.error("Face verification error:", err)
+      setFaceVerifyStatus("skipped")
+      setFaceVerifyScore(100)
+    }
+  }
+
+  function handleAfterPhotoCapture(file, previewUrl) {
+    setAfterPhoto(file)
+    setAfterPhotoPreview(previewUrl)
+    setShowEndSelfieCamera(false)
+    performFaceMatching(previewUrl)
+  }
+
+  function handleAfterPhotoFileChange(e) {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      setAfterPhoto(file)
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAfterPhotoPreview(reader.result)
+        performFaceMatching(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const elapsed = useElapsed(task.started_at)
   const liveHours = task.status === "in_progress" && elapsed > 0 ? formatDuration(elapsed) : null
 
   // Sync completion % from prop
   useEffect(() => { setCompletionPct(task.completion_percentage || 0) }, [task.completion_percentage])
-
-  function handleAfterPhotoChange(e) {
-    if (e.target.files && e.target.files[0]) setAfterPhoto(e.target.files[0])
-  }
 
   function handleStartWork() { navigate(`/time?task_id=${task.id}`) }
 
@@ -1023,6 +1081,7 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
     alert(`[SMS GATEWAY SIMULATOR] Customer SMS sent. Verification Code: ${code}`)
   }
 
+  // OTP verify
   function verifyOtp() {
     if (otpInput === otpCode && otpCode !== "") {
       setOtpVerified(true)
@@ -1036,10 +1095,24 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
     if (task.require_before_after_photos && !afterPhoto) {
       alert("An after photo is required to complete this task."); return;
     }
+    if (faceVerifyStatus === "mismatch" || faceVerifyStatus === "no_face") {
+      alert("Face verification failed. Please retake the photo."); return;
+    }
+    if (faceVerifyStatus === "verifying") {
+      alert("Please wait for face verification to complete."); return;
+    }
+    if (!faceVerifyStatus && task.start_photo) {
+      alert("Please capture or upload an ending photo to verify identity."); return;
+    }
     if (!otpVerified) {
       alert("Please generate and verify the Customer OTP code to proceed."); return;
     }
-    const payload = { notes: note, require_fd: true }
+    const payload = { 
+      notes: note, 
+      require_fd: true,
+      face_match_percentage: faceVerifyScore ?? 0,
+      face_match_status: faceVerifyStatus === 'matched' ? 'verified' : (faceVerifyStatus === 'skipped' ? 'skipped' : 'failed')
+    }
     if (afterPhoto) payload.photo = afterPhoto
     onAction(task.id, "complete", payload)
   }
@@ -1246,677 +1319,753 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
 
   return (
     <>
-    {showLiveTracking && (
-      <LiveTrackingModal
-        task={task}
-        empPos={precGPS}
-        onClose={() => setShowLiveTracking(false)}
-      />
-    )}
-    <div
-      className={`rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col gap-4 ${!task.is_pushed_gap_job ? 'bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800' : ''}`}
-      style={task.is_pushed_gap_job ? {
-        background: 'linear-gradient(135deg, #fff5f5 0%, #fff 60%)',
-        border: '2px solid #ef4444',
-        boxShadow: '0 0 0 3px rgba(239,68,68,0.15), 0 4px 24px rgba(239,68,68,0.12)',
-        animation: 'urgentCardPulse 2s ease-in-out infinite',
-      } : undefined}
-    >
-      <style>{`
+      {showLiveTracking && (
+        <LiveTrackingModal
+          task={task}
+          empPos={precGPS}
+          onClose={() => setShowLiveTracking(false)}
+        />
+      )}
+      <div
+        className={`rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-5 flex flex-col gap-4 ${!task.is_pushed_gap_job ? 'bg-surface dark:bg-slate-900/60 border border-stroke dark:border-slate-800' : ''}`}
+        style={task.is_pushed_gap_job ? {
+          background: 'linear-gradient(135deg, #fff5f5 0%, #fff 60%)',
+          border: '2px solid #ef4444',
+          boxShadow: '0 0 0 3px rgba(239,68,68,0.15), 0 4px 24px rgba(239,68,68,0.12)',
+          animation: 'urgentCardPulse 2s ease-in-out infinite',
+        } : undefined}
+      >
+        <style>{`
         @keyframes urgentCardPulse {
           0%,100% { box-shadow: 0 0 0 3px rgba(239,68,68,0.15), 0 4px 24px rgba(239,68,68,0.12); }
           50% { box-shadow: 0 0 0 6px rgba(239,68,68,0.08), 0 4px 32px rgba(239,68,68,0.2); }
         }
       `}</style>
-      {/* ── 3-Choice Resume Modal ── */}
-      {showResumeModal && createPortal(
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-          zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
-        }} onClick={() => setShowResumeModal(false)}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: "#fff", borderRadius: 20, padding: 28, width: "100%", maxWidth: 420,
-            boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
-          }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: "#1e293b", marginBottom: 6 }}>▶ Resume Options</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 20, fontWeight: 600 }}>Gap job complete. What would you like to do with the original task?</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <button onClick={handleResumeNow} style={{
-                padding: "12px 16px", borderRadius: 12, border: "none", background: "#4f46e5",
-                color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer", textAlign: "left",
-              }}>
-                ▶ Resume Now — Head back to the original job
-              </button>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>⏰ Resume Later — Set a new deadline:</div>
-                <input type="datetime-local" value={resumeLaterDeadline}
-                  onChange={e => setResumeLaterDeadline(e.target.value)}
-                  style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e2e8f0", fontSize: 13 }}
-                />
-                <button onClick={handleResumeLater} disabled={!resumeLaterDeadline} style={{
-                  padding: "10px 16px", borderRadius: 12,
-                  border: "1.5px solid #e2e8f0", background: resumeLaterDeadline ? "#f8fafc" : "#f1f5f9",
-                  color: resumeLaterDeadline ? "#334155" : "#94a3b8",
-                  fontSize: 12, fontWeight: 800, cursor: resumeLaterDeadline ? "pointer" : "not-allowed",
+        {/* ── 3-Choice Resume Modal ── */}
+        {showResumeModal && createPortal(
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+            zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }} onClick={() => setShowResumeModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: "#fff", borderRadius: 20, padding: 28, width: "100%", maxWidth: 420,
+              boxShadow: "0 25px 80px rgba(0,0,0,0.25)",
+            }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: "#1e293b", marginBottom: 6 }}>▶ Resume Options</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 20, fontWeight: 600 }}>Gap job complete. What would you like to do with the original task?</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button onClick={handleResumeNow} style={{
+                  padding: "12px 16px", borderRadius: 12, border: "none", background: "#4f46e5",
+                  color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer", textAlign: "left",
                 }}>
-                  Confirm Resume Later
+                  ▶ Resume Now — Head back to the original job
+                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>⏰ Resume Later — Set a new deadline:</div>
+                  <input type="datetime-local" value={resumeLaterDeadline}
+                    onChange={e => setResumeLaterDeadline(e.target.value)}
+                    style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid #e2e8f0", fontSize: 13 }}
+                  />
+                  <button onClick={handleResumeLater} disabled={!resumeLaterDeadline} style={{
+                    padding: "10px 16px", borderRadius: 12,
+                    border: "1.5px solid #e2e8f0", background: resumeLaterDeadline ? "#f8fafc" : "#f1f5f9",
+                    color: resumeLaterDeadline ? "#334155" : "#94a3b8",
+                    fontSize: 12, fontWeight: 800, cursor: resumeLaterDeadline ? "pointer" : "not-allowed",
+                  }}>
+                    Confirm Resume Later
+                  </button>
+                </div>
+                <button onClick={handleRequestReassign} style={{
+                  padding: "12px 16px", borderRadius: 12,
+                  border: "1.5px solid #fca5a5", background: "#fff5f5",
+                  color: "#dc2626", fontSize: 13, fontWeight: 900, cursor: "pointer",
+                }}>
+                  🔄 Request Reassignment — Pass this task to another employee
                 </button>
               </div>
-              <button onClick={handleRequestReassign} style={{
-                padding: "12px 16px", borderRadius: 12,
-                border: "1.5px solid #fca5a5", background: "#fff5f5",
-                color: "#dc2626", fontSize: 13, fontWeight: 900, cursor: "pointer",
-              }}>
-                🔄 Request Reassignment — Pass this task to another employee
-              </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-2">
-          {task.is_pushed_gap_job ? (
+        {/* ── COMPACT HEADER ── */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {task.is_pushed_gap_job ? (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 8px', borderRadius: 20,
+                background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                color: '#fff', fontSize: 9, fontWeight: 900,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+              }}>⚡ URGENT GAP JOB</span>
+            ) : (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 8px', borderRadius: 6,
+                background: '#f1f5f9', color: '#475569',
+                fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em',
+              }}>{categoryLabel(task.category)}</span>
+            )}
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: priorityColorClass(task.priority).includes('red') ? '#ef4444' : priorityColorClass(task.priority).includes('amber') ? '#f59e0b' : '#22c55e' }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {isPending && (
+              <span style={{
+                padding: "2px 8px", borderRadius: 20, fontSize: 9, fontWeight: 900,
+                background: "#fffbeb", color: "#d97706", border: "1px solid #fde68a",
+                textTransform: "uppercase", letterSpacing: "0.06em",
+              }}>⏳ Awaiting Response</span>
+            )}
+            <SlaBadge slaStatus={task.sla_status} slaMinutes={task.sla_minutes_remaining} />
+            {/* Status pill with proper color coding */}
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '3px 9px', borderRadius: 20,
-              background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-              color: '#fff', fontSize: 9, fontWeight: 900,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
-              animation: 'urgentFlash 1.8s ease-in-out infinite',
+              padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 900,
+              letterSpacing: "0.06em", textTransform: "uppercase",
+              background: task.status === 'pending' ? '#fff7ed' : task.status === 'in_progress' ? '#f0fdf4' : task.status === 'completed' ? '#064e3b' : task.status === 'suspended' ? '#f8fafc' : '#eff6ff',
+              color: task.status === 'pending' ? '#ea580c' : task.status === 'in_progress' ? '#16a34a' : task.status === 'completed' ? '#fff' : task.status === 'suspended' ? '#64748b' : '#2563eb',
+              border: `1px solid ${task.status === 'pending' ? '#fed7aa' : task.status === 'in_progress' ? '#bbf7d0' : task.status === 'completed' ? '#065f46' : task.status === 'suspended' ? '#e2e8f0' : '#bfdbfe'}`,
             }}>
-              ⚡ URGENT GAP JOB
+              {task.status === "in_progress" ? (liveHours ? `🟢 ${liveHours}` : "In Progress") : statusLabel(task.status)}
             </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
-              <Tag size={10} /> {categoryLabel(task.category)}
-            </span>
-          )}
-          {task.is_pushed_gap_job && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
-              <Tag size={10} /> {categoryLabel(task.category)}
-            </span>
-          )}
-          <div className={`w-2 h-2 rounded-full ${priorityColorClass(task.priority)}`} title={`Priority: ${task.priority}`} />
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {isPending && (
-            <span style={{
-              padding: "3px 9px", borderRadius: 20, fontSize: 9, fontWeight: 900,
-              backgroundColor: "#fffbeb", color: "#d97706", border: "1px solid #fde68a",
-              letterSpacing: "0.08em", textTransform: "uppercase",
-            }}>
-              ⏳ Awaiting Your Response
-            </span>
-          )}
-          <SlaBadge slaStatus={task.sla_status} slaMinutes={task.sla_minutes_remaining} />
-          <Pill tone={statusTone(task.status)}>
-            {task.status === "in_progress" ? (liveHours ? `🟢 ${liveHours}` : "In Progress") : statusLabel(task.status)}
-          </Pill>
-        </div>
-      </div>
-
-      <div className="flex-1">
-        <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight tracking-tight">{task.title}</h3>
-        {task.description && (
-          <div className={`text-slate-500 dark:text-slate-400 text-sm mt-2 line-clamp-${expanded ? 'none' : '3'} whitespace-pre-wrap leading-relaxed`}>
-            {task.description}
           </div>
-        )}
-        {task.description && task.description.length > 120 && (
-          <button className="text-indigo-600 text-xs font-bold mt-1 hover:underline" onClick={() => setExpanded(v => !v)}>
-            {expanded ? "Show less" : "Read more"}
-          </button>
-        )}
-      </div>
+        </div>
 
-      <div className="grid grid-cols-2 gap-y-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-        <div className="flex items-center gap-1.5 truncate">
-          <Building2 size={12} className="text-slate-300" />
-          <span className="truncate">{task.job_site_name || task.client_name || "No site"}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <CalIcon size={12} className="text-slate-300" />
-          <span>Due: {task.due_date}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Clock size={12} className="text-slate-300" />
-          <span>Est: {task.estimated_hours}h</span>
-        </div>
-        {task.actual_hours > 0 && (
-          <div className="flex items-center gap-1.5 text-emerald-600">
-            <CheckCircle2 size={12} />
-            <span>Actual: {task.actual_hours}h</span>
+        {/* ── TITLE BLOCK ── */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 900, color: "#0f172a", lineHeight: 1.2, margin: 0 }}>{task.title}</h3>
+            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700, marginTop: 2 }}>Job #{task.id}</div>
           </div>
-        )}
-      </div>
-
-      {/* Billing badge for completed tasks */}
-      {task.status === "completed" && task.billed_hours && (
-        <BillingBadge
-          billedHours={task.billed_hours}
-          actualHours={task.actual_hours}
-          estimatedHours={task.estimated_hours}
-        />
-      )}
-
-      {task.admin_notes && (
-        <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-400 p-3 rounded-xl text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">
-          <strong className="uppercase tracking-widest mr-1 opacity-60">Admin note:</strong> {task.admin_notes}
-        </div>
-      )}
-
-      {/* Attachments Viewer */}
-      {task.attachments && task.attachments.length > 0 && (
-        <AttachmentsViewer attachments={task.attachments} />
-      )}
-
-      {/* Urgent Gap Job dispatched info strip */}
-      {task.is_pushed_gap_job && (
-        <div style={{
-          padding: '14px 16px', borderRadius: 14,
-          background: 'linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)',
-          border: '1.5px solid #fca5a5',
-          display: 'flex', flexDirection: 'column', gap: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!isPending && (
             <div style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, color: '#fff',
-              boxShadow: '0 2px 8px rgba(220,38,38,0.35)',
-            }}>⚡</div>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: '#991b1b', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Admin Dispatched — Urgent Gap Job
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#f87171', marginTop: 1 }}>
-                Your manager has assigned this task while you are suspended. Please accept immediately.
-              </div>
+              flexShrink: 0, width: 52, height: 52,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 12, padding: 8,
+            }}>
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+                <polyline points="10,56 10,16 34,8 34,56" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" fill="none"/>
+                <rect x="34" y="26" width="20" height="30" rx="1" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" fill="none"/>
+                <line x1="6" y1="56" x2="58" y2="56" stroke="#1e293b" strokeWidth="3" strokeLinecap="round"/>
+                <rect x="14" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="22" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="14" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="22" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="14" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="22" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="38" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="46" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="38" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="46" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                <rect x="21" y="46" width="7" height="10" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              </svg>
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, paddingTop: 4, borderTop: '1px solid #fecaca' }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#dc2626' }}>
-              ⏱ Est: {task.estimated_hours}h
-            </div>
+          )}
+        </div>
+
+        {/* ── META ROW: site / date / est ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Building2 size={11} />
+            {task.job_site_name || task.client_name || "No Site"}
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <CalIcon size={11} />
+            {task.due_date}
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Clock size={11} />
+            Est: {task.estimated_hours}h
+          </span>
+          {task.actual_hours > 0 && (
+            <span style={{ color: "#16a34a", display: "flex", alignItems: "center", gap: 4 }}>
+              <CheckCircle2 size={11} />
+              Act: {task.actual_hours}h
+            </span>
+          )}
+        </div>
+
+        {/* ── CLIENT CARD — shown immediately after header for accepted tasks ── */}
+        {!isPending && (task.client_name || task.client_contact_number || task.job_address) && (
+          <div className="p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 flex flex-col gap-3.5 shadow-sm">
+            <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-0.5">Customer Dossier</div>
+            {task.client_name && (
+              <div className="flex items-center gap-3 text-sm text-slate-800 dark:text-slate-200 font-bold">
+                <User size={15} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                <span>{task.client_name}</span>
+              </div>
+            )}
+            {task.client_company_name && (
+              <div className="flex items-center gap-3 text-[12px] text-slate-500 dark:text-slate-400 font-semibold">
+                <Building2 size={15} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                <span>{task.client_company_name}</span>
+              </div>
+            )}
             {task.client_contact_number && (
               <a href={`tel:${task.client_contact_number}`}
-                style={{ fontSize: 10, fontWeight: 800, color: '#dc2626', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                📞 Call Client
+                className="flex items-center gap-3 text-sm text-blue-600 dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                style={{ textDecoration: "none" }}
+              >
+                <Phone size={15} className="text-blue-500 dark:text-blue-400 shrink-0" />
+                <span>{task.client_contact_number}</span>
               </a>
             )}
             {task.job_address && (
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#b91c1c', flex: 1, truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                📍 {task.job_address}
+              <div className="flex items-start gap-3 text-[12px] text-slate-650 dark:text-slate-400 font-semibold leading-relaxed">
+                <MapPin size={15} className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                <span>{task.job_address}</span>
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Suspension Panel details */}
-      {task.status === "suspended" && (
-        <div style={{
-          padding: 16, borderRadius: 14,
-          background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-          border: "1.5px solid #cbd5e1",
-          display: "flex", flexDirection: "column", gap: 10,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 900, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
-            ⏸️ JOB SUSPENDED
-          </div>
-          <div className="text-xs text-slate-700 dark:text-slate-300">
-            <span className="font-bold">Reason:</span> {task.suspend_reason || "No reason specified"}
-          </div>
-          <div className="text-xs text-slate-700 dark:text-slate-300">
-            <span className="font-bold">Resume Deadline:</span> {task.resume_deadline ? new Date(task.resume_deadline).toLocaleString() : "None"}
-          </div>
-          <div className="text-xs text-slate-700 dark:text-slate-300">
-            <span className="font-bold">Total Active Time:</span> {formatDuration(task.total_active_seconds || 0)}
-          </div>
-        </div>
-      )}
+        {/* Billing badge for completed tasks */}
+        {task.status === "completed" && task.billed_hours && (
+          <BillingBadge
+            billedHours={task.billed_hours}
+            actualHours={task.actual_hours}
+            estimatedHours={task.estimated_hours}
+          />
+        )}
 
-      {/* ── Accept / Decline Banner ── */}
-      {isPending && (
-        <div style={{
-          padding: 16, borderRadius: 14,
-          background: "linear-gradient(135deg, #eff6ff 0%, #fefce8 100%)",
-          border: "1.5px solid #bfdbfe",
-          display: "flex", flexDirection: "column", gap: 12,
-        }}>
-          <div style={{ fontSize: 11, fontWeight: 900, color: "#1d4ed8", letterSpacing: "0.08em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
-            <UserCheck size={14} /> New Task Assigned — Please Respond
+        {task.admin_notes && (
+          <div className="bg-amber-50 dark:bg-amber-900/10 text-amber-800 dark:text-amber-400 p-3 rounded-xl text-[11px] font-bold border border-amber-100 dark:border-amber-900/30">
+            <strong className="uppercase tracking-widest mr-1 opacity-60">Admin note:</strong> {task.admin_notes}
           </div>
-          {!declining ? (
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={handleAccept}
-                disabled={localBusy || busy}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
-                  background: "#059669", color: "#fff",
-                  fontSize: 11, fontWeight: 900, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                  opacity: localBusy || busy ? 0.6 : 1,
-                }}
-              >
-                <ThumbsUp size={14} /> Accept Task
-              </button>
-              <button
-                onClick={handleDecline}
-                disabled={localBusy || busy}
-                style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #fca5a5",
-                  background: "#fff", color: "#dc2626",
-                  fontSize: 11, fontWeight: 900, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                  opacity: localBusy || busy ? 0.6 : 1,
-                }}
-              >
-                <ThumbsDown size={14} /> Decline
-              </button>
+        )}
+
+        {/* Attachments Viewer */}
+        {task.attachments && task.attachments.length > 0 && (
+          <AttachmentsViewer attachments={task.attachments} />
+        )}
+
+        {/* Urgent Gap Job dispatched info strip */}
+        {task.is_pushed_gap_job && (
+          <div style={{
+            padding: '14px 16px', borderRadius: 14,
+            background: 'linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)',
+            border: '1.5px solid #fca5a5',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, color: '#fff',
+                boxShadow: '0 2px 8px rgba(220,38,38,0.35)',
+              }}>⚡</div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#991b1b', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Admin Dispatched — Urgent Gap Job
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: '#f87171', marginTop: 1 }}>
+                  Your manager has assigned this task while you are suspended. Please accept immediately.
+                </div>
+              </div>
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <textarea
-                rows={2}
-                placeholder="Reason for declining (optional)..."
-                value={declineReason}
-                onChange={e => setDeclineReason(e.target.value)}
-                style={{
-                  resize: "none", borderRadius: 10, border: "1.5px solid #fca5a5",
-                  padding: "10px 12px", fontSize: 13, fontFamily: "inherit",
-                  outline: "none", color: "#374151",
-                }}
-              />
-              <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: 'flex', gap: 12, paddingTop: 4, borderTop: '1px solid #fecaca' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#dc2626' }}>
+                ⏱ Est: {task.estimated_hours}h
+              </div>
+              {task.client_contact_number && (
+                <a href={`tel:${task.client_contact_number}`}
+                  style={{ fontSize: 10, fontWeight: 800, color: '#dc2626', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  📞 Call Client
+                </a>
+              )}
+              {task.job_address && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#b91c1c', flex: 1, truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  📍 {task.job_address}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Suspension Panel details */}
+        {task.status === "suspended" && (
+          <div style={{
+            padding: 16, borderRadius: 14,
+            background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+            border: "1.5px solid #cbd5e1",
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+              ⏸️ JOB SUSPENDED
+            </div>
+            <div className="text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-bold">Reason:</span> {task.suspend_reason || "No reason specified"}
+            </div>
+            <div className="text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-bold">Resume Deadline:</span> {task.resume_deadline ? new Date(task.resume_deadline).toLocaleString() : "None"}
+            </div>
+            <div className="text-xs text-slate-700 dark:text-slate-300">
+              <span className="font-bold">Total Active Time:</span> {formatDuration(task.total_active_seconds || 0)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Accept / Decline Banner ── */}
+        {isPending && (
+          <div style={{
+            padding: 16, borderRadius: 14,
+            background: "linear-gradient(135deg, #eff6ff 0%, #fefce8 100%)",
+            border: "1.5px solid #bfdbfe",
+            display: "flex", flexDirection: "column", gap: 12,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 900, color: "#1d4ed8", letterSpacing: "0.08em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+              <UserCheck size={14} /> New Task Assigned — Please Respond
+            </div>
+            {!declining ? (
+              <div style={{ display: "flex", gap: 10 }}>
                 <button
-                  onClick={() => { setDeclining(false); setDeclineReason("") }}
-                  style={{
-                    flex: 1, padding: "8px 0", borderRadius: 10, border: "1.5px solid #e2e8f0",
-                    background: "#fff", color: "#64748b",
-                    fontSize: 10, fontWeight: 800, cursor: "pointer",
-                    letterSpacing: "0.08em", textTransform: "uppercase",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDecline}
+                  onClick={handleAccept}
                   disabled={localBusy || busy}
                   style={{
-                    flex: 2, padding: "8px 0", borderRadius: 10, border: "none",
-                    background: "#dc2626", color: "#fff",
-                    fontSize: 10, fontWeight: 900, cursor: "pointer",
+                    flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
+                    background: "#059669", color: "#fff",
+                    fontSize: 11, fontWeight: 900, cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                     letterSpacing: "0.08em", textTransform: "uppercase",
                     opacity: localBusy || busy ? 0.6 : 1,
                   }}
                 >
-                  <ThumbsDown size={12} /> Confirm Decline
+                  <ThumbsUp size={14} /> Accept Task
                 </button>
+                <button
+                  onClick={handleDecline}
+                  disabled={localBusy || busy}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid #fca5a5",
+                    background: "#fff", color: "#dc2626",
+                    fontSize: 11, fontWeight: 900, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    opacity: localBusy || busy ? 0.6 : 1,
+                  }}
+                >
+                  <ThumbsDown size={14} /> Decline
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <textarea
+                  rows={2}
+                  placeholder="Reason for declining (optional)..."
+                  value={declineReason}
+                  onChange={e => setDeclineReason(e.target.value)}
+                  style={{
+                    resize: "none", borderRadius: 10, border: "1.5px solid #fca5a5",
+                    padding: "10px 12px", fontSize: 13, fontFamily: "inherit",
+                    outline: "none", color: "#374151",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => { setDeclining(false); setDeclineReason("") }}
+                    style={{
+                      flex: 1, padding: "8px 0", borderRadius: 10, border: "1.5px solid #e2e8f0",
+                      background: "#fff", color: "#64748b",
+                      fontSize: 10, fontWeight: 800, cursor: "pointer",
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDecline}
+                    disabled={localBusy || busy}
+                    style={{
+                      flex: 2, padding: "8px 0", borderRadius: 10, border: "none",
+                      background: "#dc2626", color: "#fff",
+                      fontSize: 10, fontWeight: 900, cursor: "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      letterSpacing: "0.08em", textTransform: "uppercase",
+                      opacity: localBusy || busy ? 0.6 : 1,
+                    }}
+                  >
+                    <ThumbsDown size={12} /> Confirm Decline
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
+          {gpsAccuracy && (
+            <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-750 text-xs font-bold rounded-xl animate-pulse text-center">
+              {gpsAccuracy}
+            </div>
+          )}
+
+          {task.status === "completed" && (
+            <div className="flex flex-col items-center justify-center p-6 border-2 border-emerald-100 dark:border-emerald-900/20 rounded-2xl bg-emerald-50/10 dark:bg-emerald-950/5 border-dashed gap-4 text-center mt-2 animate-in fade-in duration-300">
+              {/* Pulsing completed checkmark ring */}
+              <div className="relative w-20 h-20 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full bg-emerald-100 dark:bg-emerald-950/40 animate-ping opacity-75" />
+                <div className="relative w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/35">
+                  <CheckCircle2 size={36} strokeWidth={2.5} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <h4 className="text-sm font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Work Completed</h4>
+                <p className="text-[10.5px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mt-0.5">All objectives and requirements met</p>
+              </div>
+
+              {/* Quick summary grid */}
+              <div className="w-full grid grid-cols-2 gap-3 mt-2 text-left bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-900 p-4 rounded-xl shadow-inner">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Started At</span>
+                  <span className="text-xs font-black text-slate-700 dark:text-slate-350">
+                    {task.started_at ? new Date(task.started_at).toLocaleString() : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Completed At</span>
+                  <span className="text-xs font-black text-slate-700 dark:text-slate-350">
+                    {task.completed_at ? new Date(task.completed_at).toLocaleString() : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-0.5 col-span-2 border-t border-slate-50 dark:border-slate-900 pt-2 mt-1">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Your Work Notes / Summary</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-450 italic">
+                    "{task.employee_notes || "No notes submitted"}"
+                  </span>
+                </div>
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      <div className="mt-2 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-        {gpsAccuracy && (
-          <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-750 text-xs font-bold rounded-xl animate-pulse text-center">
-            {gpsAccuracy}
-          </div>
-        )}
+          {task.status === "pending" && !isPending && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-        {task.status === "completed" && (
-          <div className="flex flex-col items-center justify-center p-6 border-2 border-emerald-100 dark:border-emerald-900/20 rounded-2xl bg-emerald-50/10 dark:bg-emerald-950/5 border-dashed gap-4 text-center mt-2 animate-in fade-in duration-300">
-            {/* Pulsing completed checkmark ring */}
-            <div className="relative w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-emerald-100 dark:bg-emerald-950/40 animate-ping opacity-75" />
-              <div className="relative w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/35">
-                <CheckCircle2 size={36} strokeWidth={2.5} />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <h4 className="text-sm font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400">Work Completed</h4>
-              <p className="text-[10.5px] text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mt-0.5">All objectives and requirements met</p>
-            </div>
-
-            {/* Quick summary grid */}
-            <div className="w-full grid grid-cols-2 gap-3 mt-2 text-left bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-900 p-4 rounded-xl shadow-inner">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Started At</span>
-                <span className="text-xs font-black text-slate-700 dark:text-slate-350">
-                  {task.started_at ? new Date(task.started_at).toLocaleString() : "—"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Completed At</span>
-                <span className="text-xs font-black text-slate-700 dark:text-slate-350">
-                  {task.completed_at ? new Date(task.completed_at).toLocaleString() : "—"}
-                </span>
-              </div>
-              <div className="flex flex-col gap-0.5 col-span-2 border-t border-slate-50 dark:border-slate-900 pt-2 mt-1">
-                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Your Work Notes / Summary</span>
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-450 italic">
-                  "{task.employee_notes || "No notes submitted"}"
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {task.status === "pending" && !isPending && (
-          <div className="flex flex-col gap-5 border border-indigo-150/40 dark:border-slate-800 p-5 rounded-2xl bg-indigo-50/20 dark:bg-slate-900/20">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-indigo-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600/10 flex items-center justify-center text-indigo-600">
-                  <ClipboardList size={16} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Before Work Requirements</h4>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Complete the checklist to unlock [START WORK]</p>
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-600 text-white shadow-sm">
-                Accepted
-              </span>
-            </div>
-
-            {/* ── Journey Progress Bar ── */}
-            {(() => {
-              const travelSteps = [
-                { key: null,            icon: "✅", label: "Accepted" },
-                { key: "on_the_way",    icon: "🚗", label: "On The Way" },
-                { key: "reached_site",  icon: "📍", label: "Reached Site" },
-                { key: "working",       icon: "🔨", label: "Working" },
-              ]
-              const curIdx = task.travel_status
-                ? travelSteps.findIndex(s => s.key === task.travel_status)
-                : 0
-              return (
-                <div className="bg-white dark:bg-slate-950 border border-indigo-100/50 dark:border-slate-800/80 shadow-sm" style={{
-                  padding: "16px 14px", borderRadius: 16,
-                  display: "flex", flexDirection: "column", gap: 10,
-                }}>
-                  <div style={{ fontSize: 9, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.12em" }}>Journey Progress</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    {travelSteps.map((step, idx) => {
-                      const isActive = idx === curIdx
-                      const isDone = idx < curIdx
-                      return (
-                        <>
-                          <div key={step.key || "start"} style={{
-                            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                            flex: 1,
-                          }}>
-                            <div 
-                              className={`rounded-full flex items-center justify-center text-sm transition-all duration-300 ${
-                                isDone 
-                                  ? "bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400" 
-                                  : isActive 
-                                    ? "bg-blue-50 dark:bg-blue-950/60 border-2 border-blue-500 text-blue-600 dark:text-blue-400 shadow-md shadow-blue-500/10" 
-                                    : "bg-slate-50 dark:bg-slate-900/40 border-2 border-slate-200 dark:border-slate-800 text-slate-400"
-                              }`}
-                              style={{
-                                width: 34, height: 34,
-                              }}
-                            >
-                              {isDone ? "✓" : step.icon}
-                            </div>
-                            <div 
-                              className={`text-[8px] font-black uppercase tracking-wider text-center whitespace-nowrap transition-colors duration-300 ${
-                                isDone 
-                                  ? "text-emerald-600 dark:text-emerald-400" 
-                                  : isActive 
-                                    ? "text-blue-600 dark:text-blue-400" 
-                                    : "text-slate-400 dark:text-slate-500"
-                              }`}
-                            >
-                              {step.label}
-                            </div>
-                          </div>
-                          {idx < travelSteps.length - 1 && (
-                            <div 
-                              key={`line-${idx}`} 
-                              className={`h-0.5 flex-1 -mt-4 transition-all duration-500 ${
-                                idx < curIdx 
-                                  ? "bg-emerald-500" 
-                                  : "bg-slate-100 dark:bg-slate-800"
-                              }`}
-                              style={{
-                                height: 2, flex: 1, marginBottom: 18,
-                              }}
-                            />
-                          )}
-                        </>
-                      )
-                    })}
+              {/* ── COMPACT CHECKLIST HEADER ── */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                    <ClipboardList size={18} />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-wider">Before Work Requirements</div>
+                    <div className="text-[10px] text-indigo-500 dark:text-indigo-500/80 font-bold mt-0.5">Complete checklist to unlock Start Work</div>
                   </div>
                 </div>
-              )
-            })()}
-
-            {/* Client and Site Details */}
-            <div className="space-y-3 bg-white dark:bg-slate-950 p-4 rounded-xl border border-indigo-100/50 dark:border-slate-800/80 shadow-sm text-xs text-slate-600 dark:text-slate-400">
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-1.5 mb-2">
-                Job Information
+                <span className="px-3 py-1 rounded-full text-[9px] font-black bg-indigo-600 text-white uppercase tracking-wider shrink-0 shadow-sm shadow-indigo-100 dark:shadow-none">
+                  Accepted
+                </span>
               </div>
-              {task.client_name && (
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-505 uppercase tracking-wider text-[10px]">Client Name:</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200">{task.client_name}</span>
-                </div>
-              )}
-              {task.client_company_name && (
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-505 uppercase tracking-wider text-[10px]">Company:</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200">{task.client_company_name}</span>
-                </div>
-              )}
-              {task.client_contact_number && (
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-505 uppercase tracking-wider text-[10px]">Phone Number:</span>
-                  <a href={`tel:${task.client_contact_number}`} className="font-black text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
-                    📞 {task.client_contact_number}
+
+              {/* ── JOURNEY PROGRESS — improved ── */}
+              {(() => {
+                const travelSteps = [
+                  { key: null,           icon: <UserCheck size={16} />, label: "Accepted" },
+                  { key: "on_the_way",   icon: <Car size={16} />, label: "On The Way" },
+                  { key: "reached_site", icon: <MapPin size={16} />, label: "Reached Site" },
+                  { key: "working",      icon: <Hammer size={16} />, label: "Working" },
+                ]
+                const curIdx = task.travel_status
+                  ? travelSteps.findIndex(s => s.key === task.travel_status)
+                  : 0
+                return (
+                  <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 shadow-sm">
+                    <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-5">Task Progress</div>
+                    <div className="flex items-center w-full">
+                      {travelSteps.map((step, idx) => {
+                        const isActive = idx === curIdx
+                        const isDone = idx < curIdx
+                        
+                        let animationClass = ""
+                        if (isActive) {
+                          if (step.key === "on_the_way") animationClass = "travel-on-way"
+                          else if (step.key === "reached_site") animationClass = "travel-reached"
+                          else if (step.key === "working") animationClass = "travel-working"
+                        }
+
+                        return (
+                          <React.Fragment key={step.key || "accepted"}>
+                            <div className="flex flex-col items-center gap-2 flex-1 relative">
+                              <div 
+                                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${animationClass}`}
+                                style={{
+                                  background: isDone ? "#10b981" : isActive ? "#2563eb" : "var(--bg, #f1f5f9)",
+                                  border: `2px solid ${isDone ? "#10b981" : isActive ? "#2563eb" : "var(--stroke2, #e2e8f0)"}`,
+                                  color: isDone || isActive ? "#fff" : "var(--muted, #94a3b8)",
+                                  boxShadow: isActive ? "0 0 0 5px rgba(37,99,235,0.15)" : "none",
+                                }}
+                              >
+                                {isDone ? <CheckCircle2 size={16} /> : step.icon}
+                              </div>
+                              <div 
+                                className="text-[9px] font-black uppercase tracking-wider text-center transition-all duration-300"
+                                style={{
+                                  color: isDone ? "#10b981" : isActive ? "#2563eb" : "var(--muted, #94a3b8)"
+                                }}
+                              >
+                                {step.label}
+                              </div>
+                            </div>
+                            {idx < travelSteps.length - 1 && (
+                              <div className="flex-1 h-[2px] -mt-5 relative overflow-hidden" style={{ background: "var(--stroke2, #e2e8f0)" }}>
+                                <div 
+                                  className="absolute top-0 left-0 h-full transition-all duration-500"
+                                  style={{
+                                    width: idx < curIdx ? "100%" : "0%",
+                                    background: "#10b981",
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </React.Fragment>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* ── CONTEXTUAL ACTION BUTTON ── */}
+              <button
+                type="button"
+                onClick={() => setShowJourneyDetails(true)}
+                style={{
+                  width: "100%", padding: "13px 0", borderRadius: 14, border: "none",
+                  background: !task.travel_status
+                    ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                    : task.travel_status === "on_the_way"
+                    ? "linear-gradient(135deg, #7c3aed, #6d28d9)"
+                    : task.travel_status === "reached_site"
+                    ? "linear-gradient(135deg, #059669, #047857)"
+                    : "linear-gradient(135deg, #059669, #047857)",
+                  color: "#fff", fontSize: 13, fontWeight: 900, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  letterSpacing: "0.06em", textTransform: "uppercase",
+                  boxShadow: !task.travel_status
+                    ? "0 4px 14px rgba(37,99,235,0.35)"
+                    : task.travel_status === "on_the_way"
+                    ? "0 4px 14px rgba(124,58,237,0.35)"
+                    : "0 4px 14px rgba(5,150,105,0.35)",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {!task.travel_status && <><Car size={16} /> Start Travel</>}
+                {task.travel_status === "on_the_way" && <><MapPin size={16} /> Arrived at Client</>}
+                {task.travel_status === "reached_site" && <><Hammer size={16} /> Start Work</>}
+                {task.travel_status === "working" && <><CheckCircle2 size={16} /> Complete Work</>}
+              </button>
+
+              {/* ── QUICK ACTION BAR ── */}
+              <div className="flex items-center justify-around p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 shadow-sm w-full">
+                {task.client_contact_number && (
+                  <a href={`tel:${task.client_contact_number}`} 
+                    className="flex flex-col items-center gap-2 text-decoration-none group active:scale-95 transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-emerald-500/20">
+                      <Phone size={18} />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">Call</span>
                   </a>
-                </div>
-              )}
-              {task.client_email && (
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-505 uppercase tracking-wider text-[10px]">Email:</span>
-                  <span className="font-extrabold text-slate-850 dark:text-slate-200">{task.client_email}</span>
-                </div>
-              )}
-              {task.job_address && (
-                <div className="flex flex-col gap-1 mt-1">
-                  <span className="font-bold text-slate-505 uppercase tracking-wider text-[10px]">Service Address:</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 mt-0.5 leading-relaxed">
-                    📍 {task.job_address}
-                  </span>
-                </div>
-              )}
-            </div>
+                )}
+                <button type="button" 
+                  className="flex flex-col items-center gap-2 bg-none border-none cursor-pointer group active:scale-95 transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-blue-50/20">
+                    <MessageSquare size={18} />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">Chat</span>
+                </button>
+                {task.location_lat && task.location_lon ? (
+                  <a
+                    href={precGPS
+                      ? `https://www.google.com/maps/dir/?api=1&origin=${precGPS.lat},${precGPS.lon}&destination=${task.location_lat},${task.location_lon}`
+                      : `https://www.google.com/maps/dir/?api=1&destination=${task.location_lat},${task.location_lon}`
+                    }
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-2 text-decoration-none group active:scale-95 transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-violet-50/20">
+                      <Compass size={18} />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">Navigate</span>
+                  </a>
+                ) : (
+                  <button type="button" 
+                    className="flex flex-col items-center gap-2 bg-none border-none cursor-pointer group active:scale-95 transition-transform"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 dark:bg-violet-500/20 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-violet-50/20">
+                      <Compass size={18} />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">Navigate</span>
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowJourneyDetails(true)} 
+                  className="flex flex-col items-center gap-2 bg-none border-none cursor-pointer group active:scale-95 transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-amber-50/20">
+                    <Upload size={18} />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">Upload</span>
+                </button>
+                <button type="button" 
+                  className="flex flex-col items-center gap-2 bg-none border-none cursor-pointer group active:scale-95 transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-500/10 dark:bg-slate-500/20 border border-slate-500/20 flex items-center justify-center text-slate-600 dark:text-slate-400 transition-all duration-300 group-hover:scale-105 group-hover:bg-slate-50/20">
+                    <MoreHorizontal size={18} />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-slate-250 transition-colors">More</span>
+                </button>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setShowJourneyDetails(true)}
-              style={{
-                width: "100%",
-                padding: "14px 0",
-                borderRadius: 16,
-                border: "none",
-                background: "linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 900,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                boxShadow: "0 4px 14px rgba(79, 70, 229, 0.35)",
-                transition: "all 0.2s ease",
-                marginTop: 8,
-              }}
-            >
-              <span>Next</span>
-              <span style={{ fontSize: 14 }}>➔</span>
-            </button>
-
-            {showJourneyDetails && createPortal(
-              <div style={{
-                position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.75)",
-                backdropFilter: "blur(8px)", zIndex: 9999, display: "flex",
-                alignItems: "center", justifyContent: "center", padding: "20px",
-              }} onClick={() => setShowJourneyDetails(false)}>
-                <div onClick={e => e.stopPropagation()} style={{
-                  background: "#ffffff", borderRadius: "24px", padding: "24px",
-                  width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(99, 102, 241, 0.08)",
-                  display: "flex", flexDirection: "column", gap: "20px",
-                  border: "1px solid #e2e8f0",
-                  animation: "modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-                }}>
-                  <style>{`
+              {showJourneyDetails && createPortal(
+                <div style={{
+                  position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.75)",
+                  backdropFilter: "blur(8px)", zIndex: 9999, display: "flex",
+                  alignItems: "center", justifyContent: "center", padding: "20px",
+                }} onClick={() => setShowJourneyDetails(false)}>
+                  <div onClick={e => e.stopPropagation()} style={{
+                    background: "#ffffff", borderRadius: "24px", padding: "24px",
+                    width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto",
+                    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(99, 102, 241, 0.08)",
+                    display: "flex", flexDirection: "column", gap: "20px",
+                    border: "1px solid #e2e8f0",
+                    animation: "modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                  }}>
+                    <style>{`
                     @keyframes modalFadeIn {
                       from { opacity: 0; transform: scale(0.95) translateY(10px); }
                       to { opacity: 1; transform: scale(1) translateY(0); }
                     }
+                    @keyframes markerPulse {
+                      0% { transform: scale(0.6); opacity: 0.9; }
+                      100% { transform: scale(1.6); opacity: 0; }
+                    }
                   `}</style>
-                  
-                  {/* Header with Back Button */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(79, 70, 229, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5" }}>
-                        <ClipboardList size={16} />
+
+                    {/* Header with Back Button */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(79, 70, 229, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5" }}>
+                          <ClipboardList size={16} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 900, color: "#1e293b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Before Work Checklist</h4>
+                          <p style={{ margin: "2px 0 0 0", fontSize: "10px", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Complete to unlock [Start Work]</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 900, color: "#1e293b", textTransform: "uppercase", letterSpacing: "0.04em" }}>Before Work Checklist</h4>
-                        <p style={{ margin: "2px 0 0 0", fontSize: "10px", color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Complete to unlock [Start Work]</p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowJourneyDetails(false)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "4px",
+                          padding: "6px 12px", borderRadius: "10px", border: "1.5px solid #e2e8f0",
+                          background: "#ffffff", color: "#475569", fontSize: "10px", fontWeight: 900,
+                          cursor: "pointer", textTransform: "uppercase", transition: "all 0.2s ease"
+                        }}
+                      >
+                        <span>← Back</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowJourneyDetails(false)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "4px",
-                        padding: "6px 12px", borderRadius: "10px", border: "1.5px solid #e2e8f0",
-                        background: "#ffffff", color: "#475569", fontSize: "10px", fontWeight: 900,
-                        cursor: "pointer", textTransform: "uppercase", transition: "all 0.2s ease"
-                      }}
-                    >
-                      <span>← Back</span>
-                    </button>
-                  </div>
 
-                  {/* Travel Routing Card (ETA & Distance) */}
-                  {precGPS && task.location_lat && (() => {
-                    const dist = getDistance(precGPS.lat, precGPS.lon, parseFloat(task.location_lat), parseFloat(task.location_lon))
-                    const etaMin = dist !== null ? Math.round(dist / 1000 / 25 * 60) : 0
-                    return (
-                      <div className="p-4 bg-indigo-50/60 dark:bg-slate-950 border border-indigo-100 dark:border-slate-800 text-slate-700 dark:text-slate-350 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in duration-300">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md animate-pulse">
-                            <Navigation size={16} />
+                    {/* Travel Routing Card (ETA & Distance) */}
+                    {precGPS && task.location_lat && (() => {
+                      const dist = getDistance(precGPS.lat, precGPS.lon, parseFloat(task.location_lat), parseFloat(task.location_lon))
+                      const etaMin = dist !== null ? Math.round(dist / 1000 / 25 * 60) : 0
+                      return (
+                        <div className="p-4 bg-indigo-50/60 dark:bg-slate-950 border border-indigo-100 dark:border-slate-800 text-slate-700 dark:text-slate-350 rounded-2xl flex items-center justify-between shadow-sm animate-in fade-in duration-300">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md animate-pulse">
+                              <Navigation size={16} />
+                            </div>
+                            <div>
+                              <div className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Traveling to Client</div>
+                              <div className="text-[10px] text-slate-400 font-extrabold uppercase mt-0.5">Swiggy Live Tracking Enabled</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">Traveling to Client</div>
-                            <div className="text-[10px] text-slate-400 font-extrabold uppercase mt-0.5">Swiggy Live Tracking Enabled</div>
+                          <div className="text-right">
+                            <div className="text-sm font-black text-indigo-600 dark:text-indigo-400 flex items-center justify-end gap-1">
+                               <Car size={15} />
+                               <span>{dist !== null ? (dist < 1000 ? `${dist}m` : `${(dist / 1000).toFixed(1)}km`) : "Calculating..."}</span>
+                             </div>
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-500 font-black uppercase mt-0.5">
+                              ETA: ~{etaMin} min
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-black text-indigo-600 dark:text-indigo-400">
-                            🚗 {dist !== null ? (dist < 1000 ? `${dist}m` : `${(dist/1000).toFixed(1)}km`) : "Calculating..."}
-                          </div>
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-500 font-black uppercase mt-0.5">
-                            ETA: ~{etaMin} min
+                      )
+                    })()}
+
+                    {/* Live Route Quick View Button */}
+                    {precGPS && task.location_lat && task.location_lon && (
+                      <button
+                        type="button"
+                        onClick={() => setShowLiveTracking(true)}
+                        style={{
+                          width: "100%", padding: "12px 16px",
+                          borderRadius: 14,
+                          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                          border: "1.5px solid #334155",
+                          color: "#fff", fontSize: 12, fontWeight: 900,
+                          cursor: "pointer", textAlign: "left",
+                          display: "flex", alignItems: "center", gap: 10,
+                          letterSpacing: "0.04em",
+                          boxShadow: "0 4px 20px rgba(59,130,246,0.2)",
+                        }}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 10,
+                          background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          flexShrink: 0,
+                        }}><Compass size={18} className="text-white" /></div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 900, color: "#f1f5f9" }}>View Live Route</div>
+                          <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, marginTop: 2 }}>
+                            {(() => {
+                              const d = getDistance(precGPS.lat, precGPS.lon, parseFloat(task.location_lat), parseFloat(task.location_lon))
+                              return d !== null ? (d < 1000 ? `${d}m to client` : `${(d / 1000).toFixed(1)}km to client`) : "Tracking active"
+                            })()}
                           </div>
                         </div>
-                      </div>
-                    )
-                  })()}
+                        <div style={{ marginLeft: "auto", fontSize: 18 }}>›</div>
+                      </button>
+                    )}
 
-                  {/* Live Route Quick View Button */}
-                  {precGPS && task.location_lat && task.location_lon && (
-                    <button
-                      type="button"
-                      onClick={() => setShowLiveTracking(true)}
-                      style={{
-                        width: "100%", padding: "12px 16px",
-                        borderRadius: 14,
-                        background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-                        border: "1.5px solid #334155",
-                        color: "#fff", fontSize: 12, fontWeight: 900,
-                        cursor: "pointer", textAlign: "left",
-                        display: "flex", alignItems: "center", gap: 10,
-                        letterSpacing: "0.04em",
-                        boxShadow: "0 4px 20px rgba(59,130,246,0.2)",
-                      }}
-                    >
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        background: "linear-gradient(135deg, #3b82f6, #6366f1)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        flexShrink: 0, fontSize: 18,
-                      }}>🗺️</div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: "#f1f5f9" }}>View Live Route</div>
-                        <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, marginTop: 2 }}>
-                          {(() => {
-                            const d = getDistance(precGPS.lat, precGPS.lon, parseFloat(task.location_lat), parseFloat(task.location_lon))
-                            return d !== null ? (d < 1000 ? `${d}m to client` : `${(d/1000).toFixed(1)}km to client`) : "Tracking active"
-                          })()}
-                        </div>
-                      </div>
-                      <div style={{ marginLeft: "auto", fontSize: 18 }}>›</div>
-                    </button>
-                  )}
+                    {/* Mini Map Container */}
+                    {task.location_lat && task.location_lon && (
+                      <div className="flex flex-col gap-2">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Job Site Location</div>
+                        <div style={{
+                          position: "relative",
+                          height: 200, borderRadius: 16, overflow: "hidden",
+                          border: "1px solid rgba(99, 102, 241, 0.3)",
+                          boxShadow: "0 10px 30px -10px rgba(99, 102, 241, 0.2), 0 1px 3px rgba(0,0,0,0.05)",
+                        }}>
+                          <MapContainer
+                            center={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
+                            zoom={15}
+                            style={{ width: "100%", height: "100%" }}
+                            zoomControl={false}
+                            scrollWheelZoom={false}
+                          >
+                            <TileLayer
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              attribution="&copy; <a href=&quot;https://www.openstreetmap.org/copyright&quot;>OpenStreetMap</a> contributors"
+                            />
 
-                  {/* Mini Map Container */}
-                  {task.location_lat && task.location_lon && (
-                    <div className="flex flex-col gap-2">
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Job Site Location</div>
-                      <div style={{
-                        position: "relative",
-                        height: 200, borderRadius: 16, overflow: "hidden",
-                        border: "2px solid #6366f1",
-                        boxShadow: "0 4px 20px rgba(99,102,241,0.15)",
-                      }}>
-                        <MapContainer
-                          center={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
-                          zoom={15}
-                          style={{ width: "100%", height: "100%" }}
-                          zoomControl={false}
-                          scrollWheelZoom={false}
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution="&copy; <a href=&quot;https://www.openstreetmap.org/copyright&quot;>OpenStreetMap</a> contributors"
-                          />
+                            {/* Automatic bounds fitter for the mini-map to show both employee and client */}
+                            <LiveTrackingMapController
+                              empPos={precGPS ? { lat: precGPS.lat, lon: precGPS.lon } : null}
+                              clientPos={{ lat: parseFloat(task.location_lat), lon: parseFloat(task.location_lon) }}
+                            />
 
-                          {/* Automatic bounds fitter for the mini-map to show both employee and client */}
-                          <LiveTrackingMapController
-                            empPos={precGPS ? { lat: precGPS.lat, lon: precGPS.lon } : null}
-                            clientPos={{ lat: parseFloat(task.location_lat), lon: parseFloat(task.location_lon) }}
-                          />
-
-                          {/* Red client pin */}
-                          <Marker
-                            position={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
-                            icon={L.divIcon({
-                              className: "",
-                              html: `<div style="display:flex;flex-direction:column;align-items:center;">
+                            {/* Red client pin */}
+                            <Marker
+                              position={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
+                              icon={L.divIcon({
+                                className: "",
+                                html: `<div style="display:flex;flex-direction:column;align-items:center;">
                                 <div style="
                                   width:38px;height:38px;
                                   border-radius:50% 50% 50% 0;
@@ -1926,829 +2075,684 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
                                   box-shadow:0 4px 16px rgba(233,69,96,0.5);
                                   display:flex;align-items:center;justify-content:center;
                                 ">
-                                  <div style="transform:rotate(45deg);font-size:16px">🏢</div>
+                                  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:16px;height:16px;transform:rotate(45deg);'><rect x='4' y='2' width='16' height='20' rx='2' ry='2'></rect><line x1='9' y1='22' x2='9' y2='16'></line><line x1='15' y1='22' x2='15' y2='16'></line><line x1='9' y1='16' x2='15' y2='16'></line><path d='M9 6h1'></path><path d='M14 6h1'></path><path d='M9 10h1'></path><path d='M14 10h1'></path></svg>
                                 </div>
                               </div>`,
-                              iconSize: [50, 50],
-                              iconAnchor: [25, 45],
-                            })}
-                          >
-                            <Popup>
-                              <div style={{ fontSize: 11, fontWeight: 800, padding: 4 }}>
-                                🎯 {task.title}
-                                {task.job_address && <div style={{ fontSize: 9, color: "#64748b", marginTop: 2 }}>{task.job_address}</div>}
-                              </div>
-                            </Popup>
-                          </Marker>
-
-                          {/* Green geofence circle */}
-                          <Circle
-                            center={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
-                            radius={parseInt(task.geofence_radius) || 200}
-                            pathOptions={{ color: "#059669", fillColor: "#059669", fillOpacity: 0.10, weight: 2, dashArray: "6 4" }}
-                          />
-
-                          {/* Employee current position (blue) */}
-                          {precGPS && (
-                            <Marker
-                              position={[precGPS.lat, precGPS.lon]}
-                              icon={L.divIcon({
-                                className: "",
-                                html: `<div style="
-                                  width:20px;height:20px;border-radius:50%;
-                                  background:#3b82f6;border:3px solid white;
-                                  box-shadow:0 2px 10px rgba(59,130,246,0.6);
-                                  display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:900;
-                                ">🔵</div>`,
-                                iconSize: [20, 20],
-                                iconAnchor: [10, 10],
+                                iconSize: [50, 50],
+                                iconAnchor: [25, 45],
                               })}
+                            >
+                              <Popup>
+                                <div style={{ fontSize: 11, fontWeight: 800, padding: 4 }}>
+                                  🎯 {task.title}
+                                  {task.job_address && <div style={{ fontSize: 9, color: "#64748b", marginTop: 2 }}>{task.job_address}</div>}
+                                </div>
+                              </Popup>
+                            </Marker>
+
+                            {/* Green geofence circle */}
+                            <Circle
+                              center={[parseFloat(task.location_lat), parseFloat(task.location_lon)]}
+                              radius={parseInt(task.geofence_radius) || 200}
+                              pathOptions={{ color: "#059669", fillColor: "#059669", fillOpacity: 0.10, weight: 2, dashArray: "6 4" }}
                             />
-                          )}
 
-                          {/* Animated Blue Route Polyline */}
-                          {precGPS && (
-                            <Polyline
-                              positions={[[precGPS.lat, precGPS.lon], [parseFloat(task.location_lat), parseFloat(task.location_lon)]]}
-                              pathOptions={{
-                                color: "#3b82f6",
-                                weight: 3.5,
-                                dashArray: "8 5",
-                                opacity: 0.85
-                              }}
-                            />
-                          )}
-                        </MapContainer>
+                            {/* Employee current position (blue) */}
+                            {precGPS && (
+                              <Marker
+                                position={[precGPS.lat, precGPS.lon]}
+                                icon={L.divIcon({
+                                  className: "",
+                                  html: `<div style="
+                                  position:relative;width:24px;height:24px;
+                                  display:flex;align-items:center;justify-content:center;
+                                ">
+                                  <div style="
+                                    position:absolute;width:20px;height:20px;
+                                    border-radius:50%;background:rgba(59,130,246,0.35);
+                                    animation:markerPulse 1.8s infinite ease-in-out;
+                                  "></div>
+                                  <div style="
+                                    position:relative;width:11px;height:11px;
+                                    border-radius:50%;background:#3b82f6;
+                                    border:2px solid white;box-shadow:0 2px 8px rgba(59,130,246,0.5);
+                                  "></div>
+                                </div>`,
+                                  iconSize: [24, 24],
+                                  iconAnchor: [12, 12],
+                                })}
+                              />
+                            )}
 
-                        {/* Get Directions overlay button with live origin routing */}
-                        <a
-                          href={precGPS
-                            ? `https://www.google.com/maps/dir/?api=1&origin=${precGPS.lat},${precGPS.lon}&destination=${task.location_lat},${task.location_lon}`
-                            : `https://www.google.com/maps/dir/?api=1&destination=${task.location_lat},${task.location_lon}`
-                          }
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            position: "absolute", bottom: 8, right: 8,
-                            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                            color: "white", padding: "5px 12px",
-                            borderRadius: 20, fontSize: 9, fontWeight: 900,
-                            textDecoration: "none", zIndex: 600,
-                            boxShadow: "0 4px 12px rgba(99,102,241,0.4)",
-                            display: "flex", alignItems: "center", gap: 4,
-                          }}
-                        >
-                          <Navigation size={10} /> Get Directions
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                            {/* Animated Blue Route Polyline */}
+                            {precGPS && (
+                              <Polyline
+                                positions={[[precGPS.lat, precGPS.lon], [parseFloat(task.location_lat), parseFloat(task.location_lon)]]}
+                                pathOptions={{
+                                  className: "animated-route-line",
+                                  color: "#3b82f6",
+                                  weight: 3.5,
+                                  dashArray: "8 5",
+                                  opacity: 0.85
+                                }}
+                              />
+                            )}
+                          </MapContainer>
 
-                  {/* Before Photo Upload Requirement */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
-                      <span>Before Photo *</span>
-                      {beforePhoto && <span className="text-emerald-600 font-extrabold uppercase">Captured ✓</span>}
-                    </label>
-
-                    {beforePhotoPreview ? (
-                      <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-650/40 h-44 group shadow-sm bg-slate-900">
-                        <img src={beforePhotoPreview} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-205">
-                          <button
-                            type="button"
-                            onClick={() => { setBeforePhoto(null); setBeforePhotoPreview(null) }}
-                            className="px-4 py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-705 transition-colors shadow-lg"
+                          {/* Get Directions overlay button with live origin routing */}
+                          <a
+                            href={precGPS
+                              ? `https://www.google.com/maps/dir/?api=1&origin=${precGPS.lat},${precGPS.lon}&destination=${task.location_lat},${task.location_lon}`
+                              : `https://www.google.com/maps/dir/?api=1&destination=${task.location_lat},${task.location_lon}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              position: "absolute", bottom: 8, right: 8,
+                              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                              color: "white", padding: "5px 12px",
+                              borderRadius: 20, fontSize: 9, fontWeight: 900,
+                              textDecoration: "none", zIndex: 600,
+                              boxShadow: "0 4px 12px rgba(99,102,241,0.4)",
+                              display: "flex", alignItems: "center", gap: 4,
+                            }}
                           >
-                            Remove Photo
-                          </button>
+                            <Navigation size={10} /> Get Directions
+                          </a>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShowSelfieCamera(true)}
-                          className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm"
-                        >
-                          <Camera size={24} className="text-indigo-600" />
-                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Take Selfie / Photo</span>
-                        </button>
-                        <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm cursor-pointer">
-                          <Upload size={24} className="text-indigo-600" />
-                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Upload File</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleBeforePhotoFileChange}
-                            className="hidden"
-                          />
-                        </label>
                       </div>
                     )}
-                  </div>
 
-                  {/* Selfie Capture Modal Portal */}
-                  {showSelfieCamera && (
-                    <SelfieCapture
-                      onCapture={handleBeforePhotoCapture}
-                      onCancel={() => setShowSelfieCamera(false)}
-                    />
-                  )}
+                    {/* Before Photo Upload Requirement */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                        <span>Before Photo *</span>
+                        {beforePhoto && <span className="text-emerald-600 font-extrabold uppercase">Captured ✓</span>}
+                      </label>
 
-                  {/* Starting Work Notes */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Work Notes / Objectives *</label>
-                    <textarea
-                      value={startNotes}
-                      onChange={e => setStartNotes(e.target.value)}
-                      placeholder="Describe the initial condition, diagnostic status, or action plan..."
-                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm resize-none"
-                      rows={3}
-                    />
-                  </div>
-
-                  {/* Location Verification Panel */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location Verification</label>
-                    
-                    {acquiringGps ? (
-                      <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 animate-pulse">
-                        <Loader2 size={14} className="animate-spin" /> Locating precise GPS coordinates...
-                      </div>
-                    ) : gpsError ? (
-                      <div className="p-4 bg-red-50 border border-red-100 text-red-750 text-xs font-bold rounded-2xl flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <AlertTriangle size={14} className="text-red-600" /> {gpsError}
+                      {beforePhotoPreview ? (
+                        <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-650/40 h-44 group shadow-sm bg-slate-900">
+                          <img src={beforePhotoPreview} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-205">
+                            <button
+                              type="button"
+                              onClick={() => { setBeforePhoto(null); setBeforePhotoPreview(null) }}
+                              className="px-4 py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-705 transition-colors shadow-lg"
+                            >
+                              Remove Photo
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowSelfieCamera(true)}
+                            className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm"
+                          >
+                            <Camera size={24} className="text-indigo-600" />
+                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Take Selfie / Photo</span>
+                          </button>
+                          <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm cursor-pointer">
+                            <Upload size={24} className="text-indigo-600" />
+                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Upload File</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleBeforePhotoFileChange}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selfie Capture Modal Portal */}
+                    {showSelfieCamera && (
+                      <SelfieCapture
+                        onCapture={handleBeforePhotoCapture}
+                        onCancel={() => setShowSelfieCamera(false)}
+                      />
+                    )}
+
+                    {/* Starting Work Notes */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Work Notes / Objectives *</label>
+                      <textarea
+                        value={startNotes}
+                        onChange={e => setStartNotes(e.target.value)}
+                        placeholder="Describe the initial condition, diagnostic status, or action plan..."
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm resize-none"
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Location Verification Panel */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Location Verification</label>
+
+                      {acquiringGps ? (
+                        <div className="p-4 bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-bold rounded-2xl flex items-center justify-center gap-2 animate-pulse">
+                          <Loader2 size={14} className="animate-spin" /> Locating precise GPS coordinates...
+                        </div>
+                      ) : gpsError ? (
+                        <div className="p-4 bg-red-50 border border-red-100 text-red-750 text-xs font-bold rounded-2xl flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle size={14} className="text-red-600" /> {gpsError}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={triggerGpsAcquisition}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase rounded-lg shadow transition-colors"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      ) : precGPS ? (
+                        (() => {
+                          const dist = getDistance(
+                            parseFloat(task.location_lat),
+                            parseFloat(task.location_lon),
+                            precGPS.lat,
+                            precGPS.lon
+                          )
+                          const radius = parseInt(task.geofence_radius) || 200
+                          const inside = dist === null || dist <= radius
+
+                          return (
+                            <div className={`p-4 border rounded-2xl flex flex-col gap-2 shadow-sm ${inside ? 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-950/10 dark:border-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 border-amber-100 text-amber-850 dark:bg-amber-950/10 dark:border-amber-900/30 dark:text-amber-400'}`}>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                                  {inside ? <CheckCircle2 size={14} className="text-emerald-600" /> : <AlertTriangle size={14} className="text-amber-600" />}
+                                  {inside ? "GPS Location Locked ✓" : "Geofence Boundary Alert"}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={triggerGpsAcquisition}
+                                  className={`p-1.5 rounded-lg border transition-all ${inside ? 'bg-emerald-100 hover:bg-emerald-200 border-emerald-200 text-emerald-700' : 'bg-amber-100 hover:bg-amber-200 border-amber-200 text-amber-700'}`}
+                                  title="Refresh Location"
+                                >
+                                  <RefreshCw size={11} />
+                                </button>
+                              </div>
+                              <div className="text-[11px] font-bold">
+                                {dist !== null ? (
+                                  <>
+                                    You are <span className="font-extrabold">{dist < 1000 ? `${dist}m` : `${(dist / 1000).toFixed(1)}km`}</span> from the job site.
+                                    {inside ? " (Within Allowed Geofence Radius)" : ` (Required radius: ${radius}m)`}
+                                  </>
+                                ) : (
+                                  "Precision GPS Coordinates Registered Successfully."
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })()
+                      ) : (
                         <button
                           type="button"
                           onClick={triggerGpsAcquisition}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black uppercase rounded-lg shadow transition-colors"
+                          className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 text-xs font-black rounded-2xl flex items-center justify-center gap-2 uppercase tracking-wider shadow-sm transition-all"
                         >
-                          Retry
+                          <MapPin size={14} /> Lock Precision GPS Coordinate
                         </button>
-                      </div>
-                    ) : precGPS ? (
-                      (() => {
-                        const dist = getDistance(
-                          parseFloat(task.location_lat),
-                          parseFloat(task.location_lon),
-                          precGPS.lat,
-                          precGPS.lon
-                        )
-                        const radius = parseInt(task.geofence_radius) || 200
-                        const inside = dist === null || dist <= radius
+                      )}
+                    </div>
 
-                        return (
-                          <div className={`p-4 border rounded-2xl flex flex-col gap-2 shadow-sm ${inside ? 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-950/10 dark:border-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 border-amber-100 text-amber-850 dark:bg-amber-950/10 dark:border-amber-900/30 dark:text-amber-400'}`}>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                                {inside ? <CheckCircle2 size={14} className="text-emerald-600" /> : <AlertTriangle size={14} className="text-amber-600" />}
-                                {inside ? "GPS Location Locked ✓" : "Geofence Boundary Alert"}
-                              </span>
+                    {/* Journey Action Buttons — context-sensitive based on travel_status */}
+                    {!task.travel_status && (
+                      <SwipeButton
+                        text="Start Journey"
+                        emoji="🚗"
+                        colorGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
+                        shadowColor="rgba(59,130,246,0.3)"
+                        onConfirm={handleStartTravel}
+                        disabled={localBusy || busy}
+                      />
+                    )}
+
+                    {task.travel_status === "on_the_way" && (
+                      <>
+                        <div style={{
+                          padding: "10px 14px", borderRadius: 12,
+                          background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
+                          border: "1.5px solid #93c5fd",
+                          fontSize: 11, fontWeight: 800, color: "#1d4ed8",
+                          display: "flex", alignItems: "center", gap: 8, marginTop: 4,
+                          animation: "travelPulse 2s ease-in-out infinite",
+                        }}>
+                          🚗 <span>You are On The Way — Admin is tracking your location live</span>
+                        </div>
+                        <SwipeButton
+                          text="Arrived at Client"
+                          emoji="📍"
+                          colorGradient="linear-gradient(135deg, #f59e0b, #d97706)"
+                          shadowColor="rgba(245,158,11,0.3)"
+                          onConfirm={handleReachedSite}
+                          disabled={localBusy || busy}
+                        />
+                      </>
+                    )}
+
+                    {task.travel_status === "reached_site" && (
+                      <>
+                        <div style={{
+                          padding: "10px 14px", borderRadius: 12,
+                          background: "linear-gradient(135deg, #fef3c7, #fffbeb)",
+                          border: "1.5px solid #fde68a",
+                          fontSize: 11, fontWeight: 800, color: "#92400e",
+                          display: "flex", alignItems: "center", gap: 8, marginTop: 4,
+                        }}>
+                          📍 <span>You have Arrived — Ready to begin work?</span>
+                        </div>
+                        <SwipeButton
+                          text={precGPS ? "Start Work" : "Locking GPS..."}
+                          emoji="🔨"
+                          colorGradient={precGPS ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #94a3b8, #64748b)"}
+                          shadowColor={precGPS ? "rgba(5,150,105,0.3)" : "rgba(148,163,184,0.1)"}
+                          onConfirm={handleStartWorkNew}
+                          disabled={localBusy || busy || !precGPS}
+                        />
+                        {!precGPS && (
+                          <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textAlign: "center", marginTop: 4 }}>
+                            GPS is locking automatically…
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* ── START WORK — Visible for non-reached, non-working states ── */}
+                    {task.travel_status !== "reached_site" && task.travel_status !== "working" && (
+                      <div className="mt-3 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 flex flex-col gap-3.5 shadow-sm">
+                        <div className="text-[10px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                          <Hammer size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                          <span>Start Work Action</span>
+                        </div>
+                        
+                        {(!beforePhoto || !startNotes.trim()) && (
+                          <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400/90 leading-relaxed flex flex-col gap-2 bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/10">
+                            {!beforePhoto && (
+                              <div className="flex items-center gap-2">
+                                <Camera size={13} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <span>Capture a Before Photo above first</span>
+                              </div>
+                            )}
+                            {!startNotes.trim() && (
+                              <div className="flex items-center gap-2">
+                                <ClipboardList size={13} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <span>Fill in Work Notes / Objectives above first</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!beforePhoto) { alert("Please capture a Before Photo first."); return; }
+                            if (!startNotes.trim()) { alert("Please enter Work Notes / Objectives first."); return; }
+                            if (!precGPS) { alert("GPS is still locking. Please wait a moment and try again."); return; }
+                            await handleStartWorkNew();
+                          }}
+                          disabled={localBusy || busy}
+                          style={{
+                            width: "100%",
+                            padding: "15px 0",
+                            borderRadius: 14,
+                            border: "none",
+                            background: (beforePhoto && startNotes.trim() && precGPS)
+                              ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
+                              : "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 900,
+                            cursor: (localBusy || busy) ? "not-allowed" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 10,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            boxShadow: (beforePhoto && startNotes.trim() && precGPS)
+                              ? "0 6px 20px rgba(5,150,105,0.4)"
+                              : "0 4px 12px rgba(100,116,139,0.2)",
+                            transition: "all 0.25s ease",
+                            opacity: (localBusy || busy) ? 0.6 : 1,
+                          }}
+                        >
+                          <Hammer size={16} />
+                          <span>{localBusy ? "Starting Work…" : "Start Work"}</span>
+                          {!localBusy && <ChevronRight size={16} />}
+                        </button>
+
+                        {!precGPS && (
+                          <div className="text-[9px] text-emerald-650 dark:text-emerald-500/80 font-bold text-center flex items-center justify-center gap-1.5">
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>GPS is locking automatically in the background…</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── COMPLETE WORK — Visible for working state ── */}
+                    {task.travel_status === "working" && (
+                      <div className="mt-3 p-5 rounded-3xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex flex-col gap-5 shadow-sm">
+                        <div className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                          <CheckCircle2 size={16} className="text-indigo-600" />
+                          <span>Complete Work Action</span>
+                        </div>
+
+                        {/* End Photo Requirement */}
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                            <span>Ending Photo (After Photo) *</span>
+                            {afterPhoto && <span className="text-emerald-600 font-extrabold uppercase">Captured ✓</span>}
+                          </label>
+
+                          {afterPhotoPreview ? (
+                            <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-650/40 h-44 group shadow-sm bg-slate-900">
+                              <img src={afterPhotoPreview} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-205">
+                                <button
+                                  type="button"
+                                  onClick={() => { setAfterPhoto(null); setAfterPhotoPreview(null); setFaceVerifyStatus(null); setFaceVerifyScore(null); }}
+                                  className="px-4 py-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-red-705 transition-colors shadow-lg"
+                                >
+                                  Remove Photo
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-3">
                               <button
                                 type="button"
-                                onClick={triggerGpsAcquisition}
-                                className={`p-1.5 rounded-lg border transition-all ${inside ? 'bg-emerald-100 hover:bg-emerald-200 border-emerald-200 text-emerald-700' : 'bg-amber-100 hover:bg-amber-200 border-amber-200 text-amber-700'}`}
-                                title="Refresh Location"
+                                onClick={() => setShowEndSelfieCamera(true)}
+                                className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm"
                               >
-                                <RefreshCw size={11} />
+                                <Camera size={24} className="text-indigo-600" />
+                                <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Take Selfie / Photo</span>
                               </button>
+                              <label className="flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 hover:bg-indigo-50/20 bg-white dark:bg-slate-950 transition-all shadow-sm cursor-pointer">
+                                <Upload size={24} className="text-indigo-600" />
+                                <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">Upload File</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleAfterPhotoFileChange}
+                                  className="hidden"
+                                />
+                              </label>
                             </div>
-                            <div className="text-[11px] font-bold">
-                              {dist !== null ? (
-                                <>
-                                  You are <span className="font-extrabold">{dist < 1000 ? `${dist}m` : `${(dist/1000).toFixed(1)}km`}</span> from the job site.
-                                  {inside ? " (Within Allowed Geofence Radius)" : ` (Required radius: ${radius}m)`}
-                                </>
-                              ) : (
-                                "Precision GPS Coordinates Registered Successfully."
-                              )}
+                          )}
+                        </div>
+
+                        {showEndSelfieCamera && (
+                          <SelfieCapture
+                            onCapture={handleAfterPhotoCapture}
+                            onCancel={() => setShowEndSelfieCamera(false)}
+                          />
+                        )}
+
+                        {/* Face Verification Preview Section */}
+                        <div className="flex flex-col gap-3 p-4 rounded-2xl border border-stroke bg-white dark:bg-slate-950 shadow-sm">
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Verification Section</div>
+                          <div className="grid grid-cols-2 gap-4 items-center">
+                            {/* Start Photo Preview */}
+                            <div className="flex flex-col gap-1 items-center">
+                              <span className="text-[9px] font-black text-slate-400 uppercase">Start Photo</span>
+                              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                                {task.start_photo ? (
+                                  <img src={`http://localhost:8000${task.start_photo}`} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase">No Start Photo</div>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-[9px] font-mono opacity-80 mt-0.5">
-                              Coords: {precGPS.lat.toFixed(6)}, {precGPS.lon.toFixed(6)} (Accuracy: {precGPS.accuracy}m)
+                            
+                            {/* End Photo Preview */}
+                            <div className="flex flex-col gap-1 items-center">
+                              <span className="text-[9px] font-black text-slate-400 uppercase">End Photo</span>
+                              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                                {afterPhotoPreview ? (
+                                  <img src={afterPhotoPreview} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase">Awaiting Photo</div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        )
-                      })()
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={triggerGpsAcquisition}
-                        className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-700 text-xs font-black rounded-2xl flex items-center justify-center gap-2 uppercase tracking-wider shadow-sm transition-all"
-                      >
-                        <MapPin size={14} /> Lock Precision GPS Coordinate
-                      </button>
-                    )}
-                  </div>
 
-                  {/* Journey Action Buttons — context-sensitive based on travel_status */}
-                  {!task.travel_status && (
-                    <SwipeButton
-                      text="Start Journey"
-                      emoji="🚗"
-                      colorGradient="linear-gradient(135deg, #3b82f6, #6366f1)"
-                      shadowColor="rgba(59,130,246,0.3)"
-                      onConfirm={handleStartTravel}
-                      disabled={localBusy || busy}
-                    />
-                  )}
-
-                  {task.travel_status === "on_the_way" && (
-                    <>
-                      <div style={{
-                        padding: "10px 14px", borderRadius: 12,
-                        background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
-                        border: "1.5px solid #93c5fd",
-                        fontSize: 11, fontWeight: 800, color: "#1d4ed8",
-                        display: "flex", alignItems: "center", gap: 8, marginTop: 4,
-                        animation: "travelPulse 2s ease-in-out infinite",
-                      }}>
-                        🚗 <span>You are On The Way — Admin is tracking your location live</span>
-                      </div>
-                      <SwipeButton
-                        text="Arrived at Client"
-                        emoji="📍"
-                        colorGradient="linear-gradient(135deg, #f59e0b, #d97706)"
-                        shadowColor="rgba(245,158,11,0.3)"
-                        onConfirm={handleReachedSite}
-                        disabled={localBusy || busy}
-                      />
-                    </>
-                  )}
-
-                  {task.travel_status === "reached_site" && (
-                    <>
-                      <div style={{
-                        padding: "10px 14px", borderRadius: 12,
-                        background: "linear-gradient(135deg, #fef3c7, #fffbeb)",
-                        border: "1.5px solid #fde68a",
-                        fontSize: 11, fontWeight: 800, color: "#92400e",
-                        display: "flex", alignItems: "center", gap: 8, marginTop: 4,
-                      }}>
-                        📍 <span>You have Arrived — Ready to begin work?</span>
-                      </div>
-                      <SwipeButton
-                        text={precGPS ? "Start Work" : "Locking GPS..."}
-                        emoji="🔨"
-                        colorGradient={precGPS ? "linear-gradient(135deg, #059669, #047857)" : "linear-gradient(135deg, #94a3b8, #64748b)"}
-                        shadowColor={precGPS ? "rgba(5,150,105,0.3)" : "rgba(148,163,184,0.1)"}
-                        onConfirm={handleStartWorkNew}
-                        disabled={localBusy || busy || !precGPS}
-                      />
-                      {!precGPS && (
-                        <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textAlign: "center", marginTop: 4 }}>
-                          GPS is locking automatically…
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* ── START WORK — Always visible at bottom of modal ── */}
-                  {task.travel_status !== "reached_site" && (
-                    <div style={{
-                      marginTop: 8,
-                      padding: "16px",
-                      borderRadius: 16,
-                      background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
-                      border: "1.5px solid #bbf7d0",
-                      display: "flex", flexDirection: "column", gap: 10,
-                    }}>
-                      <div style={{ fontSize: 10, fontWeight: 900, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.1em", display: "flex", alignItems: "center", gap: 6 }}>
-                        🔨 Start Work
-                      </div>
-                      {(!beforePhoto || !startNotes.trim()) && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#047857", lineHeight: 1.6 }}>
-                          {!beforePhoto && <div>📸 Capture a Before Photo above first</div>}
-                          {!startNotes.trim() && <div>📝 Fill in Work Notes / Objectives above first</div>}
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (!beforePhoto) { alert("Please capture a Before Photo first."); return; }
-                          if (!startNotes.trim()) { alert("Please enter Work Notes / Objectives first."); return; }
-                          if (!precGPS) { alert("GPS is still locking. Please wait a moment and try again."); return; }
-                          await handleStartWorkNew();
-                        }}
-                        disabled={localBusy || busy}
-                        style={{
-                          width: "100%",
-                          padding: "15px 0",
-                          borderRadius: 14,
-                          border: "none",
-                          background: (beforePhoto && startNotes.trim() && precGPS)
-                            ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
-                            : "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
-                          color: "#fff",
-                          fontSize: 13,
-                          fontWeight: 900,
-                          cursor: (localBusy || busy) ? "not-allowed" : "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 10,
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          boxShadow: (beforePhoto && startNotes.trim() && precGPS)
-                            ? "0 6px 20px rgba(5,150,105,0.4)"
-                            : "0 4px 12px rgba(100,116,139,0.2)",
-                          transition: "all 0.25s ease",
-                          opacity: (localBusy || busy) ? 0.6 : 1,
-                        }}
-                      >
-                        <span style={{ fontSize: 18 }}>🔨</span>
-                        {localBusy ? "Starting Work…" : "Start Work"}
-                        {!localBusy && <span style={{ fontSize: 16 }}>→</span>}
-                      </button>
-                      {!precGPS && (
-                        <div style={{ fontSize: 9, color: "#059669", fontWeight: 700, textAlign: "center", opacity: 0.8 }}>
-                          ⏳ GPS is locking automatically in the background…
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              </div>,
-              document.body
-            )}
-          </div>
-        )}
-
-        {task.status === "in_progress" && !isPending && (
-          <>
-            {/* Pulsing Active Live Tracking Badge */}
-            <div className="p-3.5 bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-900/30 text-emerald-800 dark:text-emerald-400 rounded-xl flex items-center justify-between shadow-sm animate-pulse mb-3">
-              <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                LIVE TRACKING ACTIVE
-              </span>
-              <span className="text-[10px] font-mono opacity-80">
-                Broadcasting to Admin Dispatcher
-              </span>
-            </div>
-
-            {/* ── Completion % Slider ── */}
-            <div style={{ padding: "12px 14px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em" }}>📊 Completion</span>
-                <span style={{ fontSize: 12, fontWeight: 900, color: completionPct >= 80 ? "#059669" : "#4f46e5" }}>{completionPct}%</span>
-              </div>
-              <input
-                type="range" min={0} max={100} step={5}
-                value={completionPct}
-                onChange={e => setCompletionPct(parseInt(e.target.value))}
-                onMouseUp={e => handleSaveCompletion(parseInt(e.target.value))}
-                onTouchEnd={e => handleSaveCompletion(completionPct)}
-                style={{ width: "100%", accentColor: completionPct >= 80 ? "#059669" : "#4f46e5" }}
-              />
-              {completionPct >= 80 && (
-                <div style={{ fontSize: 9, fontWeight: 900, color: "#059669", marginTop: 4, letterSpacing: "0.05em" }}>
-                  ⚡ Smart nearby job suggestions active
-                </div>
-              )}
-            </div>
-
-            {suspending ? (
-              <div style={{
-                padding: 16, borderRadius: 14,
-                backgroundColor: "#fffbeb", border: "1.5px solid #fde68a",
-                display: "flex", flexDirection: "column", gap: 12,
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 950, color: "#ca8a04", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                  ⏸️ Suspend Current Job
-                </div>
-
-                {/* SLA Blocker */}
-                {suspendSlaBlock && (
-                  <div style={{
-                    padding: "10px 12px", borderRadius: 10,
-                    background: "#fef2f2", border: "1.5px solid #fca5a5",
-                    fontSize: 12, color: "#dc2626", fontWeight: 700,
-                  }}>
-                    🚫 {suspendSlaBlock}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Reason Category *</label>
-                  <select
-                    value={suspendReasonCategory}
-                    onChange={e => { setSuspendReasonCategory(e.target.value); setSuspendSlaBlock(null) }}
-                    style={{
-                      padding: "8px 12px", borderRadius: 10, border: "1.5px solid #cbd5e1",
-                      fontSize: 13, outline: "none", color: "#1e293b", cursor: "pointer",
-                    }}
-                  >
-                    {PAUSE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Additional Details (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Waiting for part #A2249 from supplier"
-                    value={suspendReason}
-                    onChange={e => setSuspendReason(e.target.value)}
-                    style={{
-                      padding: "8px 12px", borderRadius: 10, border: "1.5px solid #cbd5e1",
-                      fontSize: 13, outline: "none", color: "#1e293b",
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Expected Resume In</label>
-                  <select
-                    value={suspendDuration}
-                    onChange={e => setSuspendDuration(e.target.value)}
-                    style={{
-                      padding: "8px 12px", borderRadius: 10, border: "1.5px solid #cbd5e1",
-                      fontSize: 13, outline: "none", color: "#1e293b", cursor: "pointer",
-                    }}
-                  >
-                    <option value="30m">30 Minutes</option>
-                    <option value="1h">1 Hour</option>
-                    <option value="2h">2 Hours</option>
-                    <option value="4h">4 Hours</option>
-                    <option value="custom">Custom Date/Time</option>
-                  </select>
-                </div>
-                {suspendDuration === "custom" && (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Select Datetime</label>
-                    <input
-                      type="datetime-local"
-                      value={customDeadline}
-                      onChange={e => setCustomDeadline(e.target.value)}
-                      style={{
-                        padding: "8px 12px", borderRadius: 10, border: "1.5px solid #cbd5e1",
-                        fontSize: 13, outline: "none", color: "#1e293b",
-                      }}
-                    />
-                  </div>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setSuspending(false); setSuspendSlaBlock(null) }}
-                    className="flex-1 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleConfirmSuspend}
-                    disabled={localBusy || busy}
-                    className="flex-[1.5] py-2 rounded-xl bg-amber-600 text-white text-xs font-black uppercase tracking-wider"
-                  >
-                    Confirm Suspend
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {task.require_before_after_photos && (
-                  <div className="p-3 bg-bg dark:bg-slate-950/40 rounded-xl border border-stroke dark:border-slate-800">
-                    <div className="text-[10px] font-black text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5 uppercase tracking-widest">
-                      <Camera size={14} className="text-indigo-600 dark:text-indigo-400" /> After Photo Required
-                    </div>
-                    <input type="file" accept="image/*" onChange={handleAfterPhotoChange} className="text-xs w-full text-slate-500 dark:text-slate-400" />
-                  </div>
-                )}
-
-                <TextArea
-                  rows={2}
-                  placeholder="Optional completion notes..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="min-h-[60px]"
-                />
-
-                {/* ── CUSTOMER VERIFICATION WORKFLOW ── */}
-                <div style={{
-                  padding: 16, borderRadius: 14,
-                  backgroundColor: "#f8fafc", border: "1.5px solid #cbd5e1",
-                  display: "flex", flexDirection: "column", gap: 12,
-                }}>
-                  <div style={{ fontSize: 10, fontWeight: 900, color: "#475569", uppercase: true, letterSpacing: "0.08em", display: "flex", alignItems: "center", gap: 6 }}>
-                    🔐 CUSTOMER SECURITY VERIFICATION
-                  </div>
-
-                  {/* SMS OTP verification panel */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, borderBottom: "1.5px solid #e2e8f0", paddingBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "#334155" }}>1. SMS OTP Code Verification</span>
-                      {otpVerified && (
-                        <span style={{ fontSize: 9, fontWeight: 900, color: "#059669", background: "#ecfdf5", padding: "2px 6px", borderRadius: 4 }}>VERIFIED</span>
-                      )}
-                    </div>
-                    {!otpCode ? (
-                      <button
-                        type="button"
-                        onClick={generateOtp}
-                        style={{ padding: "8px 12px", borderRadius: 10, border: "none", background: "#4f46e5", color: "#fff", fontSize: 11, fontWeight: 900, cursor: "pointer", textTransform: "uppercase" }}
-                      >
-                        Generate Customer OTP
-                      </button>
-                    ) : !otpVerified ? (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <input
-                          type="text"
-                          maxLength={4}
-                          placeholder="Enter 4-digit OTP..."
-                          value={otpInput}
-                          onChange={e => setOtpInput(e.target.value)}
-                          style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: "1.5px solid #cbd5e1", fontSize: 13, outline: "none", textAlign: "center", fontWeight: "bold" }}
-                        />
-                        <button
-                          type="button"
-                          onClick={verifyOtp}
-                          style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: "#059669", color: "#fff", fontSize: 11, fontWeight: 900, cursor: "pointer" }}
-                        >
-                          Verify
-                        </button>
-                        <button
-                          type="button"
-                          onClick={generateOtp}
-                          style={{ padding: "8px 10px", borderRadius: 10, border: "1px solid #cbd5e1", background: "#fff", color: "#64748b", fontSize: 10, fontWeight: 800 }}
-                        >
-                          Resend
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 12, color: "#059669", fontWeight: 750 }}>
-                        ✓ SMS OTP Verification cleared!
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Digital Signature canvas panel */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "#334155" }}>2. Digital Signature Canvas</span>
-                      <button
-                        type="button"
-                        onClick={clearCanvas}
-                        style={{ background: "none", border: "none", color: "#e94560", fontSize: 10, fontWeight: 800, cursor: "pointer", textTransform: "uppercase" }}
-                      >
-                        Clear Sign
-                      </button>
-                    </div>
-                    <canvas
-                      ref={canvasRef}
-                      width={310}
-                      height={100}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                      style={{
-                        backgroundColor: "white",
-                        border: "1.5px solid #cbd5e1",
-                        borderRadius: 10,
-                        cursor: "crosshair",
-                        touchAction: "none"
-                      }}
-                    />
-                    <div style={{ fontSize: 9, color: "#94a3b8", fontStyle: "italic", fontWeight: 650 }}>
-                      Ask the customer to sign inside the white box above using touch or mouse.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Save notes, suspend, and finish work row blocks */}
-                <div className="flex gap-3">
-                  <Button variant="ghost" className="flex-1 border border-slate-200 bg-bg dark:bg-slate-950/40" disabled={busy || localBusy} onClick={() => onAction(task.id, "notes", { employee_notes: note })}>
-                    <Save size={16} className="mr-2" /> Save Notes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => setSuspending(true)}
-                    className="flex-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 font-bold uppercase text-[10px] flex items-center justify-center gap-1"
-                  >
-                    ⏸️ Suspend
-                  </Button>
-                </div>
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 hover:shadow-emerald-200/50" disabled={busy || localBusy} onClick={handleComplete}>
-                  <CheckCircle2 size={16} className="mr-2" /> Finish Work
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {task.status === "suspended" && (
-          <div className="flex flex-col gap-3">
-            {task.gap_job ? (
-              // Gap job is active
-              <div style={{
-                padding: 14, borderRadius: 12,
-                backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0",
-                display: "flex", flexDirection: "column", gap: 10,
-              }}>
-                <div className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1.5">
-                  ⚡ Linked Gap Job Active
-                </div>
-                {(() => {
-                  const linkedGap = (tasks || []).find(t => t.id === task.gap_job || String(t.id) === String(task.gap_job))
-                  const isGapCompleted = linkedGap ? linkedGap.status === "completed" : true
-                  return (
-                    <>
-                      <div className="text-xs text-emerald-900 font-bold">
-                        {linkedGap ? linkedGap.title : `Gap Job #${task.gap_job}`}
-                      </div>
-                      <div className="text-[10px] text-emerald-750 font-semibold uppercase">
-                        Status: {linkedGap ? statusLabel(linkedGap.status) : "Completed"}
-                      </div>
-
-                      {isGapCompleted ? (
-                        <>
-                          <div className="text-[10px] font-black text-emerald-600 flex items-center gap-1">
-                            ✅ GAP JOB COMPLETED
+                          {/* Verification Badge */}
+                          <div className="mt-2 flex justify-center">
+                            {faceVerifyStatus === "verifying" && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-indigo-50 border border-indigo-200 text-indigo-700 animate-pulse flex items-center gap-1.5">
+                                <Loader2 size={12} className="animate-spin" /> Verifying Facial Models...
+                              </span>
+                            )}
+                            {faceVerifyStatus === "matched" && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-emerald-50 border border-emerald-200 text-emerald-805 flex items-center gap-1.5">
+                                🟢 Identity Verified ({faceVerifyScore}% Match)
+                              </span>
+                            )}
+                            {faceVerifyStatus === "mismatch" && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-red-50 border border-red-200 text-red-800 flex items-center gap-1.5">
+                                🔴 Verification Failed ({faceVerifyScore}% Match)
+                              </span>
+                            )}
+                            {faceVerifyStatus === "no_face" && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-red-50 border border-red-200 text-red-800 flex items-center gap-1.5">
+                                🔴 Verification Failed (No face detected)
+                              </span>
+                            )}
+                            {faceVerifyStatus === "skipped" && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-amber-50 border border-amber-200 text-amber-800 flex items-center gap-1.5">
+                                🟡 Identity Verification Skipped
+                              </span>
+                            )}
+                            {!faceVerifyStatus && (
+                              <span className="px-4 py-2 rounded-full text-xs font-black bg-slate-100 border border-slate-200 text-slate-500">
+                                ⚪ Verification Pending Ending Photo
+                              </span>
+                            )}
                           </div>
-                          <Button
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2.5 rounded-xl flex items-center justify-center gap-2 uppercase tracking-wider text-[11px]"
-                            disabled={busy || localBusy}
-                            onClick={handleResumeParent}
-                          >
-                            <Play size={14} /> Resume Original Job
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="text-[10px] text-emerald-650 font-bold italic animate-pulse">
-                          👉 Complete the Gap Job task card below first!
                         </div>
-                      )}
-                    </>
-                  )
-                })()}
-              </div>
-            ) : (
-              // No gap job active
-              <>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2.5 rounded-xl flex items-center justify-center gap-1.5 uppercase tracking-wider text-[10px]"
-                    disabled={busy || localBusy}
-                    onClick={handleResumeParent}
-                  >
-                    <Play size={12} /> Resume Job
-                  </Button>
-                  <Button
-                    type="button"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl flex items-center justify-center gap-1.5 uppercase tracking-wider text-[10px]"
-                    disabled={busy || localBusy || fetchingGapJobs}
-                    onClick={handleFindGapJobs}
-                  >
-                    {fetchingGapJobs ? <Loader2 size={12} className="animate-spin mr-1" /> : "⚡ Find Gap Jobs"}
-                  </Button>
-                </div>
 
-                {showingGapJobs && (
-                  <div style={{
-                    padding: 14, borderRadius: 12,
-                    backgroundColor: "#f8fafc", border: "1.5px solid #e2e8f0",
-                    marginTop: 4, display: "flex", flexDirection: "column", gap: 10,
-                  }}>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Nearby Gap Jobs (Max {radiusKm}km)</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowingGapJobs(false)}
-                        className="text-slate-400 hover:text-slate-600 text-xs font-black"
-                      >
-                        ✕ Close
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest shrink-0">Radius</label>
-                      <input
-                        type="range"
-                        min="5"
-                        max="50"
-                        value={radiusKm}
-                        onChange={e => setRadiusKm(parseInt(e.target.value))}
-                        className="w-full accent-indigo-600 h-1 bg-slate-200 rounded-lg cursor-pointer"
-                      />
-                      <span className="text-xs font-black text-slate-600 shrink-0">{radiusKm}km</span>
-                      <button
-                        type="button"
-                        onClick={handleFindGapJobs}
-                        className="p-1 text-[10px] font-black bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-100"
-                      >
-                        Refresh
-                      </button>
-                    </div>
-
-                    <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-                      {gapJobs.length === 0 ? (
-                        <div className="text-center py-6 text-xs text-slate-400 font-semibold italic">
-                          No gap jobs found within {radiusKm}km.
+                        {/* Work Summary Notes */}
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Work Summary Notes</label>
+                          <textarea
+                            value={note}
+                            onChange={e => setNote(e.target.value)}
+                            placeholder="Add brief description of task completion..."
+                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm resize-none"
+                            rows={2}
+                          />
                         </div>
-                      ) : (
-                        gapJobs.map(job => (
-                          <div
-                            key={job.id}
-                            style={{
-                              padding: 10, borderRadius: 8,
-                              backgroundColor: "#fff", border: "1px solid #cbd5e1",
-                              display: "flex", flexDirection: "column", gap: 6,
-                            }}
-                          >
-                            <div className="text-xs font-black text-slate-900 leading-tight">
-                              {job.title}
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-semibold truncate">
-                              📍 {job.address || "No address"}
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] font-black uppercase text-indigo-600">
-                              <span>🚗 {job.distance_km?.toFixed(2)} km away</span>
-                              <span>⏱️ {job.estimated_duration_minutes} min</span>
-                            </div>
+
+                        {/* Customer Digital Signature */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Digital Signature *</label>
                             <button
                               type="button"
-                              onClick={() => handleAcceptGapJob(job.id)}
-                              disabled={busy || localBusy}
-                              style={{
-                                width: "100%", padding: "6px 0", borderRadius: 6,
-                                border: "none", background: "#059669", color: "#fff",
-                                fontSize: 10, fontWeight: 900, textTransform: "uppercase",
-                                cursor: "pointer", tracking: "0.05em",
-                              }}
+                              onClick={clearCanvas}
+                              className="text-[9px] font-black uppercase text-indigo-600 tracking-wider hover:text-indigo-800"
                             >
-                              Accept & Start
+                              Clear Pad
                             </button>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
+                          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 h-32 relative">
+                            <canvas
+                              ref={canvasRef}
+                              width={480}
+                              height={128}
+                              onMouseDown={startDrawing}
+                              onMouseMove={draw}
+                              onMouseUp={stopDrawing}
+                              onMouseLeave={stopDrawing}
+                              onTouchStart={startDrawing}
+                              onTouchMove={draw}
+                              onTouchEnd={stopDrawing}
+                              className="w-full h-full cursor-crosshair touch-none"
+                            />
+                          </div>
+                        </div>
 
-        {task.status === "completed" && (
-          <Button
-            className="w-full bg-slate-100 dark:bg-slate-800/20 text-slate-400 dark:text-slate-600 font-black py-3 rounded-xl flex items-center justify-center gap-2 cursor-default border border-stroke dark:border-slate-800/80"
-            disabled
-          >
-            <CheckCircle2 size={14} className="text-emerald-500" /> Work Completed
-          </Button>
-        )}
+                        {/* Customer OTP Verification */}
+                        <div className="flex flex-col gap-2.5 p-4 rounded-2xl border border-stroke bg-white dark:bg-slate-950 shadow-sm">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer OTP Verification *</label>
+                          
+                          {otpVerified ? (
+                            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 text-xs font-black flex items-center gap-1.5">
+                              <span>✓ Customer OTP Verification Successful</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <button
+                                type="button"
+                                onClick={generateOtp}
+                                className="py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-xl uppercase tracking-wider transition-colors border border-indigo-200"
+                              >
+                                Send OTP Code to Customer
+                              </button>
+                              {otpCode && (
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    maxLength={4}
+                                    placeholder="Enter 4-digit code"
+                                    value={otpInput}
+                                    onChange={e => setOtpInput(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-center font-black text-sm tracking-widest outline-none focus:border-indigo-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={verifyOtp}
+                                    className="px-6 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-xl uppercase tracking-wider transition-colors"
+                                  >
+                                    Verify
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
-        {/* ── Activity Timeline ── */}
-        <button
-          onClick={toggleTimeline}
-          style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "8px 12px",
-            borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc",
-            fontSize: 10, fontWeight: 900, color: "#475569", cursor: "pointer",
-            textTransform: "uppercase", letterSpacing: "0.07em",
-          }}
-        >
-          📋 {showTimeline ? "Hide" : "Show"} Activity Log
-          {loadingTimeline && " (loading...)"}
-        </button>
-        {showTimeline && (
-          <div style={{
-            padding: "12px 14px", borderRadius: 12,
-            background: "#f8fafc", border: "1px solid #e2e8f0",
-            maxHeight: 220, overflowY: "auto",
-          }}>
-            {timeline.length === 0 ? (
-              <div style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>No activity recorded yet.</div>
-            ) : timeline.map(entry => (
-              <div key={entry.id} style={{
-                display: "flex", gap: 10, paddingBottom: 10, marginBottom: 10,
-                borderBottom: "1px solid #e2e8f0", alignItems: "flex-start",
-              }}>
-                <span style={{ fontSize: 14, lineHeight: 1.4, flexShrink: 0 }}>{entry.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: "#334155" }}>{entry.event_label}</div>
-                  {entry.notes && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{entry.notes}</div>}
-                  <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 3, fontWeight: 700 }}>
-                    {new Date(entry.timestamp).toLocaleString()} · {entry.actor_name}
+                        {/* Complete Button */}
+                        <button
+                          type="button"
+                          onClick={handleComplete}
+                          disabled={
+                            localBusy || 
+                            busy || 
+                            faceVerifyStatus === "verifying" || 
+                            (task.start_photo && faceVerifyStatus !== "matched" && faceVerifyStatus !== "skipped") || 
+                            !otpVerified
+                          }
+                          style={{
+                            width: "100%",
+                            padding: "15px 0",
+                            borderRadius: 14,
+                            border: "none",
+                            background: (otpVerified && (!task.start_photo || faceVerifyStatus === "matched" || faceVerifyStatus === "skipped"))
+                              ? "linear-gradient(135deg, #059669 0%, #047857 100%)"
+                              : "linear-gradient(135deg, #94a3b8 0%, #64748b 100%)",
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 900,
+                            cursor: (localBusy || busy) ? "not-allowed" : "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 10,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            boxShadow: (otpVerified && (!task.start_photo || faceVerifyStatus === "matched" || faceVerifyStatus === "skipped"))
+                              ? "0 6px 20px rgba(5,150,105,0.4)"
+                              : "0 4px 12px rgba(100,116,139,0.2)",
+                            transition: "all 0.25s ease",
+                            opacity: (localBusy || busy) ? 0.6 : 1,
+                          }}
+                        >
+                          <CheckCircle2 size={16} />
+                          <span>{localBusy ? "Submitting…" : "Submit & Finish"}</span>
+                          {!localBusy && <ChevronRight size={16} />}
+                        </button>
+                      </div>
+                    )}
                   </div>
+                </div>,
+                document.body
+              )}
+            </div>
+          )}
+
+          {/* ── COMPLETED STATE ── */}
+          {task.status === "completed" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "20px 0", gap: 14, textAlign: "center" }}>
+              <div style={{ position: "relative", width: 76, height: 76, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#d1fae5", opacity: 0.5 }} />
+                <div style={{ width: 62, height: 62, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(5,150,105,0.35)" }}>
+                  <CheckCircle2 size={32} style={{ color: "#fff" }} />
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: "#065f46", textTransform: "uppercase", letterSpacing: "0.06em" }}>Work Completed</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 3 }}>All objectives and requirements met</div>
+              </div>
+              {task.billed_hours && <BillingBadge billedHours={task.billed_hours} actualHours={task.actual_hours} estimatedHours={task.estimated_hours} />}
+              <div style={{ width: "100%", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, textAlign: "left" }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Started At</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#1e293b", marginTop: 3 }}>{task.started_at ? new Date(task.started_at).toLocaleString() : "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Completed At</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#1e293b", marginTop: 3 }}>{task.completed_at ? new Date(task.completed_at).toLocaleString() : "—"}</div>
+                </div>
+                <div style={{ gridColumn: "span 2", borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Work Notes</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginTop: 3, fontStyle: "italic" }}>"{task.employee_notes || "No notes submitted"}"</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── SHOW ACTIVITY LOG ── */}
+          <button onClick={toggleTimeline} 
+            className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 w-full cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors"
+          >
+            <div className="flex items-center gap-3 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+              <ClipboardList size={16} className="text-slate-400 dark:text-slate-500" />
+              <span>{showTimeline ? "Hide" : "Show"} Activity Log</span>
+              {loadingTimeline && <span className="text-[9px] font-bold text-slate-400 animate-pulse"> (loading...)</span>}
+            </div>
+            <ChevronDown size={16} className="text-slate-400 transition-transform duration-300" style={{ transform: showTimeline ? "rotate(180deg)" : "none" }} />
+          </button>
+          
+          {showTimeline && (
+            <div className="p-4 rounded-2xl bg-slate-50/30 dark:bg-slate-900/20 border border-slate-200/60 dark:border-slate-800 max-h-64 overflow-y-auto flex flex-col gap-3 shadow-inner">
+              {timeline.length === 0 ? (
+                <div className="text-xs text-slate-400 dark:text-slate-500 italic text-center py-2">No activity recorded yet.</div>
+              ) : timeline.map(entry => (
+                <div key={entry.id} className="flex gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80 items-start last:border-0 last:pb-0">
+                  <span className="text-base leading-none shrink-0">{entry.icon}</span>
+                  <div className="flex-1">
+                    <div className="text-xs font-black text-slate-700 dark:text-slate-300 tracking-tight">{entry.event_label}</div>
+                    {entry.notes && <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{entry.notes}</div>}
+                    <div className="text-[9px] text-slate-400 dark:text-slate-500 mt-2 font-extrabold uppercase tracking-wider">
+                      {new Date(entry.timestamp).toLocaleString()} · {entry.actor_name}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </>
   )
 })
-
 // ─── Declined Tasks Panel (Admin) ────────────────────────────
 function DeclinedTasksPanel({ declinedTasks, availableEmployees, onReassigned }) {
   const [reassigning, setReassigning] = useState({}) // taskId → newUserId
@@ -2943,7 +2947,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
       const avail = emp.current_availability || "offline";
       const isOnline = avail !== "offline";
       const isNearby = nearbyDetail && nearbyDetail.distance_km <= 10;
-      
+
       let priority = 3; // OFFLINE
       if (isOnline) {
         priority = isNearby ? 1 : 2;
@@ -2966,7 +2970,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
       }
       if (a.distance_km !== null) return -1;
       if (b.distance_km !== null) return 1;
-      
+
       const ORDER = { available: 0, busy: 1, on_break: 2, on_leave: 3, offline: 4 };
       return (ORDER[a.current_availability] ?? 5) - (ORDER[b.current_availability] ?? 5);
     });
@@ -3140,7 +3144,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
         <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-stroke dark:border-slate-800 pb-2 flex items-center gap-2">
           <Sparkles size={13} className="text-indigo-500" /> General Details
         </div>
-        
+
         <div>
           <Input
             value={form.title}
@@ -3179,7 +3183,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
                 const cfg = AVAILABILITY_CONFIG[avail] || AVAILABILITY_CONFIG.offline
                 const userId = emp.user?.id || emp.id
                 const name = `${emp.first_name || emp.user?.first_name || emp.user?.username || "?"} ${emp.last_name || emp.user?.last_name || ""}`.trim()
-                
+
                 let displayLabel = `[${cfg.label.toUpperCase()}] ${name}`;
                 if (emp.isOnline) {
                   if (emp.nearbyDetail) {
@@ -3273,7 +3277,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
       {/* ── SECTION: ADVANCED PROPERTIES ── */}
       {showMore && (
         <div className="bg-surface dark:bg-slate-900/40 p-6 rounded-3xl border border-stroke dark:border-slate-800 shadow-sm flex flex-col gap-8 animate-in fade-in slide-in-from-top-3 duration-300">
-          
+
           {/* CLIENT DETAILS */}
           <div>
             <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-b border-stroke dark:border-slate-800 pb-2 mb-4 flex items-center gap-1.5">
@@ -3566,7 +3570,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
                     >
                       <Popup>
                         <div style={{ fontSize: 12, fontWeight: 800, padding: 4 }}>
-                          👷 {rec.employee_name}<br/>
+                          👷 {rec.employee_name}<br />
                           <span style={{ fontSize: 10, color: "#64748b" }}>{rec.distance_km}km · {rec.area_name}</span>
                         </div>
                       </Popup>
@@ -3596,7 +3600,7 @@ function AssignTaskPanel({ employees, jobSites, availableEmployees, onAssigned, 
                 }}>
                   <div style={{ fontSize: 40 }}>🗺️</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: "#64748b", textAlign: "center" }}>
-                    Search client address above<br/>
+                    Search client address above<br />
                     <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8" }}>Map will auto-pin the location</span>
                   </div>
                 </div>
@@ -4004,6 +4008,8 @@ function AdminTasksTable({ tasks, employees, availableEmployees, jobSites, onRef
               <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Assigned To</th>
               <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Due Date</th>
               <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Acceptance</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Face Match %</th>
+              <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Verification Status</th>
               <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Status</th>
               <th className="p-6 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">Actions</th>
             </tr>
@@ -4011,7 +4017,7 @@ function AdminTasksTable({ tasks, employees, availableEmployees, jobSites, onRef
           <tbody className="divide-y divide-stroke dark:divide-slate-800">
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-24 text-center text-slate-400">
+                <td colSpan={8} className="p-24 text-center text-slate-400">
                   <div className="flex flex-col items-center gap-3 text-[10px] font-black uppercase tracking-widest">
                     <ClipboardList size={32} className="opacity-20" />
                     No jobs in this view.
@@ -4106,6 +4112,28 @@ function AdminTasksTable({ tasks, employees, availableEmployees, jobSites, onRef
                       <div style={{ marginTop: 4, fontSize: 10, color: "#f87171", fontStyle: "italic", maxWidth: 160 }}>
                         "{t.decline_reason.slice(0, 60)}{t.decline_reason.length > 60 ? "…" : ""}"
                       </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {t.face_match_percentage !== null && t.face_match_percentage !== undefined ? (
+                      <span className={t.face_match_percentage >= 90 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                        {t.face_match_percentage.toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 dark:text-slate-600">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {t.face_match_status === "verified" ? (
+                      <Pill tone="good">🟢 Verified</Pill>
+                    ) : t.face_match_status === "failed" ? (
+                      <Pill tone="bad">🔴 Failed</Pill>
+                    ) : t.face_match_status === "skipped" ? (
+                      <Pill tone="neutral">⚪ Skipped</Pill>
+                    ) : t.face_match_status === "pending" ? (
+                      <Pill tone="warn">🟡 Pending</Pill>
+                    ) : (
+                      <span className="text-slate-400 dark:text-slate-600 text-xs">—</span>
                     )}
                   </td>
                   <td className="px-6 py-4">
@@ -4310,6 +4338,39 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
               Job #{task.id} · Due: {task.due_date}
             </div>
           </div>
+
+          {/* Building icon */}
+          <div style={{
+            flexShrink: 0,
+            width: 60,
+            height: 60,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#f8fafc",
+            border: "1.5px solid #e2e8f0",
+            borderRadius: 14,
+            padding: 9,
+            marginRight: 10,
+          }}>
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+              <polyline points="10,56 10,16 34,8 34,56" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" fill="none"/>
+              <rect x="34" y="26" width="20" height="30" rx="1" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" fill="none"/>
+              <line x1="6" y1="56" x2="58" y2="56" stroke="#1e293b" strokeWidth="3" strokeLinecap="round"/>
+              <rect x="14" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="22" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="14" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="22" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="14" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="22" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="38" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="46" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="38" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="46" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+              <rect x="21" y="46" width="7" height="10" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+            </svg>
+          </div>
+
           <button onClick={onClose} style={{
             width: 36, height: 36, borderRadius: 10, background: "#f1f5f9",
             border: "1px solid #e2e8f0", cursor: "pointer",
@@ -4342,6 +4403,170 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
               </div>
             </div>
           </div>
+
+          {/* Journey Progress Bar */}
+          {task.assigned_to && (
+            <div style={{ padding: "14px 16px", borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Journey Progress</div>
+              {(() => {
+                const travelSteps = [
+                  { key: null, icon: "✅", label: "Accepted" },
+                  { key: "on_the_way", icon: "🚗", label: "On The Way" },
+                  { key: "reached_site", icon: "📍", label: "Reached Site" },
+                  { key: "working", icon: "🔨", label: "Working" },
+                ]
+                const curIdx = task.travel_status
+                  ? travelSteps.findIndex(s => s.key === task.travel_status)
+                  : 0
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    {travelSteps.map((step, idx) => {
+                      const isActive = idx === curIdx
+                      const isDone = idx < curIdx
+                      return (
+                        <React.Fragment key={step.key || "start"}>
+                          <div style={{
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                            flex: 1,
+                          }}>
+                            <div
+                              style={{
+                                width: 34, height: 34,
+                                borderRadius: "50%",
+                                display: "flex", justifyContent: "center", alignItems: "center",
+                                fontSize: 13,
+                                transition: "all 0.3s ease",
+                                border: "2px solid",
+                                borderColor: isDone ? "#10b981" : isActive ? "#3b82f6" : "#cbd5e1",
+                                background: isDone ? "#ecfdf5" : isActive ? "#eff6ff" : "#f8fafc",
+                                color: isDone ? "#059669" : isActive ? "#2563eb" : "#94a3b8",
+                                boxShadow: isActive ? "0 4px 10px rgba(59, 130, 246, 0.15)" : "none",
+                              }}
+                            >
+                              {isDone ? "✓" : step.icon}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 8,
+                                fontWeight: 900,
+                                textTransform: "uppercase",
+                                tracking: "0.05em",
+                                textAlign: "center",
+                                whiteSpace: "nowrap",
+                                color: isDone ? "#059669" : isActive ? "#2563eb" : "#64748b",
+                              }}
+                            >
+                              {step.label}
+                            </div>
+                          </div>
+                          {idx < travelSteps.length - 1 && (
+                            <div
+                              style={{
+                                height: 2,
+                                flex: 1,
+                                background: idx < curIdx ? "#10b981" : "#cbd5e1",
+                                marginBottom: 16,
+                                transition: "all 0.5s ease",
+                              }}
+                            />
+                          )}
+                        </React.Fragment>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* Identity Verification Section */}
+          {(task.start_photo || task.end_photo || task.face_match_percentage !== null || task.face_match_status) && (
+            <div style={{ padding: "14px 16px", borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+              <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Identity Verification</div>
+              
+              {/* Status Badge & Match Percentage */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {task.face_match_status === "verified" ? (
+                    <span style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 900,
+                      background: "#dcfce7", color: "#166534", border: "1px solid #86efac",
+                      display: "inline-flex", alignItems: "center", gap: 4
+                    }}>
+                      🟢 Identity Verified
+                    </span>
+                  ) : task.face_match_status === "failed" ? (
+                    <span style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 900,
+                      background: "#fef2f2", color: "#991b1b", border: "1px solid #fca5a5",
+                      display: "inline-flex", alignItems: "center", gap: 4
+                    }}>
+                      🔴 Verification Failed
+                    </span>
+                  ) : task.face_match_status === "skipped" ? (
+                    <span style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 900,
+                      background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1",
+                      display: "inline-flex", alignItems: "center", gap: 4
+                    }}>
+                      ⚪ Verification Skipped
+                    </span>
+                  ) : (
+                    <span style={{
+                      padding: "4px 10px", borderRadius: 20, fontSize: 10, fontWeight: 900,
+                      background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa",
+                      display: "inline-flex", alignItems: "center", gap: 4
+                    }}>
+                      🟡 Pending Verification
+                    </span>
+                  )}
+                </div>
+                {task.face_match_percentage !== null && task.face_match_percentage !== undefined && (
+                  <div style={{ fontSize: 12, fontWeight: 900, color: task.face_match_percentage >= 90 ? "#16a34a" : "#dc2626" }}>
+                    Match Score: {task.face_match_percentage.toFixed(1)}%
+                  </div>
+                )}
+              </div>
+
+              {/* Photos comparison */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Start Photo</div>
+                  <div style={{
+                    width: "100%", height: 120, borderRadius: 10, border: "1.5px solid #cbd5e1",
+                    overflow: "hidden", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>
+                    {task.start_photo ? (
+                      <img src={task.start_photo} alt="Start Photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8" }}>No Start Photo</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>End Photo</div>
+                  <div style={{
+                    width: "100%", height: 120, borderRadius: 10, border: "1.5px solid #cbd5e1",
+                    overflow: "hidden", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>
+                    {task.end_photo ? (
+                      <img src={task.end_photo} alt="End Photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8" }}>No End Photo</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Submission Time */}
+              {task.submission_time && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}>
+                  <span>🕒 Submitted:</span>
+                  <span>{new Date(task.submission_time).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Client Info */}
           {(task.client_name || task.client_company_name || task.job_address) && (
@@ -4640,6 +4865,39 @@ function AdminTasksPage({ tasks, employees, availableEmployees, jobSites, declin
                 <div className="text-xl professional-title text-slate-900 dark:text-white">Create Work Order</div>
                 <div className="text-sm text-slate-400 font-medium mt-0.5">Define jobs, assign personnel, and set location constraints.</div>
               </div>
+
+              {/* Building icon */}
+              <div style={{
+                flexShrink: 0,
+                width: 60,
+                height: 60,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f8fafc",
+                border: "1.5px solid #e2e8f0",
+                borderRadius: 14,
+                padding: 9,
+                marginRight: 12,
+              }}>
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%" }}>
+                  <polyline points="10,56 10,16 34,8 34,56" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" fill="none"/>
+                  <rect x="34" y="26" width="20" height="30" rx="1" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" fill="none"/>
+                  <line x1="6" y1="56" x2="58" y2="56" stroke="#1e293b" strokeWidth="3" strokeLinecap="round"/>
+                  <rect x="14" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="22" y="22" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="14" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="22" y="32" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="14" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="22" y="42" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="38" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="46" y="30" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="38" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="46" y="40" width="5" height="5" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                  <rect x="21" y="46" width="7" height="10" rx="1" stroke="#1e293b" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+
               <button type="button" className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" onClick={() => setOpen(false)}>
                 <X size={24} />
               </button>
@@ -5005,19 +5263,19 @@ function UrgentGapJobAlert({ urgentGapJobs, onDismiss }) {
     if (urgentGapJobs.length > 0 && !beepDone) {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)()
-        // Triple beep for urgency
-        ;[0, 0.25, 0.5].forEach(offset => {
-          const osc = ctx.createOscillator()
-          const gain = ctx.createGain()
-          osc.connect(gain)
-          gain.connect(ctx.destination)
-          osc.frequency.value = 1046 // C6 - urgent high tone
-          osc.type = 'sine'
-          gain.gain.setValueAtTime(0.4, ctx.currentTime + offset)
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.18)
-          osc.start(ctx.currentTime + offset)
-          osc.stop(ctx.currentTime + offset + 0.2)
-        })
+          // Triple beep for urgency
+          ;[0, 0.25, 0.5].forEach(offset => {
+            const osc = ctx.createOscillator()
+            const gain = ctx.createGain()
+            osc.connect(gain)
+            gain.connect(ctx.destination)
+            osc.frequency.value = 1046 // C6 - urgent high tone
+            osc.type = 'sine'
+            gain.gain.setValueAtTime(0.4, ctx.currentTime + offset)
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.18)
+            osc.start(ctx.currentTime + offset)
+            osc.stop(ctx.currentTime + offset + 0.2)
+          })
       } catch { /* blocked */ }
       setBeepDone(true)
     }

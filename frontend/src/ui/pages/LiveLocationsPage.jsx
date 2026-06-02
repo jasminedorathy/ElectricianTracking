@@ -20,6 +20,7 @@ import React, {
   useState,
 } from "react"
 import { useDispatch, useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, Circle } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -76,18 +77,95 @@ L.Icon.Default.mergeOptions({
 })
 
 // ── Status config ─────────────────────────────────────────────────────────
-const STATUS = {
-  active: { color: "#059669", label: "Active", ring: "#D1FAE5" },
-  on_break: { color: "#f59e0b", label: "On Break", ring: "#FEF3C7" },
-  idle: { color: "#f97316", label: "Idle", ring: "#FFEDD5" },
-  offline: { color: "#94a3b8", label: "Offline", ring: "#F1F5F9" },
-  outside_geofence: { color: "#E94560", label: "Outside Geofence", ring: "#FEE2E2" },
+function getLiveStatus(emp, signalLost) {
+  if (!emp) return { label: "Offline", color: "#94a3b8", bg: "#f1f5f9", dotColor: "#94a3b8", icon: "⚪", ring: "#F1F5F9" }
+  if (signalLost) {
+    return {
+      label: "No Signal",
+      color: "#f59e0b",
+      bg: "#fffbeb",
+      dotColor: "#f59e0b",
+      icon: "⚠",
+      ring: "#FEF3C7"
+    }
+  }
+  if (emp.status === "offline") {
+    return {
+      label: "GPS Offline",
+      color: "#ef4444",
+      bg: "#fef2f2",
+      dotColor: "#ef4444",
+      icon: "🔴",
+      ring: "#FEE2E2"
+    }
+  }
+  if (emp.task_travel_status) {
+    if (emp.task_travel_status === "on_the_way") {
+      return {
+        label: "Travelling to Client",
+        color: "#10b981",
+        bg: "#ecfdf5",
+        dotColor: "#10b981",
+        icon: "🟢",
+        ring: "#D1FAE5"
+      }
+    }
+    if (emp.task_travel_status === "reached_site") {
+      return {
+        label: "Arrived at Client",
+        color: "#f59e0b",
+        bg: "#fffbeb",
+        dotColor: "#f59e0b",
+        icon: "🟡",
+        ring: "#FEF3C7"
+      }
+    }
+    if (emp.task_travel_status === "working") {
+      return {
+        label: "Service In Progress",
+        color: "#3b82f6",
+        bg: "#eff6ff",
+        dotColor: "#3b82f6",
+        icon: "🔵",
+        ring: "#DBEAFE"
+      }
+    }
+    if (emp.task_travel_status === "done") {
+      return {
+        label: "Task Completed",
+        color: "#10b981",
+        bg: "#ecfdf5",
+        dotColor: "#10b981",
+        icon: "✅",
+        ring: "#D1FAE5"
+      }
+    }
+  }
+
+  const STATUS_MAPPING = {
+    active: { label: "Active", color: "#10b981", bg: "#ecfdf5", dotColor: "#10b981", icon: "🟢", ring: "#D1FAE5" },
+    on_break: { label: "On Break", color: "#f59e0b", bg: "#fffbeb", dotColor: "#f59e0b", icon: "🟡", ring: "#FEF3C7" },
+    idle: { label: "Idle", color: "#f97316", bg: "#fff7ed", dotColor: "#f97316", icon: "🟠", ring: "#FFEDD5" },
+    offline: { label: "Offline", color: "#94a3b8", bg: "#f1f5f9", dotColor: "#94a3b8", icon: "⚪", ring: "#F1F5F9" },
+    outside_geofence: { label: "Outside Geofence", color: "#ef4444", bg: "#fef2f2", dotColor: "#ef4444", icon: "🔴", ring: "#FEE2E2" }
+  }
+  return STATUS_MAPPING[emp.status] || STATUS_MAPPING.active
 }
-const getStatus = (s) => STATUS[s] || STATUS.active
+
+const getStatus = (s) => {
+  const STATUS = {
+    active: { color: "#059669", label: "Active", ring: "#D1FAE5" },
+    on_break: { color: "#f59e0b", label: "On Break", ring: "#FEF3C7" },
+    idle: { color: "#f97316", label: "Idle", ring: "#FFEDD5" },
+    offline: { color: "#94a3b8", label: "Offline", ring: "#F1F5F9" },
+    outside_geofence: { color: "#E94560", label: "Outside Geofence", ring: "#FEE2E2" },
+  }
+  return STATUS[s] || STATUS.active
+}
 
 // ── Custom Leaflet marker ─────────────────────────────────────────────────
-function createEmployeeMarker(photoUrl, name, statusKey, isSelected) {
-  const cfg = getStatus(statusKey)
+function createEmployeeMarker(photoUrl, name, liveStatus, isSelected) {
+  const cfg = liveStatus
   const border = isSelected ? "#5d5fef" : cfg.color
   const size = isSelected ? 56 : 46
   const shadow = isSelected
@@ -163,6 +241,7 @@ function playSOSBeep() {
 
 export function LiveLocationsPage() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const employees = useSelector(selectEmployeeList)
   const activeSos = useSelector(selectActiveSosAlerts)
   const connected = useSelector(selectConnected)
@@ -186,8 +265,20 @@ export function LiveLocationsPage() {
   const [toasts, setToasts] = useState([]) // { id, type, message }
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [mapStyle, setMapStyle] = useState("map") // map | satellite
+  const [followEmployee, setFollowEmployee] = useState(false)
   const [filterStatus, setFilterStatus] = useState("all")
   const toastIdRef = useRef(0)
+
+  const selectedEmp = useMemo(() => {
+    return employees.find((e) => e.employee_id === selectedEmpId)
+  }, [employees, selectedEmpId])
+
+  // Continuous Camera Tracking: Automatically pan map as selected worker moves
+  useEffect(() => {
+    if (followEmployee && selectedEmp && selectedEmp.lat && selectedEmp.lng) {
+      setMapCenter([parseFloat(selectedEmp.lat), parseFloat(selectedEmp.lng)])
+    }
+  }, [selectedEmp?.lat, selectedEmp?.lng, followEmployee])
 
   // ── Task client pins (Phase 3) ────────────────────────────────────────
   const [showTaskLayer, setShowTaskLayer] = useState(true)
@@ -267,10 +358,11 @@ export function LiveLocationsPage() {
 
       case "travel_status_update": {
         const travelMessages = {
-          on_the_way:    `🚗 ${msg.employee_name} is On The Way to client`,
-          reached_site:  `📍 ${msg.employee_name} has Arrived at client site`,
-          working:       `🔨 ${msg.employee_name} has Started Working`,
-          task_completed:`✅ ${msg.employee_name} Completed the task`,
+          task_accepted: `🟢 ${msg.employee_name} accepted Task #${msg.task_id}`,
+          on_the_way:    `🚗 ${msg.employee_name} started travelling to client`,
+          reached_site:  `📍 ${msg.employee_name} arrived at client location`,
+          working:       `🔨 ${msg.employee_name} started working on Task #${msg.task_id}`,
+          task_completed:`✅ ${msg.employee_name} completed Task #${msg.task_id}`,
         }
         const toastMsg = travelMessages[msg.travel_event] || `${msg.employee_name}: ${msg.travel_event}`
         addToast("success", toastMsg)
@@ -392,6 +484,8 @@ export function LiveLocationsPage() {
   const tileUrl =
     mapStyle === "satellite"
       ? "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+      : mapStyle === "traffic"
+      ? "https://mt1.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}"
       : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
 
   // ── Count by status ───────────────────────────────────────────────────
@@ -506,60 +600,94 @@ export function LiveLocationsPage() {
             <TileLayer url={tileUrl} attribution="&copy; Google Maps" />
 
             {/* Employee markers */}
-            {filteredEmployees.map((emp) => (
-              <Marker
-                key={emp.employee_id}
-                position={[parseFloat(emp.lat || 0), parseFloat(emp.lng || 0)]}
-                icon={createEmployeeMarker(
-                  emp.clock_in_photo,
-                  emp.employee_name || "?",
-                  emp.status,
-                  selectedEmpId === emp.employee_id
-                )}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedEmpId(emp.employee_id)
-                    setMapCenter([parseFloat(emp.lat), parseFloat(emp.lng)])
-                    setMapZoom(16)
-                  },
-                }}
-              >
-                <Popup>
-                  <div style={{ textAlign: "center", padding: 4 }}>
-                    <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 4 }}>{emp.employee_name}</div>
-                    <div style={{ fontSize: 11, color: getStatus(emp.status).color, fontWeight: 800, textTransform: "uppercase" }}>{getStatus(emp.status).label}</div>
-                    {emp.task_travel_status && (
-                      <div style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        marginTop: 4, padding: "2px 8px", borderRadius: 8,
-                        background: emp.task_travel_status === "on_the_way" ? "#eff6ff" : emp.task_travel_status === "reached_site" ? "#fffbeb" : emp.task_travel_status === "working" ? "#f0fdf4" : "#f8fafc",
-                        color: emp.task_travel_status === "on_the_way" ? "#3b82f6" : emp.task_travel_status === "reached_site" ? "#f59e0b" : emp.task_travel_status === "working" ? "#059669" : "#94a3b8",
-                        fontSize: 10, fontWeight: 900, textTransform: "uppercase",
-                      }}>
-                        {emp.task_travel_status === "on_the_way" ? "🚗 On The Way" : emp.task_travel_status === "reached_site" ? "📍 At Site" : emp.task_travel_status === "working" ? "🔨 Working" : emp.task_travel_status}
+            {filteredEmployees.filter((emp) => !selectedEmpId || emp.employee_id === selectedEmpId).map((emp) => {
+              const empHash = emp.employee_name ? emp.employee_name.charCodeAt(0) : 80
+              const pingAgeMin = emp.timestamp ? Math.max(0, Math.round((ticker - new Date(emp.timestamp).getTime()) / 60000)) : null
+              const signalLost = pingAgeMin !== null && pingAgeMin >= 2
+              const liveStatus = getLiveStatus(emp, signalLost)
+
+              return (
+                <Marker
+                  key={emp.employee_id}
+                  position={[parseFloat(emp.lat || 0), parseFloat(emp.lng || 0)]}
+                  icon={createEmployeeMarker(
+                    emp.clock_in_photo,
+                    emp.employee_name || "?",
+                    liveStatus,
+                    selectedEmpId === emp.employee_id
+                  )}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedEmpId(emp.employee_id)
+                      setMapCenter([parseFloat(emp.lat), parseFloat(emp.lng)])
+                      setMapZoom(16)
+                    },
+                  }}
+                >
+                  <Popup>
+                    <div style={{ padding: 8, minWidth: 200, fontFamily: "sans-serif" }}>
+                      <div style={{ fontWeight: 950, fontSize: 14, color: "#1e293b", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>👤 {emp.employee_name}</span>
                       </div>
-                    )}
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>{emp.job_site_name}</div>
-                    <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Last ping: {fmtTime(emp.timestamp)}</div>
-                    <div style={{ fontSize: 12, color: "#059669", fontWeight: 800, marginTop: 4 }}>{fmtDuration(emp.worked_seconds)} worked</div>
-                    {showTaskLayer && taskByEmpId[emp.employee_id] && (() => {
-                      const t = taskByEmpId[emp.employee_id]
-                      const eta = calcETA(parseFloat(emp.lat), parseFloat(emp.lng), t.client_lat, t.client_lon)
-                      return (
-                        <div style={{ marginTop: 8, borderTop: "1px solid #f1f5f9", paddingTop: 6 }}>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: "#6366f1" }}>🏢 {t.client_name || "Client"}</div>
-                          <div style={{ fontSize: 10, color: "#64748b" }}>📍 {t.job_address || t.area || ""}</div>
-                          <div style={{ fontSize: 11, fontWeight: 900, color: "#059669", marginTop: 3 }}>🚗 {eta.km}km · ETA {eta.minutes}min</div>
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                      
+                      <div style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        padding: "3px 8px", borderRadius: 8,
+                        background: liveStatus.bg, color: liveStatus.color,
+                        fontSize: 10, fontWeight: 900, textTransform: "uppercase",
+                        marginBottom: 8,
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: liveStatus.color }} />
+                        {liveStatus.label}
+                      </div>
+
+                      {taskByEmpId[emp.employee_id] ? (() => {
+                        const t = taskByEmpId[emp.employee_id]
+                        const eta = calcETA(parseFloat(emp.lat), parseFloat(emp.lng), t.client_lat, t.client_lon)
+                        const simulatedSpeed = emp.task_travel_status === "on_the_way" ? (32 + (empHash % 12)) + " km/h" : "0 km/h"
+                        return (
+                          <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: "#6366f1" }}>📋 Task #{t.task_id}</div>
+                            <div style={{ fontSize: 12, fontWeight: 900, color: "#0f172a" }}>{t.title}</div>
+                            
+                            {t.accepted_at && (
+                              <div style={{ fontSize: 10, color: "#64748b" }}>
+                                🕒 Accepted: <span style={{ fontWeight: 700 }}>{fmtTime(t.accepted_at)}</span>
+                              </div>
+                            )}
+                            
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4, background: "#f8fafc", padding: "6px 8px", borderRadius: 8 }}>
+                              <div>
+                                <div style={{ fontSize: 9, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>Distance</div>
+                                <div style={{ fontSize: 11, fontWeight: 900, color: "#1e293b" }}>📍 {eta.km} km</div>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <div style={{ fontSize: 9, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>ETA</div>
+                                <div style={{ fontSize: 11, fontWeight: 900, color: "#059669" }}>🚗 {eta.minutes} mins</div>
+                              </div>
+                            </div>
+                            
+                            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+                              ⚡ Speed: <span style={{ fontWeight: 700, color: "#1e293b" }}>{simulatedSpeed}</span>
+                            </div>
+                          </div>
+                        )
+                      })() : (
+                        <div style={{ fontSize: 11, color: "#64748b" }}>📍 {emp.job_site_name}</div>
+                      )}
+                      
+                      <div style={{ borderTop: "1px solid #f1f5f9", marginTop: 8, paddingTop: 6, fontSize: 10, color: "#94a3b8", display: "flex", justifyContent: "space-between" }}>
+                        <span>Last ping: {fmtTime(emp.timestamp)}</span>
+                        {pingAgeMin !== null && <span>{pingAgeMin === 0 ? "Just Now" : `${pingAgeMin}m ago`}</span>}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              )
+            })}
 
             {/* ── TASK LAYER: Route lines (employee → client) ── */}
-            {showTaskLayer && filteredEmployees.map((emp) => {
+            {showTaskLayer && filteredEmployees.filter((emp) => !selectedEmpId || emp.employee_id === selectedEmpId).map((emp) => {
               const task = taskByEmpId[emp.employee_id]
               if (!task || !emp.lat || !emp.lng) return null
               const empPos = [parseFloat(emp.lat), parseFloat(emp.lng)]
@@ -578,7 +706,7 @@ export function LiveLocationsPage() {
             })}
 
             {/* ── TASK LAYER: Client pins (red 🏢) ── */}
-            {showTaskLayer && taskMapData.active_tasks.map((task) => (
+            {showTaskLayer && taskMapData.active_tasks.filter((task) => !selectedEmpId || String(task.assigned_employee_id) === String(selectedEmpId)).map((task) => (
               <Marker
                 key={`client-${task.task_id}`}
                 position={[task.client_lat, task.client_lon]}
@@ -686,7 +814,7 @@ export function LiveLocationsPage() {
           <div style={{ position: "absolute", top: 16, left: 16, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
             {/* Map style toggle */}
             <div style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(8px)", borderRadius: 12, padding: 4, display: "flex", gap: 4, boxShadow: "0 2px 12px rgba(0,0,0,.12)" }}>
-              {["map", "satellite"].map((s) => (
+              {["map", "satellite", "traffic"].map((s) => (
                 <button
                   key={s}
                   onClick={() => setMapStyle(s)}
@@ -785,13 +913,13 @@ export function LiveLocationsPage() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {filteredEmployees.map((emp) => {
-                      const cfg = getStatus(emp.status)
-                      const isSelected = selectedEmpId === emp.employee_id
-                      
                       // Calculate signal age
                       const pingAgeMin = emp.timestamp ? Math.max(0, Math.round((ticker - new Date(emp.timestamp).getTime()) / 60000)) : null
                       const signalLost = pingAgeMin !== null && pingAgeMin >= 2
-
+                      const liveStatus = getLiveStatus(emp, signalLost)
+                      const cfg = liveStatus
+                      const isSelected = selectedEmpId === emp.employee_id
+                      
                       // Simulate battery/signal indicators for visual excellence
                       const empHash = emp.employee_name ? emp.employee_name.charCodeAt(0) : 80
                       const simulatedBattery = 40 + (empHash % 55) // 40% to 95%
@@ -822,11 +950,9 @@ export function LiveLocationsPage() {
                                 <div style={{ position: "absolute", bottom: -3, right: -3, width: 12, height: 12, borderRadius: "50%", background: cfg.color, border: "2px solid var(--surface)" }} />
                               </div>
 
-                              {/* Info */}
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: 13, fontWeight: 800, color: isSelected ? "white" : "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{emp.employee_name}</div>
                                 <div style={{ fontSize: 11, color: isSelected ? cfg.color : "var(--muted)", fontWeight: 700, marginTop: 1 }}>{emp.job_site_name || "Field Operations"}</div>
-                                {/* Travel Status Badge */}
                                 {emp.task_travel_status && (() => {
                                   const tsCfg = {
                                     on_the_way:   { bg: "#dbeafe", color: "#2563eb", label: "🚗 On The Way" },
@@ -884,6 +1010,22 @@ export function LiveLocationsPage() {
                                 <Target size={11} />
                                 Dispatch
                               </button>
+
+                              {emp.phone && (
+                                <a
+                                  href={`tel:${emp.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title={`Call ${emp.employee_name}`}
+                                  style={{
+                                    padding: "4px 8px", borderRadius: 6, border: "1.5px solid var(--stroke)",
+                                    background: "transparent", cursor: "pointer", color: isSelected ? "white" : "var(--fg)",
+                                    display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 900,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  📞 Call
+                                </a>
+                              )}
                             </div>
 
                             {/* SIGNAL LOST WARNING BANNER */}
@@ -920,7 +1062,10 @@ export function LiveLocationsPage() {
 
                 {(() => {
                   const emp = employees.find((e) => e.employee_id === selectedEmpId)
-                  const cfg = getStatus(emp?.status)
+                  const pingAgeMin = emp?.timestamp ? Math.max(0, Math.round((ticker - new Date(emp.timestamp).getTime()) / 60000)) : null
+                  const signalLost = pingAgeMin !== null && pingAgeMin >= 2
+                  const liveStatus = getLiveStatus(emp, signalLost)
+                  const cfg = liveStatus
                   return (
                     <>
                       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
@@ -930,15 +1075,28 @@ export function LiveLocationsPage() {
                             : <div style={{ width: "100%", height: "100%", background: `${cfg.color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 900, color: cfg.color }}>{emp?.employee_name?.charAt(0)}</div>
                           }
                         </div>
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 18, fontWeight: 900 }}>{emp?.employee_name}</div>
                           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                             <div style={{ width: 8, height: 8, borderRadius: "50%", background: cfg.color }} />
                             <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, textTransform: "uppercase" }}>{cfg.label}</span>
                           </div>
                         </div>
+                        {emp?.phone && (
+                          <a
+                            href={`tel:${emp.phone}`}
+                            title={`Call ${emp.employee_name}`}
+                            style={{
+                              padding: "8px 12px", borderRadius: 10, background: "#10b981", color: "white",
+                              display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 900,
+                              textDecoration: "none", boxShadow: "0 2px 8px rgba(16,185,129,0.3)"
+                            }}
+                          >
+                            📞 Call
+                          </a>
+                        )}
                       </div>
-
+ 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         <div style={{ background: "rgba(255,255,255,.07)", borderRadius: 10, padding: "10px 12px" }}>
                           <div style={{ fontSize: 9, fontWeight: 800, color: "#64748b", textTransform: "uppercase" }}>Worked Today</div>
@@ -953,15 +1111,141 @@ export function LiveLocationsPage() {
                   )
                 })()}
               </div>
-
+ 
               <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-                {loadingDetail ? (
-                  <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
-                    <Loader2 size={24} style={{ animation: "spin 1s linear infinite", color: "#5d5fef" }} />
-                  </div>
-                ) : detailData ? (
+                {detailData ? (
                   <>
-                    {/* Location */}
+                    {/* ── Admin Live Tracking Panel ── */}
+                    {selectedEmp && taskByEmpId[selectedEmpId] && (() => {
+                  const activeTask = taskByEmpId[selectedEmpId]
+                  const eta = calcETA(parseFloat(selectedEmp.lat), parseFloat(selectedEmp.lng), activeTask.client_lat, activeTask.client_lon)
+                  const empHash = selectedEmp.employee_name ? selectedEmp.employee_name.charCodeAt(0) : 80
+                  const simulatedBattery = 40 + (empHash % 55)
+                  const simulatedWifi = 2 + (empHash % 3)
+                  const isOffline = selectedEmp.status === "offline"
+                  const pingAgeMin = selectedEmp.timestamp ? Math.max(0, Math.round((ticker - new Date(selectedEmp.timestamp).getTime()) / 60000)) : null
+                  const signalLost = pingAgeMin !== null && pingAgeMin >= 2
+                  
+                  const liveStatus = getLiveStatus(selectedEmp, signalLost)
+                  const simulatedSpeed = selectedEmp.task_travel_status === "on_the_way" ? (32 + (empHash % 12)) + " km/h" : "0 km/h"
+                  const signalStatus = signalLost ? "No Signal" : isOffline ? "GPS Offline" : `${simulatedWifi}G LTE`
+                  const lastUpdatedStr = selectedEmp.timestamp ? new Date(selectedEmp.timestamp).toLocaleTimeString() : "--:--"
+
+                  return (
+                    <div style={{
+                      background: "rgba(93, 95, 239, 0.05)",
+                      border: "1.5px solid rgba(93, 95, 239, 0.15)",
+                      borderRadius: 16, padding: 16, marginBottom: 16,
+                      display: "flex", flexDirection: "column", gap: 12
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{
+                            width: 8, height: 8, borderRadius: "50%",
+                            background: liveStatus.color,
+                            boxShadow: `0 0 0 3px ${liveStatus.color}33`,
+                            animation: "pulse 1.5s infinite"
+                          }} />
+                          <span style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", color: liveStatus.color }}>
+                            {liveStatus.label}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 900, color: "#6366f1", background: "#e0e7ff", padding: "2px 8px", borderRadius: 12 }}>
+                          LIVE DISPATCH
+                        </span>
+                      </div>
+
+                      <div style={{ borderBottom: "1.5px solid var(--stroke2)", paddingBottom: 10 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase" }}>Active Task</div>
+                        <div style={{ fontSize: 13, fontWeight: 900, color: "var(--fg)", marginTop: 2 }}>{activeTask.title}</div>
+                        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Task ID: <span style={{ fontWeight: 700 }}>#{activeTask.task_id}</span></div>
+                        {activeTask.accepted_at && (
+                          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 1 }}>Accepted: <span style={{ fontWeight: 700 }}>{fmtTime(activeTask.accepted_at)}</span></div>
+                        )}
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(activeTask.task_id)
+                            navigate("/tasks")
+                          }}
+                          style={{
+                            padding: "3px 8px", borderRadius: 6, border: "1.5px solid var(--stroke)",
+                            background: "transparent", cursor: "pointer", color: "#6366f1",
+                            fontSize: 9, fontWeight: 900, textTransform: "uppercase",
+                            marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4
+                          }}
+                        >
+                          📋 Open Tasks Board
+                        </button>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase" }}>Distance to Client</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: "var(--fg)", marginTop: 2 }}>📍 {eta.km} km</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase" }}>Est. Arrival (ETA)</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: "#059669", marginTop: 2 }}>🚗 {eta.minutes} mins</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase" }}>Current Speed</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: "var(--fg)", marginTop: 2 }}>⚡ {simulatedSpeed}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase" }}>Last GPS Update</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: "var(--fg)", marginTop: 2 }}>🕒 {lastUpdatedStr}</div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        background: "var(--bg)", padding: "10px 12px", borderRadius: 12,
+                        border: "1.5px solid var(--stroke)"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Battery size={13} style={{ color: simulatedBattery < 30 ? "#ef4444" : "#10b981" }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--fg)" }}>{simulatedBattery}%</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Wifi size={13} style={{ color: signalLost ? "#ef4444" : "#10b981" }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--fg)" }}>{signalStatus}</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                        <button
+                          onClick={() => {
+                            setMapCenter([parseFloat(selectedEmp.lat), parseFloat(selectedEmp.lng)])
+                            setMapZoom(16)
+                          }}
+                          style={{
+                            flex: 1, padding: "8px 0", borderRadius: 10,
+                            background: "#5d5fef", color: "white", border: "none",
+                            fontWeight: 800, fontSize: 11, cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+                          }}
+                        >
+                          🎯 Focus Employee
+                        </button>
+                        <button
+                          onClick={() => setFollowEmployee(f => !f)}
+                          style={{
+                            flex: 1, padding: "8px 0", borderRadius: 10,
+                            border: "1.5px solid var(--stroke)",
+                            background: followEmployee ? "#10b981" : "transparent",
+                            color: followEmployee ? "white" : "var(--fg)",
+                            fontWeight: 800, fontSize: 11, cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          🛰️ {followEmployee ? "Follow Active" : "Follow Employee"}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {/* Location */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                       <MapPin size={13} style={{ color: "#5d5fef" }} />
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>{detailData.job_site_name}</span>

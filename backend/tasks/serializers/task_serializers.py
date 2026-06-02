@@ -97,6 +97,11 @@ class TaskSerializer(serializers.ModelSerializer):
             "client_email",
             "require_selfie",
             "require_before_after_photos",
+            "start_photo",
+            "end_photo",
+            "face_match_percentage",
+            "face_match_status",
+            "submission_time",
             "time_log",
             "employee_notes",
             "admin_notes",
@@ -125,6 +130,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "is_pushed_gap_job",
             "sla_status", "sla_minutes_remaining",
             "travel_status", "reached_site_at", "work_started_at",
+            "start_photo", "end_photo", "face_match_percentage", "face_match_status", "submission_time",
         )
 
     def get_assigned_by_name(self, obj):

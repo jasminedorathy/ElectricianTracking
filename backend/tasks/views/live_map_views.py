@@ -81,6 +81,7 @@ class LiveTaskMapView(APIView):
                 "status": t.status,
                 "priority": t.priority,
                 "geofence_radius": t.geofence_radius or 200,
+                "accepted_at": t.accepted_at.isoformat() if t.accepted_at else None,
             })
 
         # ── 2. Latest employee GPS pings ─────────────────────────────

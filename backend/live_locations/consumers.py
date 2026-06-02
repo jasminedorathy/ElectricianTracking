@@ -516,3 +516,198 @@ class AdminMapConsumer(AsyncWebsocketConsumer):
             acknowledged_by=self.user,
             acknowledged_at=timezone.now(),
         )
+
+
+class PresenceConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        user = self.scope.get("user")
+        company = self.scope.get("company")
+
+        if not user or not getattr(user, "pk", None):
+            await self.close(code=4001)
+            return
+
+        self.user = user
+        self.company = company
+        self.company_id = str(company.id) if company else None
+
+        if not self.company_id:
+            await self.close(code=4004)
+            return
+
+        # Join the presence group for the company
+        self.presence_group = f"presence_{self.company_id}"
+        await self.channel_layer.group_add(self.presence_group, self.channel_name)
+        await self.accept()
+
+        # Update status to Online for the connected user (if employee)
+        is_updated, event_data = await self._set_user_presence(is_online=True)
+        if is_updated and event_data:
+            # Broadcast to everyone in the presence group (including admins)
+            await self.channel_layer.group_send(
+                self.presence_group,
+                {
+                    "type": "presence_status_change",
+                    "data": event_data
+                }
+            )
+
+    async def disconnect(self, close_code):
+        if hasattr(self, "presence_group"):
+            await self.channel_layer.group_discard(self.presence_group, self.channel_name)
+
+            # Update status to Offline for the disconnected user (if employee)
+            is_updated, event_data = await self._set_user_presence(is_online=False)
+            if is_updated and event_data:
+                # Broadcast to everyone in the presence group
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        "type": "presence_status_change",
+                        "data": event_data
+                    }
+                )
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+        except (json.JSONDecodeError, TypeError):
+            return
+
+        msg_type = data.get("type")
+        if msg_type == "activity_ping":
+            # Update last_activity_at
+            event_data = await self._update_activity()
+            if event_data:
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        "type": "presence_status_change",
+                        "data": event_data
+                    }
+                )
+        elif msg_type == "change_availability":
+            availability = data.get("availability", "Available")
+            event_data = await self._change_availability(availability)
+            if event_data:
+                await self.channel_layer.group_send(
+                    self.presence_group,
+                    {
+                        "type": "presence_status_change",
+                        "data": event_data
+                    }
+                )
+
+    async def presence_status_change(self, event):
+        # Relay to the client
+        await self.send(json.dumps({
+            "type": "presence_status_change",
+            "data": event.get("data")
+        }))
+
+    # ── DB Helpers ──
+    @database_sync_to_async
+    def _set_user_presence(self, is_online):
+        _set_tenant(self.company)
+        from employees.models import Employee, PresenceLog
+        from django.utils import timezone
+
+        employee = Employee.objects.filter(user=self.user, company=self.company).first()
+        if not employee:
+            return False, None
+
+        now = timezone.now()
+        employee.is_online = is_online
+        employee.last_activity_at = now
+
+        if is_online:
+            employee.last_login_at = now
+            employee.save(update_fields=["is_online", "last_login_at", "last_activity_at"])
+
+            # Create log entry
+            PresenceLog.objects.create(
+                employee=employee,
+                login_at=now,
+                company=self.company
+            )
+        else:
+            employee.last_logout_at = now
+            employee.save(update_fields=["is_online", "last_logout_at", "last_activity_at"])
+
+            # Close open logs
+            open_logs = PresenceLog.objects.filter(employee=employee, logout_at__isnull=True, company=self.company)
+            for log in open_logs:
+                log.logout_at = now
+                if log.login_at:
+                    log.duration_seconds = int((now - log.login_at).total_seconds())
+                log.save(update_fields=["logout_at", "duration_seconds"])
+
+        emp_name = employee.user.get_full_name() or employee.user.username
+        login_str = employee.last_login_at.isoformat() if employee.last_login_at else None
+        logout_str = employee.last_logout_at.isoformat() if employee.last_logout_at else None
+        activity_str = employee.last_activity_at.isoformat() if employee.last_activity_at else None
+
+        event_data = {
+            "employee_id": str(employee.id),
+            "employee_name": emp_name,
+            "is_online": is_online,
+            "last_login_at": login_str,
+            "last_logout_at": logout_str,
+            "last_activity_at": activity_str,
+            "current_availability": employee.current_availability,
+            "role": employee.user.role,
+        }
+
+        return True, event_data
+
+    @database_sync_to_async
+    def _update_activity(self):
+        _set_tenant(self.company)
+        from employees.models import Employee
+        from django.utils import timezone
+
+        employee = Employee.objects.filter(user=self.user, company=self.company).first()
+        if not employee:
+            return None
+
+        now = timezone.now()
+        employee.last_activity_at = now
+        employee.save(update_fields=["last_activity_at"])
+
+        return {
+            "employee_id": str(employee.id),
+            "employee_name": employee.user.get_full_name() or employee.user.username,
+            "is_online": employee.is_online,
+            "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
+            "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
+            "last_activity_at": now.isoformat(),
+            "current_availability": employee.current_availability,
+            "role": employee.user.role,
+        }
+
+    @database_sync_to_async
+    def _change_availability(self, availability):
+        _set_tenant(self.company)
+        from employees.models import Employee
+        from django.utils import timezone
+
+        employee = Employee.objects.filter(user=self.user, company=self.company).first()
+        if not employee:
+            return None
+
+        now = timezone.now()
+        employee.current_availability = availability
+        employee.last_activity_at = now
+        employee.save(update_fields=["current_availability", "last_activity_at"])
+
+        return {
+            "employee_id": str(employee.id),
+            "employee_name": employee.user.get_full_name() or employee.user.username,
+            "is_online": employee.is_online,
+            "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
+            "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
+            "last_activity_at": now.isoformat(),
+            "current_availability": availability,
+            "role": employee.user.role,
+        }
+

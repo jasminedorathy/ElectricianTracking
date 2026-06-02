@@ -1605,33 +1605,35 @@ function EmployeeTimePage() {
   async function action(path, overridePhoto = null) {
     setBusy(true); setError("")
     try {
-      const fd = new FormData()
-      if (path.includes("clock-in") || path.includes("clock-out")) {
-        let gps = currentGPS
-        try {
-          const fresh = await getPosition(acc => setGpsAccuracy(acc))
-          gps = fresh; setCurrentGPS(fresh); setGpsAccuracy(fresh.accuracy); setGpsStatus("ok")
-          const addr = await getAddress(fresh.lat, fresh.lon)
-          if (addr) setResolvedAddr(addr)
-        } catch { }
-        if (gps) { fd.append("lat", gps.lat); fd.append("lon", gps.lon) }
-        if (resolvedAddr) fd.append("address", resolvedAddr)
-        if (sessionNotes) fd.append("notes", sessionNotes)
-        if (selectedTaskId) fd.append("task_id", selectedTaskId)
+      if (path.includes("break/start") || path.includes("break/end")) {
+        const payload = path.includes("break/start") ? { break_type: breakType } : {}
+        await apiRequest(path, { method: "POST", json: payload })
+      } else {
+        const fd = new FormData()
+        if (path.includes("clock-in") || path.includes("clock-out")) {
+          let gps = currentGPS
+          try {
+            const fresh = await getPosition(acc => setGpsAccuracy(acc))
+            gps = fresh; setCurrentGPS(fresh); setGpsAccuracy(fresh.accuracy); setGpsStatus("ok")
+            const addr = await getAddress(fresh.lat, fresh.lon)
+            if (addr) setResolvedAddr(addr)
+          } catch { }
+          if (gps) { fd.append("lat", gps.lat); fd.append("lon", gps.lon) }
+          if (resolvedAddr) fd.append("address", resolvedAddr)
+          if (sessionNotes) fd.append("notes", sessionNotes)
+          if (selectedTaskId) fd.append("task_id", selectedTaskId)
 
-        const photoToSend = overridePhoto || selfieFile || sessionPhoto
-        if (photoToSend) fd.append("photo", photoToSend)
+          const photoToSend = overridePhoto || selfieFile || sessionPhoto
+          if (photoToSend) fd.append("photo", photoToSend)
 
-        // Attach face verification result for clock-out
-        if (path.includes("clock-out") && faceVerifyStatus) {
-          fd.append("face_match_status", faceVerifyStatus)
-          if (faceVerifyScore !== null) fd.append("face_match_score", faceVerifyScore)
+          // Attach face verification result for clock-out
+          if (path.includes("clock-out") && faceVerifyStatus) {
+            fd.append("face_match_status", faceVerifyStatus)
+            if (faceVerifyScore !== null) fd.append("face_match_score", faceVerifyScore)
+          }
         }
+        await apiRequest(path, { method: "POST", body: fd })
       }
-      if (path.includes("break/start")) {
-        fd.append("break_type", breakType)
-      }
-      await apiRequest(path, { method: "POST", body: fd })
 
       // Send Windows Notifications
       if (path.includes("clock-in")) {

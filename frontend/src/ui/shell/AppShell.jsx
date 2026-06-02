@@ -310,6 +310,16 @@ export function AppShell() {
     onMessage: handleGlobalWsMessage,
   })
 
+  // Global presence socket connection
+  useWebSocket("/ws/live/presence/", {
+    onMessage: (msg) => {
+      if (msg.type === "presence_status_change") {
+        window.dispatchEvent(new CustomEvent("quicktims:presenceStatusChange", { detail: msg.data }))
+      }
+    }
+  })
+
+
 
   if (!user) return null
 

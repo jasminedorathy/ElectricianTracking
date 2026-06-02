@@ -392,6 +392,54 @@ function AdminDashboard() {
   const [wageViolations, setWageViolations] = useState([])
   const [rtwExpiring, setRtwExpiring] = useState([])
   const [complianceDismissed, setComplianceDismissed] = useState(false)
+  const [employees, setEmployees] = useState([])
+  const [notifications, setNotifications] = useState([])
+
+  // Helpers for Presence Monitoring
+  const initials = (username) => {
+    const s = String(username || "").trim()
+    if (!s) return "U"
+    const parts = s.split(/\s+/).filter(Boolean)
+    const first = (parts[0] || "").slice(0, 1)
+    const second = (parts.length > 1 ? parts[1] : parts[0] || "").slice(1, 2)
+    return (first + second).toUpperCase()
+  }
+
+  const formatRelativeDate = (dateObj) => {
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+
+    const timeStr = dateObj.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+
+    if (dateObj.toDateString() === today.toDateString()) {
+      return `Today at ${timeStr}`
+    } else if (dateObj.toDateString() === yesterday.toDateString()) {
+      return `Yesterday at ${timeStr}`
+    } else {
+      const options = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }
+      return `${dateObj.toLocaleDateString("en-US", options)}`
+    }
+  }
+
+  const formatLastSeen = (lastLoginStr, lastLogoutStr, isOnline) => {
+    if (isOnline) {
+      return "🟢 Online Now"
+    }
+    if (!lastLogoutStr) {
+      if (lastLoginStr) {
+        const loginDate = new Date(lastLoginStr)
+        return `Last seen ${formatRelativeDate(loginDate)}`
+      }
+      return "🔴 Offline"
+    }
+    const logoutDate = new Date(lastLogoutStr)
+    return `Last seen ${formatRelativeDate(logoutDate)}`
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -400,8 +448,15 @@ function AdminDashboard() {
       setLoading(true)
       setError("")
       try {
-        const data = await apiRequest("/reports/dashboard-analytics/")
-        if (!cancelled) setAnalytics(data)
+        const [data, empData] = await Promise.all([
+          apiRequest("/reports/dashboard-analytics/"),
+          apiRequest("/employees/").catch(() => []),
+        ])
+        if (!cancelled) {
+          setAnalytics(data)
+          const employeesList = Array.isArray(empData) ? empData : empData?.results || []
+          setEmployees(employeesList)
+        }
       } catch (err) {
         if (!cancelled) {
           console.error("Dashboard analytics error:", err)
@@ -442,6 +497,64 @@ function AdminDashboard() {
     }
     return () => { cancelled = true }
   }, [user, isAdmin])
+
+  // WebSocket Live Presence Event Listener
+  useEffect(() => {
+    function handlePresenceChange(event) {
+      const presenceData = event.detail
+      
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === presenceData.employee_id
+            ? {
+                ...emp,
+                is_online: presenceData.is_online,
+                last_login_at: presenceData.last_login_at,
+                last_logout_at: presenceData.last_logout_at,
+                last_activity_at: presenceData.last_activity_at,
+                current_availability: presenceData.current_availability,
+              }
+            : emp
+        )
+      )
+
+      // Add a dynamic toast notification popup
+      const timestampStr = new Date().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      const dateStr = new Date().toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+
+      const newNotification = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: presenceData.is_online ? "🟢 Employee Online" : "🔴 Employee Offline",
+        employeeName: presenceData.employee_name,
+        status: presenceData.is_online ? "Online" : "Offline",
+        time: `${dateStr} ${timestampStr}`,
+        isOnline: presenceData.is_online,
+      }
+
+      setNotifications((prev) => [newNotification, ...prev].slice(0, 5))
+    }
+
+    window.addEventListener("quicktims:presenceStatusChange", handlePresenceChange)
+    return () => window.removeEventListener("quicktims:presenceStatusChange", handlePresenceChange)
+  }, [])
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const timer = setTimeout(() => {
+        setNotifications((prev) => prev.slice(0, -1))
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [notifications])
 
   const kpi = analytics?.kpi || {}
 
@@ -1270,6 +1383,168 @@ function AdminDashboard() {
             <KpiDiagramSide card={kpiShft} side="right" />
           </div>
         </div>
+      </div>
+
+      {/* ── Real-Time Presence Monitoring Section (WhatsApp-Style) ── */}
+      <div className="bg-surface dark:bg-slate-900/40 rounded-xl shadow-sm border border-stroke dark:border-slate-800 overflow-hidden">
+        <div className="px-6 py-5 border-b border-stroke dark:border-slate-800 flex justify-between items-center flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-3.5 w-3.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+            </div>
+            <span className="text-[1.1rem] font-extrabold text-slate-800 dark:text-slate-200">
+              Workforce Presence Monitoring
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-900/50">
+              {employees.filter(e => e.is_online).length} Online
+            </span>
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+              {employees.filter(e => !e.is_online).length} Offline
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6 grid gap-6 grid-cols-1 lg:grid-cols-2">
+          {/* Online Employees Section */}
+          <div className="bg-bg dark:bg-slate-950/40 rounded-xl border border-stroke dark:border-slate-800 p-5 flex flex-col gap-4">
+            <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              Online Employees ({employees.filter(e => e.is_online).length})
+            </div>
+            
+            <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+              {employees.filter(e => e.is_online).length > 0 ? (
+                employees.filter(e => e.is_online).map((emp) => (
+                  <motion.div
+                    layout
+                    key={emp.id}
+                    className="bg-surface dark:bg-slate-900/60 p-4 rounded-xl border border-stroke dark:border-slate-800 flex items-center justify-between hover:shadow-md hover:border-emerald-500/30 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="relative">
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-extrabold text-sm shadow-md border-2 border-white dark:border-slate-950">
+                          {initials(emp.user?.username || emp.first_name || "E")}
+                        </div>
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-950 rounded-full shadow-[0_0_4px_rgba(16,185,129,0.6)]" />
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        <div className="font-extrabold text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          {emp.first_name || emp.user?.username ? `${emp.first_name} ${emp.last_name || ""}`.trim() : "Employee"}
+                        </div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wide">
+                          {emp.title || emp.role || "Staff"}
+                        </div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
+                          Login: {emp.last_login_at ? new Date(emp.last_login_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/40">
+                        {emp.current_availability || "Available"}
+                      </span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                        Active: {emp.last_activity_at ? new Date(emp.last_activity_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "just now"}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-600 bg-surface/30 dark:bg-slate-900/30 rounded-xl border border-dashed border-stroke dark:border-slate-800">
+                  <span className="text-2xl mb-2 animate-bounce">💤</span>
+                  <span className="text-sm font-semibold">All employees are currently offline</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Offline Employees Section */}
+          <div className="bg-bg dark:bg-slate-950/40 rounded-xl border border-stroke dark:border-slate-800 p-5 flex flex-col gap-4">
+            <div className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              Offline Employees ({employees.filter(e => !e.is_online).length})
+            </div>
+
+            <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+              {employees.filter(e => !e.is_online).length > 0 ? (
+                employees.filter(e => !e.is_online).map((emp) => (
+                  <motion.div
+                    layout
+                    key={emp.id}
+                    className="bg-surface dark:bg-slate-900/60 p-4 rounded-xl border border-stroke dark:border-slate-800 flex items-center justify-between hover:shadow-md hover:border-slate-400/30 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3.5 opacity-70 group-hover:opacity-100 transition-opacity">
+                      <div className="relative">
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 text-white flex items-center justify-center font-extrabold text-sm border-2 border-white dark:border-slate-950">
+                          {initials(emp.user?.username || emp.first_name || "E")}
+                        </div>
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-slate-400 border-2 border-white dark:border-slate-950 rounded-full" />
+                      </div>
+
+                      <div className="flex flex-col">
+                        <div className="font-extrabold text-slate-800 dark:text-white transition-colors">
+                          {emp.first_name || emp.user?.username ? `${emp.first_name} ${emp.last_name || ""}`.trim() : "Employee"}
+                        </div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wide">
+                          {emp.title || emp.role || "Staff"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        {formatLastSeen(emp.last_login_at, emp.last_logout_at, false)}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-600 bg-surface/30 dark:bg-slate-900/30 rounded-xl border border-dashed border-stroke dark:border-slate-800">
+                  <span className="text-2xl mb-2">🎉</span>
+                  <span className="text-sm font-semibold">Every employee is currently online!</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Real-Time Presence Notification Popups (WhatsApp-Style Toast Overlay) ── */}
+      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
+        <AnimatePresence>
+          {notifications.map((n) => (
+            <motion.div
+              layout
+              key={n.id}
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 dark:border-slate-800 p-4 flex items-start gap-3 pointer-events-auto border-l-4"
+              style={{ borderLeftColor: n.isOnline ? "#10B981" : "#EF4444" }}
+            >
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-extrabold text-xs shadow-inner flex-shrink-0 ${n.isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                {initials(n.employeeName)}
+              </div>
+              <div className="flex-1">
+                <div className="font-extrabold text-sm text-slate-800 dark:text-white flex items-center justify-between">
+                  <span>{n.title}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{n.time}</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1">
+                  Employee: <span className="font-bold text-slate-800 dark:text-white">{n.employeeName}</span>
+                </div>
+                <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">
+                  Status: <span className={`font-bold ${n.isOnline ? 'text-emerald-500' : 'text-rose-500'}`}>{n.status}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       {/* ── Row 1: Hours by Employee + Task Status Donut + Leave Status Pie ── */}

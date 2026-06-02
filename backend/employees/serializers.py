@@ -59,21 +59,24 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "uk_ni_category",
             "rolled_up_holiday_pay",
             "wtr_opt_out_active",
-            "is_active",
+            "is_online",
+            "last_login_at",
+            "last_logout_at",
+            "last_activity_at",
             "current_availability",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at", "is_online", "last_login_at", "last_logout_at", "last_activity_at")
 
     def get_current_availability(self, employee):
         """
         Compute live availability by checking:
           1. Employee is inactive        → offline
           2. Has approved leave today    → on_leave
-          3. Has an open Break today     → on_break
-          4. Has an open TimeLog today   → busy (if active task) or available (if standby)
-          5. Otherwise (not clocked in)  → offline
+          3. Is not online               → offline
+          4. Has explicit availability   → lowercase value
+          5. Otherwise fallback to shift details
         """
         from django.utils import timezone
         from time_tracking.models import TimeLog, Break
@@ -93,6 +96,13 @@ class EmployeeSerializer(serializers.ModelSerializer):
         ).exists()
         if on_leave:
             return "on_leave"
+
+        if not employee.is_online:
+            return "offline"
+
+        # If online, try using the explicit availability field
+        if employee.current_availability and employee.current_availability.strip() and employee.current_availability.lower() != "offline":
+            return employee.current_availability.lower()
 
         # Check for an open time log (clocked in, not yet clocked out)
         open_log = TimeLog.objects.filter(
@@ -118,8 +128,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
             
             return "busy" if has_active_task else "available"
 
-        # If not clocked in, employee is offline
-        return "offline"
+        # If not clocked in but online, employee is available
+        return "available"
+
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})

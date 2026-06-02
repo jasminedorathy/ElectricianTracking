@@ -48,6 +48,13 @@ class Employee(models.Model):
     # WTR 48-hr opt-out agreement active?
     wtr_opt_out_active = models.BooleanField(default=False)
 
+    # Presence status
+    is_online = models.BooleanField(default=False)
+    last_login_at = models.DateTimeField(null=True, blank=True)
+    last_logout_at = models.DateTimeField(null=True, blank=True)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
+    current_availability = models.CharField(max_length=50, default="Available")
+
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -73,3 +80,15 @@ class Employee(models.Model):
 
     def __str__(self):
         return f"{self.employee_id} - {self.user.get_full_name() or self.user.username}"
+
+
+class PresenceLog(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="presence_logs")
+    login_at = models.DateTimeField(null=True, blank=True)
+    logout_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.IntegerField(null=True, blank=True)
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name="presence_logs")
+
+    class Meta:
+        ordering = ["-login_at"]
+

@@ -119,6 +119,7 @@ def build_live_snapshot(company):
         employees.append({
             "employee_id": str(emp.id),
             "employee_name": emp.user.get_full_name() or emp.user.username,
+            "phone": emp.phone or "",
             "lat": lat,
             "lng": lng,
             "timestamp": last_seen,
@@ -190,6 +191,7 @@ def build_live_snapshot(company):
         employees.append({
             "employee_id": str(emp.id),
             "employee_name": emp.user.get_full_name() or emp.user.username,
+            "phone": emp.phone or "",
             "lat": lat,
             "lng": lng,
             "timestamp": last_seen,
@@ -394,6 +396,7 @@ class EmployeeLiveSessionDetailView(APIView):
             "id": str(log.id),
             "employee_name": (log.employee.user.get_full_name() or log.employee.user.username),
             "employee_id_code": log.employee.employee_id,
+            "phone": log.employee.phone or "",
             "clock_in": log.clock_in,
             "clock_out": log.clock_out,
             "clock_in_photo": clock_in_photo,

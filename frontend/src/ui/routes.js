@@ -43,4 +43,12 @@ export const routes = {
   accept_invite: "/accept-invite",
   settings_invoices: "/settings/invoices",
   reset_password: "/reset-password",
+  activation_journey: "/activation-journey",
+  approvals: "/approvals",
+  employees_dashboard: "/employees/dashboard",
+  employees_pending: "/employees/pending",
+  employees_approved: "/employees/approved",
+  employees_rejected: "/employees/rejected",
+  employees_documents: "/employees/documents",
+  employees_training: "/employees/training",
 }

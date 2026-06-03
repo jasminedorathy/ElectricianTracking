@@ -19,7 +19,7 @@ import { addSosAlert, addGeofenceBreach } from "../../store/liveLocationSlice.js
 import {
   Home, Clock, CheckSquare, CalendarDays, Banknote, CalendarRange,
   Users, BarChart3, MapPin, Settings, Search, LogOut,
-  ChevronLeft, ChevronRight, Rocket, ShieldAlert,
+  ChevronLeft, ChevronRight, Rocket, ShieldAlert, Globe
 } from "lucide-react"
 
 // Items visible to all authenticated users (employees + admins)

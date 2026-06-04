@@ -90,7 +90,7 @@ def check_task_inventory(task):
     if not task.assigned_to:
         return
     
-    employee = task.assigned_to.employee_profile
+    employee = getattr(task.assigned_to, 'employee_profile', None)
     if not employee:
         return
 
@@ -116,7 +116,6 @@ def check_task_inventory(task):
                 location = emp_loc.location
 
     if not location:
-        # Assuming no specific location required if not defined, or we can't fulfill
         task.inventory_status = Task.InventoryStatus.MISSING
         task.blocking_reason = "No valid location found for the employee to check inventory."
         task.save(update_fields=['inventory_status', 'blocking_reason'])
@@ -126,22 +125,23 @@ def check_task_inventory(task):
     partial = []
     
     for req in required_items:
-        # Check stock of this inventory item at the specific location
-        # The InventoryItem model has a `location` field.
-        # But wait! Required item specifies an `InventoryItem`.
-        # Is an `InventoryItem` specific to a location? Yes, it has `location` FK.
-        # Wait, if `req.inventory_item.location` != `location`, it's not at the location.
-        # Actually, maybe the task needs "Safety Helmet" in general, but `req.inventory_item` points to a specific record.
-        # If `InventoryItem` is specific to a location, then checking if it is at the employee's location:
+        # Find if there is an item with matching SKU/name at the employee's location
+        target_sku = req.inventory_item.sku
+        target_name = req.inventory_item.name
         
-        item = req.inventory_item
-        if item.location != location:
-            missing.append(f"{item.name} is at {item.location.name if item.location else 'unknown'}, not at {location.name}")
-        elif item.available_quantity < req.quantity_needed:
-            if item.available_quantity > 0:
-                partial.append(f"{item.name} (Need {req.quantity_needed}, Have {item.available_quantity})")
+        item_at_loc = None
+        if target_sku:
+            item_at_loc = InventoryItem.objects.filter(org=task.company, location=location, sku=target_sku).first()
+        else:
+            item_at_loc = InventoryItem.objects.filter(org=task.company, location=location, name=target_name).first()
+            
+        if not item_at_loc:
+            missing.append(f"{target_name} is not stocked at {location.name}")
+        elif item_at_loc.available_quantity < req.quantity_needed:
+            if item_at_loc.available_quantity > 0:
+                partial.append(f"{target_name} at {location.name} (Need {req.quantity_needed}, Have {item_at_loc.available_quantity})")
             else:
-                missing.append(f"{item.name} (Out of stock at {location.name})")
+                missing.append(f"{target_name} is out of stock at {location.name}")
 
     if missing:
         task.inventory_status = Task.InventoryStatus.MISSING

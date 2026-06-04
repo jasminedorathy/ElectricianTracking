@@ -167,6 +167,44 @@ class TaskSerializer(serializers.ModelSerializer):
             for r in reqs.all()
         ]
 
+    def create(self, validated_data):
+        task = super().create(validated_data)
+        self._handle_required_items(task)
+        return task
+
+    def update(self, instance, validated_data):
+        task = super().update(instance, validated_data)
+        self._handle_required_items(task)
+        return task
+
+    def _handle_required_items(self, task):
+        if "required_items" in self.initial_data:
+            from tasks.models import TaskRequiredItem
+            from inventory.models import InventoryItem
+            from inventory.services import check_task_inventory
+
+            # Clear existing items
+            TaskRequiredItem.objects.filter(task=task).delete()
+
+            required_items_data = self.initial_data.get("required_items")
+            if isinstance(required_items_data, list):
+                for item_data in required_items_data:
+                    item_id = item_data.get("item_id") or item_data.get("id")
+                    quantity = int(item_data.get("quantity_needed", 1))
+                    if item_id:
+                        try:
+                            inv_item = InventoryItem.objects.get(id=item_id, org=task.company)
+                            TaskRequiredItem.objects.create(
+                                task=task,
+                                inventory_item=inv_item,
+                                quantity_needed=quantity,
+                            )
+                        except (InventoryItem.DoesNotExist, ValueError):
+                            pass
+
+            # Recalculate inventory status
+            check_task_inventory(task)
+
 
 class TaskAttachmentSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)

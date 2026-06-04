@@ -36,6 +36,7 @@ class TaskSerializer(serializers.ModelSerializer):
     attachments   = serializers.SerializerMethodField()
     sla_status            = serializers.SerializerMethodField()
     sla_minutes_remaining = serializers.SerializerMethodField()
+    required_items        = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
@@ -104,6 +105,9 @@ class TaskSerializer(serializers.ModelSerializer):
             "completed_at",
             "created_at",
             "updated_at",
+            "inventory_status",
+            "blocking_reason",
+            "required_items",
             # Suspended / Gap job fields
             "suspended_at",
             "resume_deadline",
@@ -125,6 +129,8 @@ class TaskSerializer(serializers.ModelSerializer):
             "is_pushed_gap_job",
             "sla_status", "sla_minutes_remaining",
             "travel_status", "reached_site_at", "work_started_at",
+            "start_photo", "end_photo", "face_match_percentage", "face_match_status", "submission_time",
+            "inventory_status", "blocking_reason", "required_items",
         )
 
     def get_assigned_by_name(self, obj):
@@ -147,6 +153,57 @@ class TaskSerializer(serializers.ModelSerializer):
         from tasks.services.gap_job_service import get_sla_status
         _, mins = get_sla_status(obj)
         return mins
+
+    def get_required_items(self, obj):
+        reqs = getattr(obj, "taskrequireditem_set", None)
+        if reqs is None:
+            return []
+        return [
+            {
+                "item_id": str(r.inventory_item.id),
+                "name": r.inventory_item.name,
+                "quantity_needed": r.quantity_needed,
+            }
+            for r in reqs.all()
+        ]
+
+    def create(self, validated_data):
+        task = super().create(validated_data)
+        self._handle_required_items(task)
+        return task
+
+    def update(self, instance, validated_data):
+        task = super().update(instance, validated_data)
+        self._handle_required_items(task)
+        return task
+
+    def _handle_required_items(self, task):
+        if "required_items" in self.initial_data:
+            from tasks.models import TaskRequiredItem
+            from inventory.models import InventoryItem
+            from inventory.services import check_task_inventory
+
+            # Clear existing items
+            TaskRequiredItem.objects.filter(task=task).delete()
+
+            required_items_data = self.initial_data.get("required_items")
+            if isinstance(required_items_data, list):
+                for item_data in required_items_data:
+                    item_id = item_data.get("item_id") or item_data.get("id")
+                    quantity = int(item_data.get("quantity_needed", 1))
+                    if item_id:
+                        try:
+                            inv_item = InventoryItem.objects.get(id=item_id, org=task.company)
+                            TaskRequiredItem.objects.create(
+                                task=task,
+                                inventory_item=inv_item,
+                                quantity_needed=quantity,
+                            )
+                        except (InventoryItem.DoesNotExist, ValueError):
+                            pass
+
+            # Recalculate inventory status
+            check_task_inventory(task)
 
 
 class TaskAttachmentSerializer(serializers.ModelSerializer):

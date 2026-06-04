@@ -426,6 +426,8 @@ class EmployeeTaskActionView(APIView):
                 task.status     = Task.Status.IN_PROGRESS
                 task.started_at = timezone.now()
                 task.time_log   = timelog
+                if photo:
+                    task.start_photo = photo
                 if notes:
                     task.employee_notes = notes
                 task.save()
@@ -462,6 +464,35 @@ class EmployeeTaskActionView(APIView):
                     task.employee_notes = notes
                 if not task.started_at:
                     task.started_at = task.completed_at
+                
+                face_match_pct = request.data.get("face_match_percentage")
+                face_match_status = request.data.get("face_match_status")
+
+                if photo:
+                    task.end_photo = photo
+                if face_match_pct is not None:
+                    try:
+                        task.face_match_percentage = float(face_match_pct)
+                    except (ValueError, TypeError):
+                        pass
+                if face_match_status:
+                    task.face_match_status = face_match_status
+
+                if (not task.face_match_status or task.face_match_status == "pending") and task.start_photo and photo:
+                    try:
+                        from time_tracking.utils import verify_face_match
+                        _, score, status_res = verify_face_match(task.start_photo, photo)
+                        if task.face_match_percentage is None or task.face_match_percentage == 0:
+                            task.face_match_percentage = score
+                        task.face_match_status = "verified" if status_res == "matched" else (
+                            "failed" if status_res == "mismatch" else (
+                                "failed" if status_res == "no_face" else "skipped"
+                            )
+                        )
+                    except Exception as e:
+                        print(f"Backend face verification failed: {e}")
+                
+                task.submission_time = timezone.now()
 
                 # ── Sub-1-hour billing round-up ───────────────────────────
                 actual_seconds = int(
@@ -608,6 +639,8 @@ class EmployeeTaskActionView(APIView):
                 task.work_started_at = timezone.now()
                 task.started_at   = task.work_started_at
                 task.time_log     = timelog
+                if photo:
+                    task.start_photo = photo
                 if request.data.get("notes"):
                     task.employee_notes = request.data.get("notes")
                 task.save()

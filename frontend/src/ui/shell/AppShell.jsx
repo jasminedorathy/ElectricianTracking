@@ -19,8 +19,8 @@ import { addSosAlert, addGeofenceBreach } from "../../store/liveLocationSlice.js
 import {
   Home, Clock, CheckSquare, CalendarDays, Banknote, CalendarRange,
   Users, BarChart3, MapPin, Settings, Search, LogOut,
-  ChevronLeft, ChevronRight, Rocket, ShieldAlert, Award,
-  FolderOpen, GraduationCap, Bell, FileText, CheckCircle, XCircle, Globe
+  ChevronLeft, ChevronRight, Rocket, ShieldAlert, Globe, Package, Award,
+  FolderOpen, GraduationCap, Bell, FileText, CheckCircle, XCircle
 } from "lucide-react"
 
 // Items visible to all authenticated users (employees + admins)
@@ -57,6 +57,7 @@ const NAV_ADMIN = [
   { label: "Payroll", to: routes.payroll, icon: <Banknote size={20} />, color: "#6366F1" },
   { label: "Scheduling", to: routes.scheduling, icon: <CalendarRange size={20} />, color: "#38BDF8" },
   { label: "Reports", to: routes.reports, icon: <BarChart3 size={20} />, color: "#FACC15" },
+  { label: "Inventory", to: routes.inventory, icon: <Package size={20} />, color: "#10B981" },
   { label: "Compliance", to: routes.compliance, icon: <ShieldAlert size={20} />, color: "#2563EB" },
 ]
 

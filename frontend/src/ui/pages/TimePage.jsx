@@ -1703,26 +1703,22 @@ function EmployeeTimePage() {
     setShowSelfie(true)
   }
 
-  return (
+return (
     <>
       {showSelfie && (
         <SelfieCapture
           onCapture={async (file, preview) => {
             if (openLog) {
-              // Clock-out: verify face first
               setSelfieFile(file);
               setSelfiePreview(preview);
               setShowSelfie(false);
               setFaceVerifyStatus('verifying');
               setError('');
-
-              // Get clock-in photo URL and ensure it is absolute
               let clockInPhoto = openLog.clock_in_photo;
               if (clockInPhoto && clockInPhoto.startsWith('/')) {
                 const host = API_BASE_URL.replace('/api', '');
                 clockInPhoto = `${host}${clockInPhoto}`;
               }
-
               if (clockInPhoto && preview) {
                 try {
                   const result = await verifyFaces(clockInPhoto, preview);
@@ -1730,35 +1726,28 @@ function EmployeeTimePage() {
                   if (result.status === 'mismatch') {
                     setFaceVerifyStatus('mismatch');
                     setError('⚠️ Identity Verification Anomaly: Your selfie does not match your clock-in photo. Your admin has been notified, but you may proceed to clock out.');
-                    // Proceed anyway instead of returning
                   }
                   if (result.status === 'no_face') {
                     setFaceVerifyStatus('no_face');
                     setError('⚠️ No face detected in the photos! You may proceed, but please contact your admin to verify this shift manually.');
-                    // Proceed anyway instead of returning
                   }
                   setFaceVerifyStatus('matched');
                 } catch (err) {
                   console.error('Face verify error', err);
-                  setFaceVerifyStatus(null); // allow clock-out on error
+                  setFaceVerifyStatus(null);
                 }
               }
-              // Proceed with clock-out
               setTimeout(() => action("/time/clock-out/", file), 100);
             } else {
-              // Clock-in photo
               setShowSelfie(false);
               setFaceVerifyStatus('verifying');
               setError('');
-
               const faceExists = await hasFace(preview);
               if (!faceExists) {
                 setFaceVerifyStatus('no_face');
                 setError('⚠️ No face detected! Please ensure your face is clearly visible, well-lit, and fully within the frame to successfully clock in.');
-                return; // BLOCK clock-in, do not keep the photo
+                return;
               }
-
-              // Proceed
               setFaceVerifyStatus(null);
               setSelfieFile(file);
               setSelfiePreview(preview);
@@ -1773,8 +1762,6 @@ function EmployeeTimePage() {
           onCancel={() => setShowJobPhotoCamera(false)}
         />
       )}
-
-      {/* ═══ MOOD SURVEY OVERLAY ═══ */}
       {showMoodSurvey && createPortal(
         <div className="modal-overlay">
           <div className="modal-sheet max-w-md w-full p-10 text-center">
@@ -1795,7 +1782,6 @@ function EmployeeTimePage() {
                 </button>
               ))}
             </div>
-
             <div className="text-left space-y-2 mb-8">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Additional Context</label>
               <textarea
@@ -1806,7 +1792,6 @@ function EmployeeTimePage() {
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold text-slate-900 focus:border-orange-500 outline-none transition-all"
               />
             </div>
-
             <div className="flex gap-4">
               <button
                 onClick={() => { setShowMoodSurvey(false); setMoodRating(null); setMoodNote("") }}
@@ -1818,7 +1803,7 @@ function EmployeeTimePage() {
                 onClick={submitMoodAndClockOut}
                 className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-orange-600 hover:bg-orange-700 shadow-xl shadow-orange-200 transition-all"
               >
-                Submit & Finish
+                Submit &amp; Finish
               </button>
             </div>
           </div>
@@ -1826,279 +1811,240 @@ function EmployeeTimePage() {
         document.body
       )}
 
-      {/* ═══ MAIN PAGE ═══ */}
-      <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-bg dark:bg-bg overflow-hidden">
-        {/* Header Row */}
-        <div className="h-20 bg-surface dark:bg-slate-900/50 border-b border-stroke dark:border-slate-800 px-8 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 dark:shadow-none">
-              <Clock size={24} className={openLog ? 'animate-pulse' : ''} />
+      {/* ── TimePage dark mode token block ── */}
+      <style>{`
+        :root {
+          --tp-page-bg: #f8fafc;
+          --tp-header-bg: #ffffff;
+          --tp-header-border: #f1f5f9;
+          --tp-title-color: #0f172a;
+          --tp-sub-color: #94a3b8;
+          --tp-dot-idle: #cbd5e1;
+          --tp-card-bg: #ffffff;
+          --tp-card-border: #f1f5f9;
+          --tp-card-val: #0f172a;
+          --tp-card-sub: #64748b;
+          --tp-wt-icon-bg: linear-gradient(135deg,#eff6ff,#f5f3ff);
+          --tp-wt-icon-bg-ot: linear-gradient(135deg,#fef2f2,#fee2e2);
+          --tp-pers-icon-bg: linear-gradient(135deg,#ecfdf5,#d1fae5);
+          --tp-intens-icon-bg: linear-gradient(135deg,#fffbeb,#fef3c7);
+          --tp-ledger-badge-bg: #f1f5f9;
+          --tp-ledger-badge-border: #e2e8f0;
+          --tp-ledger-badge-color: #64748b;
+          --tp-filter-bg: #ffffff;
+          --tp-filter-border: #f1f5f9;
+          --tp-filter-idle-color: #64748b;
+          --tp-banner-err-bg: #fef2f2;
+          --tp-banner-err-border: #fecaca;
+          --tp-banner-err-color: #991b1b;
+          --tp-banner-info-bg: linear-gradient(135deg,#eff6ff,#f5f3ff);
+          --tp-banner-info-border: #c7d2fe;
+          --tp-banner-info-color: #3730a3;
+          --tp-banner-info-icon-bg: #ffffff;
+          --tp-banner-ok-bg: #ecfdf5;
+          --tp-banner-ok-border: #a7f3d0;
+          --tp-banner-ok-color: #065f46;
+          --tp-suspense-color: #cbd5e1;
+        }
+        :root[data-theme='dark'] {
+          --tp-page-bg: #0b111d;
+          --tp-header-bg: #131b2b;
+          --tp-header-border: rgba(255,255,255,0.06);
+          --tp-title-color: #f1f5f9;
+          --tp-sub-color: #64748b;
+          --tp-dot-idle: #334155;
+          --tp-card-bg: #131b2b;
+          --tp-card-border: rgba(255,255,255,0.07);
+          --tp-card-val: #f1f5f9;
+          --tp-card-sub: #94a3b8;
+          --tp-wt-icon-bg: linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12));
+          --tp-wt-icon-bg-ot: linear-gradient(135deg,rgba(239,68,68,0.18),rgba(220,38,38,0.12));
+          --tp-pers-icon-bg: linear-gradient(135deg,rgba(16,185,129,0.18),rgba(5,150,105,0.12));
+          --tp-intens-icon-bg: linear-gradient(135deg,rgba(245,158,11,0.18),rgba(217,119,6,0.12));
+          --tp-ledger-badge-bg: rgba(255,255,255,0.06);
+          --tp-ledger-badge-border: rgba(255,255,255,0.1);
+          --tp-ledger-badge-color: #94a3b8;
+          --tp-filter-bg: #131b2b;
+          --tp-filter-border: rgba(255,255,255,0.07);
+          --tp-filter-idle-color: #64748b;
+          --tp-banner-err-bg: rgba(239,68,68,0.12);
+          --tp-banner-err-border: rgba(239,68,68,0.25);
+          --tp-banner-err-color: #f87171;
+          --tp-banner-info-bg: linear-gradient(135deg,rgba(99,102,241,0.12),rgba(139,92,246,0.08));
+          --tp-banner-info-border: rgba(99,102,241,0.3);
+          --tp-banner-info-color: #a5b4fc;
+          --tp-banner-info-icon-bg: rgba(255,255,255,0.06);
+          --tp-banner-ok-bg: rgba(16,185,129,0.12);
+          --tp-banner-ok-border: rgba(16,185,129,0.3);
+          --tp-banner-ok-color: #34d399;
+          --tp-suspense-color: #475569;
+        }
+      `}</style>
+
+      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", width: "100%", background: "var(--tp-page-bg)", overflow: "hidden" }}>
+        {/* ── Header ── */}
+        <div style={{ background: "var(--tp-header-bg)", borderBottom: "1px solid var(--tp-header-border)", padding: "0 32px", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, boxShadow: "0 1px 8px rgba(0,0,0,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: openLog ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "linear-gradient(135deg, #64748b, #475569)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: openLog ? "0 4px 16px rgba(99,102,241,0.35)" : "none", transition: "all 0.3s" }}>
+              <Clock size={22} style={{ color: "white" }} className={openLog ? "animate-pulse" : ""} />
             </div>
             <div>
-              <h1 className="text-xl professional-title text-slate-900 dark:text-white">Personal Timesheets</h1>
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${openLog ? (openLog.task ? 'bg-emerald-500' : (openBreak ? 'bg-amber-500' : 'bg-blue-500')) : 'bg-slate-300 dark:bg-slate-700'}`}></div>
-                <span className="text-[10px] professional-subtitle text-slate-400 dark:text-slate-500">
-                  {openLog ? (openLog.task ? `Working on: ${openLog.task.title}` : (openBreak ? 'Currently on Break' : 'Standby (Idle - No Active Job)')) : 'System Standby'}
-                </span>
+              <div style={{ fontSize: 17, fontWeight: 900, color: "var(--tp-title-color)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>Personal Timesheets</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: openLog ? (openLog.task ? "#10b981" : openBreak ? "#f59e0b" : "#6366f1") : "var(--tp-dot-idle)" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--tp-sub-color)", letterSpacing: "0.02em" }}>{openLog ? (openLog.task ? `Working on: ${openLog.task.title}` : openBreak ? "Currently on Break" : "Active Session") : "System Standby"}</span>
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {openLog && (
-              <div className="flex items-center bg-slate-900 dark:bg-slate-800 text-white rounded-2xl px-1.5 py-1.5 shadow-xl shadow-slate-200 dark:shadow-none border border-slate-800 dark:border-slate-700">
-                <div className="px-4 py-1">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block leading-none">
-                    {openBreak ? `On Break (${openBreak.break_type.toUpperCase()})` : (openLog.task ? "Working Time" : "Active Session")}
-                  </span>
-                  <span className="text-lg font-black tabular-nums">
-                    {openBreak ? formatDuration(breakElapsed) : formatDuration(elapsed)}
-                  </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#0f172a", borderRadius: 16, padding: "6px 6px 6px 16px", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>{openBreak ? `On Break (${openBreak.break_type?.toUpperCase()})` : openLog.task ? "Working Time" : "Active Session"}</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "white", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>{openBreak ? formatDuration(breakElapsed) : formatDuration(elapsed)}</div>
                 </div>
-                <div className="flex items-center gap-1 ml-2">
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   {!openBreak ? (
                     <>
-                      <div className="flex items-center gap-1 bg-slate-800/80 dark:bg-slate-900/60 rounded-xl px-2 border border-slate-700/50">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Type:</span>
-                        <select
-                          value={breakType}
-                          onChange={(e) => setBreakType(e.target.value)}
-                          className="bg-transparent text-slate-200 text-xs font-bold py-2 focus:outline-none cursor-pointer outline-none border-none"
-                        >
-                          <option value="tea" className="bg-slate-800">☕ Tea</option>
-                          <option value="lunch" className="bg-slate-800">🍱 Lunch</option>
-                          <option value="other" className="bg-slate-800">💤 Other</option>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(255,255,255,0.07)", borderRadius: 10, padding: "4px 8px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <Coffee size={12} style={{ color: "#94a3b8" }} />
+                        <select value={breakType} onChange={(e) => setBreakType(e.target.value)} style={{ background: "transparent", color: "#e2e8f0", fontSize: 11, fontWeight: 700, border: "none", outline: "none", cursor: "pointer", padding: "2px 0" }}>
+                          <option value="tea" style={{ background: "#1e293b" }}>☕ Tea</option>
+                          <option value="lunch" style={{ background: "#1e293b" }}>🍱 Lunch</option>
+                          <option value="other" style={{ background: "#1e293b" }}>💤 Other</option>
                         </select>
                       </div>
-                      <button onClick={() => action("/time/break/start/")} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-amber-500 text-white rounded-xl transition-all" title="Start Break"><Coffee size={16} /></button>
-                      <button onClick={() => setPanelOpen(true)} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-emerald-500 text-white rounded-xl transition-all" title="Job Photo"><Camera size={16} /></button>
-                      <button onClick={handleClockOut} className="p-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-red-500 text-white rounded-xl transition-all" title="Clock Out"><Square size={14} fill="currentColor" /></button>
-                      <button
-                        onClick={handleSOS}
-                        disabled={sosSending}
-                        title="SOS — Send emergency alert to admin"
-                        style={{
-                          padding: "6px 10px",
-                          borderRadius: 12,
-                          background: sosConfirmed ? "#059669" : "#E94560",
-                          color: "white",
-                          border: "none",
-                          fontWeight: 900,
-                          fontSize: 10,
-                          cursor: "pointer",
-                          letterSpacing: "0.06em",
-                          opacity: sosSending ? 0.7 : 1,
-                          boxShadow: sosConfirmed ? "none" : "0 0 0 3px rgba(233,69,96,0.3)",
-                          animation: !sosConfirmed && !sosSending ? "sosPulse 2s infinite" : "none",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {sosConfirmed ? "✓ SENT" : sosSending ? "…" : "SOS"}
-                      </button>
+                      <button onClick={() => action("/time/break/start/")} title="Start Break" style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Coffee size={15} /></button>
+                      <button onClick={() => setPanelOpen(true)} title="Job Photo" style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Camera size={15} /></button>
+                      <button onClick={handleClockOut} title="Clock Out" style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Square size={13} fill="currentColor" /></button>
+                      <button onClick={handleSOS} disabled={sosSending} title="SOS" style={{ padding: "6px 10px", borderRadius: 10, background: sosConfirmed ? "#059669" : "#E94560", color: "white", border: "none", fontWeight: 900, fontSize: 10, cursor: "pointer", letterSpacing: "0.06em", opacity: sosSending ? 0.7 : 1, boxShadow: sosConfirmed ? "none" : "0 0 0 3px rgba(233,69,96,0.3)", animation: !sosConfirmed && !sosSending ? "sosPulse 2s infinite" : "none" }}>{sosConfirmed ? "✓ SENT" : sosSending ? "…" : "SOS"}</button>
                     </>
                   ) : (
-                    <button onClick={() => action("/time/break/end/")} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center gap-2 transition-all"><Play size={14} /> RESUME</button>
+                    <button onClick={() => action("/time/break/end/")} style={{ padding: "8px 16px", borderRadius: 10, background: "linear-gradient(135deg, #10b981, #059669)", color: "white", border: "none", fontSize: 11, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(16,185,129,0.4)" }}><Play size={13} /> RESUME</button>
                   )}
                 </div>
               </div>
             )}
             {!openLog && (
-              <button
-                onClick={() => setPanelOpen(true)}
-                disabled={busy}
-                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-2xl shadow-xl shadow-indigo-200 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
-              >
-                <Clock size={18} /> START SHIFT
-              </button>
+              <button onClick={() => setPanelOpen(true)} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 22px", borderRadius: 14, background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", border: "none", fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 4px 18px rgba(99,102,241,0.4)", transition: "all 0.2s", opacity: busy ? 0.6 : 1, letterSpacing: "0.02em" }}><Clock size={18} /> START SHIFT</button>
             )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-in shake duration-500">
-              <AlertCircle size={18} /> {error}
-            </div>
-          )}
+        {/* ── Scrollable body ── */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
 
-          {/* Verification Banners */}
-          <div className="space-y-4">
-            {faceVerifyStatus === 'verifying' && (
-              <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-                    <Loader2 size={16} className="animate-spin text-indigo-600" />
-                  </div>
-                  <span className="text-sm font-bold text-indigo-900">Authenticating identity models...</span>
-                </div>
-              </div>
-            )}
-            {faceVerifyStatus === 'mismatch' && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-                    <AlertCircle size={16} className="text-red-600" />
-                  </div>
-                  <span className="text-sm font-bold text-red-900">Identity verification anomaly detected.</span>
-                </div>
-                <button onClick={() => { setFaceVerifyStatus(null); setError(''); setShowSelfie(true) }} className="px-4 py-1.5 bg-red-600 text-white text-[10px] font-black rounded-lg uppercase tracking-widest">Re-verify</button>
-              </div>
-            )}
-            {faceVerifyStatus === 'matched' && (
-              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-                  <CheckCircle2 size={16} className="text-emerald-600" />
-                </div>
-                <span className="text-sm font-bold text-emerald-900">Identity verified {faceVerifyScore && `(${faceVerifyScore}%)`}</span>
-              </div>
-            )}
-          </div>
+          {/* Status banners */}
+          {error && <div style={{ padding: "14px 18px", borderRadius: 14, background: "var(--tp-banner-err-bg)", border: "1px solid var(--tp-banner-err-border)", display: "flex", alignItems: "center", gap: 10, color: "var(--tp-banner-err-color)", fontSize: 13, fontWeight: 700 }}><AlertCircle size={18} style={{ flexShrink: 0 }} /> {error}</div>}
+          {faceVerifyStatus === 'verifying' && <div style={{ padding: "12px 18px", borderRadius: 14, background: "var(--tp-banner-info-bg)", border: "1px solid var(--tp-banner-info-border)", display: "flex", alignItems: "center", gap: 10 }}><div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--tp-banner-info-icon-bg)", border: "1px solid var(--tp-banner-info-border)", display: "flex", alignItems: "center", justifyContent: "center" }}><Loader2 size={16} className="animate-spin" style={{ color: "#6366f1" }} /></div><span style={{ fontSize: 13, fontWeight: 700, color: "var(--tp-banner-info-color)" }}>Authenticating identity models...</span></div>}
+          {faceVerifyStatus === 'mismatch' && <div style={{ padding: "12px 18px", borderRadius: 14, background: "var(--tp-banner-err-bg)", border: "1px solid var(--tp-banner-err-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 10 }}><AlertCircle size={18} style={{ color: "#ef4444", flexShrink: 0 }} /><span style={{ fontSize: 13, fontWeight: 700, color: "var(--tp-banner-err-color)" }}>Identity verification anomaly detected.</span></div><button onClick={() => { setFaceVerifyStatus(null); setError(''); setShowSelfie(true) }} style={{ padding: "5px 12px", borderRadius: 8, background: "#ef4444", color: "white", border: "none", fontSize: 10, fontWeight: 900, cursor: "pointer", textTransform: "uppercase" }}>Re-verify</button></div>}
+          {faceVerifyStatus === 'matched' && <div style={{ padding: "12px 18px", borderRadius: 14, background: "var(--tp-banner-ok-bg)", border: "1px solid var(--tp-banner-ok-border)", display: "flex", alignItems: "center", gap: 10 }}><CheckCircle2 size={18} style={{ color: "#10b981", flexShrink: 0 }} /><span style={{ fontSize: 13, fontWeight: 700, color: "var(--tp-banner-ok-color)" }}>Identity verified {faceVerifyScore && `(${faceVerifyScore}%)`}</span></div>}
 
-          {/* KPI Dashboard */}
+          {/* KPI Cards */}
           {!loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                icon={<TrendingUp />}
-                label="Weekly Total"
-                value={formatHrMin(weekStats.total)}
-                sub={weekStats.otSeconds > 0 ? `+${formatHrMin(weekStats.otSeconds)} OVERTIME` : "Standard Volume"}
-                color={weekStats.otSeconds > 0 ? "#EF4444" : "#6366F1"}
-              />
-              <StatCard
-                icon={<Calendar />}
-                label="Persistence"
-                value={`${weekStats.days} Days`}
-                sub="Logged this week"
-                color="#10B981"
-              />
-              <StatCard
-                icon={<Timer />}
-                label="Daily Intensity"
-                value={formatHrMin(weekStats.avg)}
-                sub="Average Session Length"
-                color="#F59E0B"
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+              {/* Weekly Total */}
+              <div style={{ background: "var(--tp-card-bg)", borderRadius: 20, padding: "22px 24px", border: "1px solid var(--tp-card-border)", boxShadow: "0 1px 6px rgba(0,0,0,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: weekStats.otSeconds > 0 ? "radial-gradient(circle, rgba(239,68,68,0.1) 0%, transparent 70%)" : "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)" }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: "var(--tp-sub-color)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Weekly Total</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: weekStats.otSeconds > 0 ? "var(--tp-wt-icon-bg-ot)" : "var(--tp-wt-icon-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}><TrendingUp size={16} style={{ color: weekStats.otSeconds > 0 ? "#ef4444" : "#6366f1" }} /></div>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--tp-card-val)", letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 6 }}>{formatDuration(weekStats.total)}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: weekStats.otSeconds > 0 ? "#ef4444" : "#10b981" }}>{weekStats.otSeconds > 0 ? `+${formatDuration(weekStats.otSeconds)} overtime` : "Standard volume"}</div>
+              </div>
+              {/* Persistence */}
+              <div style={{ background: "var(--tp-card-bg)", borderRadius: 20, padding: "22px 24px", border: "1px solid var(--tp-card-border)", boxShadow: "0 1px 6px rgba(0,0,0,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)" }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: "var(--tp-sub-color)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Persistence</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--tp-pers-icon-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}><Calendar size={16} style={{ color: "#10b981" }} /></div>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--tp-card-val)", letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 6 }}>{weekStats.days} Days</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tp-card-sub)" }}>Logged this week</div>
+              </div>
+              {/* Daily Intensity */}
+              <div style={{ background: "var(--tp-card-bg)", borderRadius: 20, padding: "22px 24px", border: "1px solid var(--tp-card-border)", boxShadow: "0 1px 6px rgba(0,0,0,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)" }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: "var(--tp-sub-color)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Daily Intensity</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--tp-intens-icon-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}><Timer size={16} style={{ color: "#f59e0b" }} /></div>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--tp-card-val)", letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 6 }}>{formatDuration(weekStats.avg)}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--tp-card-sub)" }}>Average session length</div>
+              </div>
+              {/* Live Session Card */}
               {openLog && (
-                <StatCard
-                  icon={<Clock />}
-                  label={openLog.task ? "Live Session" : "Standby Session"}
-                  value={openLog.task ? formatDuration(elapsed) : "STANDBY"}
-                  sub={openLog.task ? `Task: ${openLog.task.title}` : "Standby - Waiting for Job Assignment"}
-                  color={openLog.task ? "#EF4444" : "#3B82F6"}
-                  pulse={!!openLog.task}
-                />
+                <div style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", borderRadius: 20, padding: "22px 24px", boxShadow: "0 4px 24px rgba(99,102,241,0.35)", position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{openLog.task ? "Live Session" : "Standby"}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 20, background: "rgba(255,255,255,0.15)" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#a5f3fc" }} />
+                      <span style={{ fontSize: 9, fontWeight: 900, color: "#a5f3fc", letterSpacing: "0.06em" }}>LIVE</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: "white", letterSpacing: "-0.02em", lineHeight: 1, fontVariantNumeric: "tabular-nums", marginBottom: 6 }}>{openLog.task ? formatDuration(elapsed) : "STANDBY"}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{openLog.task ? `Task: ${openLog.task.title}` : "Waiting for job assignment"}</div>
+                </div>
               )}
             </div>
           )}
 
-
-
-          {/* Audit Ledger Section */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-6 bg-indigo-600 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.4)]"></div>
-                <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight font-[Manrope]">Personal Ledger</h2>
-                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-900 rounded-full text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200/60 dark:border-slate-800">{logs.length} Entries</span>
+          {/* Personal Ledger */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 5, height: 22, borderRadius: 4, background: "linear-gradient(to bottom, #6366f1, #8b5cf6)", boxShadow: "0 0 12px rgba(99,102,241,0.4)" }} />
+                <h2 style={{ fontSize: 17, fontWeight: 900, color: "var(--tp-title-color)", letterSpacing: "-0.01em", margin: 0 }}>Personal Ledger</h2>
+                <span style={{ padding: "3px 10px", borderRadius: 20, background: "var(--tp-ledger-badge-bg)", border: "1px solid var(--tp-ledger-badge-border)", fontSize: 10, fontWeight: 900, color: "var(--tp-ledger-badge-color)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{logs.length} Entries</span>
               </div>
-
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-950/40 p-1 rounded-xl border border-slate-100 dark:border-slate-800/80">
-                <button onClick={() => { setFilterFrom(todayStr); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-widest">Today</button>
-                <button onClick={() => { setFilterFrom(weekAgo); setFilterTo(todayStr) }} className="px-4 py-1.5 bg-white dark:bg-slate-800 shadow-sm dark:shadow-none rounded-lg text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest border border-transparent dark:border-slate-700">Week</button>
-                <button onClick={() => { const m = new Date(); m.setDate(1); setFilterFrom(m.toLocaleDateString("en-CA")); setFilterTo(todayStr) }} className="px-4 py-1.5 text-[10px] font-black text-slate-500 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 uppercase tracking-widest">Month</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--tp-filter-bg)", borderRadius: 12, padding: 4, border: "1px solid var(--tp-filter-border)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <button onClick={() => { setFilterFrom(todayStr); setFilterTo(todayStr) }} style={{ padding: "6px 14px", borderRadius: 8, background: (filterFrom === todayStr && filterTo === todayStr) ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "transparent", color: (filterFrom === todayStr && filterTo === todayStr) ? "white" : "var(--tp-filter-idle-color)", border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }}>Today</button>
+                <button onClick={() => { setFilterFrom(weekAgo); setFilterTo(todayStr) }} style={{ padding: "6px 14px", borderRadius: 8, background: (filterFrom === weekAgo && filterTo === todayStr) ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "transparent", color: (filterFrom === weekAgo && filterTo === todayStr) ? "white" : "var(--tp-filter-idle-color)", border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }}>Week</button>
+                <button onClick={() => { const m = new Date(); m.setDate(1); setFilterFrom(m.toLocaleDateString("en-CA")); setFilterTo(todayStr) }} style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", color: "var(--tp-filter-idle-color)", border: "none", fontSize: 11, fontWeight: 800, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.2s" }}>Month</button>
               </div>
             </div>
-
-            <Suspense fallback={
-              <div className="p-20 flex flex-col items-center gap-4 text-slate-300">
-                <Loader2 className="animate-spin" size={40} />
-                <div className="font-bold text-xs uppercase tracking-widest">Synchronizing Ledger...</div>
-              </div>
-            }>
-              <AuditLedger
-                logs={logs}
-                loading={loading}
-                elapsed={elapsed}
-                downloadLogPdf={downloadLogPdf}
-                submitLog={submitLog}
-                formatDuration={formatDuration}
-              />
+            <Suspense fallback={<div style={{ padding: "60px 40px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12, color: "var(--tp-suspense-color)" }}><Loader2 size={36} className="animate-spin" /><div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>Synchronizing Ledger...</div></div>}>
+              <AuditLedger logs={logs} loading={loading} elapsed={elapsed} downloadLogPdf={downloadLogPdf} submitLog={submitLog} formatDuration={formatDuration} />
             </Suspense>
           </div>
         </div>
       </div>
-
-      {/* ═══ SLIDE-OUT OPERATION PANEL ═══ */}
       {panelOpen && (
         <div className="fixed inset-0 z-[1000] flex justify-end animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
           <div className="relative w-full max-w-md bg-surface dark:bg-slate-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-500 border-l border-stroke dark:border-slate-800">
-            {/* Header */}
             <div className="p-8 border-b border-stroke dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {openLog ? (selectedTaskId && !openLog.task ? 'Start Task' : 'Complete Shift') : 'Initiate Session'}
-                </h3>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{openLog ? (selectedTaskId && !openLog.task ? 'Start Task' : 'Complete Shift') : 'Initiate Session'}</h3>
                 {openLog && <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Started {formatDateTime(openLog.clock_in).split(",")[1]}</div>}
               </div>
               <button onClick={() => setPanelOpen(false)} className="w-10 h-10 rounded-xl bg-bg dark:bg-slate-950 text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all border border-stroke dark:border-slate-800">✕</button>
             </div>
-
-            {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-              {/* Telemetry Status */}
               <div className="p-5 bg-bg dark:bg-slate-950 rounded-2xl border border-stroke dark:border-slate-800/80 flex items-center gap-4 shadow-inner">
-                <div className="w-10 h-10 rounded-xl bg-surface dark:bg-slate-900 flex items-center justify-center shadow-sm border border-stroke dark:border-slate-800">
-                  <MapPin size={18} className="text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black text-slate-900 dark:text-slate-300 truncate">{resolvedAddr || "Locating precision coordinates..."}</div>
-                  {currentGPS && <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{currentGPS.lat.toFixed(5)}, {currentGPS.lon.toFixed(5)}</div>}
-                </div>
-                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${gpsStatus === 'ok' ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>
-                  {gpsStatus === 'ok' ? 'LOCKED' : 'LINKING'}
-                </div>
+                <div className="w-10 h-10 rounded-xl bg-surface dark:bg-slate-900 flex items-center justify-center shadow-sm border border-stroke dark:border-slate-800"><MapPin size={18} className="text-indigo-600 dark:text-indigo-400" /></div>
+                <div className="flex-1 min-w-0"><div className="text-xs font-black text-slate-900 dark:text-slate-300 truncate">{resolvedAddr || "Locating precision coordinates..."}</div>{currentGPS && <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5">{currentGPS.lat.toFixed(5)}, {currentGPS.lon.toFixed(5)}</div>}</div>
+                <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase ${gpsStatus === 'ok' ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>{gpsStatus === 'ok' ? 'LOCKED' : 'LINKING'}</div>
               </div>
-
-              {geofenceError && geofenceStatus?.strict_mode && (
-                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs font-bold text-red-600 flex items-center gap-2">
-                  <AlertCircle size={14} /> {geofenceError}
-                </div>
-              )}
-
-              {/* Task Selection (Clock-in or general shift start) */}
+              {geofenceError && geofenceStatus?.strict_mode && <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs font-bold text-red-600 flex items-center gap-2"><AlertCircle size={14} /> {geofenceError}</div>}
               {(!openLog || (openLog && !openLog.task)) && (
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Select Assigned Task (Optional)</label>
                   <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors">
-                      <CheckSquare size={18} />
-                    </div>
-                    <select
-                      value={selectedTaskId}
-                      onChange={e => setSelectedTaskId(e.target.value)}
-                      className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none appearance-none transition-all shadow-sm"
-                    >
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors"><CheckSquare size={18} /></div>
+                    <select value={selectedTaskId} onChange={e => setSelectedTaskId(e.target.value)} className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none appearance-none transition-all shadow-sm">
                       <option value="">— No specific task —</option>
-                      {assignedTasks
-                        .filter(t => (t.status === 'pending' || t.status === 'in_progress') && t.acceptance_status === 'accepted')
-                        .map(t => (
-                          <option key={t.id} value={t.id}>{t.title}</option>
-                        ))
-                      }
+                      {assignedTasks.filter(t => (t.status === 'pending' || t.status === 'in_progress') && t.acceptance_status === 'accepted').map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <ChevronDown size={16} />
-                    </div>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"><ChevronDown size={16} /></div>
                   </div>
                   {selectedTaskId && (() => {
                     const selTask = assignedTasks.find(t => String(t.id) === String(selectedTaskId))
                     const hasLoc = selTask?.location_lat && selTask?.location_lon
                     const lat = hasLoc ? parseFloat(selTask.location_lat) : null
                     const lon = hasLoc ? parseFloat(selTask.location_lon) : null
-
-                    // Calc distance from employee current position
                     let distStr = ""
                     if (hasLoc && currentGPS) {
                       const R = 6371000
@@ -2106,457 +2052,107 @@ function EmployeeTimePage() {
                       const dLon = (lon - currentGPS.lon) * Math.PI / 180
                       const a = Math.sin(dLat/2)**2 + Math.cos(currentGPS.lat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLon/2)**2
                       const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-                      const eta = Math.round(dist / 25000 * 60) // 25 km/h avg
+                      const eta = Math.round(dist / 25000 * 60)
                       distStr = dist < 1000 ? `${Math.round(dist)}m away` : `${(dist/1000).toFixed(1)}km away · ETA ~${eta}min`
                     }
-
                     return (
                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }} className="animate-in fade-in slide-in-from-top-1">
-                        {/* Client info header */}
-                        <div style={{
-                          background: "linear-gradient(135deg,#eff6ff,#f5f3ff)",
-                          border: "1.5px solid #c7d2fe",
-                          borderRadius: 16, padding: "12px 14px",
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                        }}>
-                          <div style={{
-                            width: 38, height: 38, borderRadius: 12,
-                            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            flexShrink: 0,
-                          }}>
-                            <MapPin size={18} style={{ color: "white" }} />
-                          </div>
+                        <div style={{ background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", border: "1.5px solid #c7d2fe", borderRadius: 16, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                          <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MapPin size={18} style={{ color: "white" }} /></div>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 900, color: "#1e293b", marginBottom: 2 }}>
-                              {selTask?.title}
-                            </div>
-                            {selTask?.client_name && (
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1" }}>
-                                👤 {selTask.client_name}
-                                {selTask.client_company_name && ` · ${selTask.client_company_name}`}
-                              </div>
-                            )}
-                            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>
-                              {selTask?.job_address || selTask?.area || ""}
-                              {selTask?.city && `, ${selTask.city}`}
-                            </div>
-                            {distStr && (
-                              <div style={{ fontSize: 10, fontWeight: 900, color: "#059669", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>
-                                🚗 {distStr}
-                              </div>
-                            )}
-                            {selTask?.client_contact_number && (
-                              <a
-                                href={`tel:${selTask.client_contact_number}`}
-                                style={{ fontSize: 10, fontWeight: 800, color: "#6366f1", marginTop: 3, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}
-                              >
-                                📞 {selTask.client_contact_number}
-                              </a>
-                            )}
+                            <div style={{ fontSize: 12, fontWeight: 900, color: "#1e293b", marginBottom: 2 }}>{selTask?.title}</div>
+                            {selTask?.client_name && <div style={{ fontSize: 11, fontWeight: 700, color: "#6366f1" }}>👤 {selTask.client_name}{selTask.client_company_name && ` · ${selTask.client_company_name}`}</div>}
+                            <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginTop: 2 }}>{selTask?.job_address || selTask?.area || ""}{selTask?.city && `, ${selTask.city}`}</div>
+                            {distStr && <div style={{ fontSize: 10, fontWeight: 900, color: "#059669", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>🚗 {distStr}</div>}
+                            {selTask?.client_contact_number && <a href={`tel:${selTask.client_contact_number}`} style={{ fontSize: 10, fontWeight: 800, color: "#6366f1", marginTop: 3, display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>📞 {selTask.client_contact_number}</a>}
                           </div>
                         </div>
-
-                        {/* Mini Leaflet Map */}
                         {hasLoc && (
-                          <div style={{
-                            position: "relative",
-                            height: 200, borderRadius: 16, overflow: "hidden",
-                            border: "2px solid #6366f1",
-                            boxShadow: "0 4px 20px rgba(99,102,241,0.15)",
-                          }}>
-                            <MapContainer
-                              center={[lat, lon]}
-                              zoom={15}
-                              style={{ width: "100%", height: "100%" }}
-                              zoomControl={false}
-                              scrollWheelZoom={false}
-                            >
-                              <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution="© OpenStreetMap"
-                              />
-
-                              {/* Red client pin */}
-                              <Marker
-                                position={[lat, lon]}
-                                icon={L.divIcon({
-                                  className: "",
-                                  html: `<div style="
-                                    display:flex;flex-direction:column;align-items:center;
-                                  ">
-                                    <div style="
-                                      width:42px;height:42px;
-                                      border-radius:50% 50% 50% 0;
-                                      transform:rotate(-45deg);
-                                      background:linear-gradient(135deg,#e94560,#ff6b6b);
-                                      border:3px solid white;
-                                      box-shadow:0 4px 16px rgba(233,69,96,0.5);
-                                      display:flex;align-items:center;justify-content:center;
-                                    ">
-                                      <div style="transform:rotate(45deg);font-size:18px">🏢</div>
-                                    </div>
-                                    <div style="
-                                      margin-top:3px;
-                                      background:rgba(233,69,96,0.9);color:white;
-                                      padding:2px 8px;border-radius:12px;
-                                      font-size:9px;font-weight:900;
-                                      white-space:nowrap;
-                                      box-shadow:0 2px 6px rgba(0,0,0,0.15);
-                                    ">WORK SITE</div>
-                                  </div>`,
-                                  iconSize: [60, 65],
-                                  iconAnchor: [30, 58],
-                                })}
-                              >
-                                <Popup>
-                                  <div style={{ fontSize: 12, fontWeight: 800, padding: 4 }}>
-                                    📍 {selTask?.title}
-                                    {selTask?.job_address && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{selTask.job_address}</div>}
-                                  </div>
-                                </Popup>
+                          <div style={{ position: "relative", height: 200, borderRadius: 16, overflow: "hidden", border: "2px solid #6366f1", boxShadow: "0 4px 20px rgba(99,102,241,0.15)" }}>
+                            <MapContainer center={[lat, lon]} zoom={15} style={{ width: "100%", height: "100%" }} zoomControl={false} scrollWheelZoom={false}>
+                              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+                              <Marker position={[lat, lon]} icon={L.divIcon({ className: "", html: `<div style="display:flex;flex-direction:column;align-items:center;"><div style="width:42px;height:42px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#e94560,#ff6b6b);border:3px solid white;box-shadow:0 4px 16px rgba(233,69,96,0.5);display:flex;align-items:center;justify-content:center;"><div style="transform:rotate(45deg);font-size:18px">🏢</div></div><div style="margin-top:3px;background:rgba(233,69,96,0.9);color:white;padding:2px 8px;border-radius:12px;font-size:9px;font-weight:900;white-space:nowrap;">WORK SITE</div></div>`, iconSize: [60, 65], iconAnchor: [30, 58] })}>
+                                <Popup><div style={{ fontSize: 12, fontWeight: 800, padding: 4 }}>📍 {selTask?.title}{selTask?.job_address && <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{selTask.job_address}</div>}</div></Popup>
                               </Marker>
-
-                              {/* Green geofence circle */}
-                              <Circle
-                                center={[lat, lon]}
-                                radius={parseInt(selTask?.geofence_radius) || 200}
-                                pathOptions={{ color: "#059669", fillColor: "#059669", fillOpacity: 0.10, weight: 2, dashArray: "6 4" }}
-                              />
-
-                              {/* Employee current position (blue) */}
-                              {currentGPS && (
-                                <Marker
-                                  position={[currentGPS.lat, currentGPS.lon]}
-                                  icon={L.divIcon({
-                                    className: "",
-                                    html: `<div style="
-                                      width:20px;height:20px;border-radius:50%;
-                                      background:#3b82f6;border:3px solid white;
-                                      box-shadow:0 2px 8px rgba(59,130,246,0.5);
-                                    "></div>`,
-                                    iconSize: [20, 20],
-                                    iconAnchor: [10, 10],
-                                  })}
-                                />
-                              )}
+                              <Circle center={[lat, lon]} radius={parseInt(selTask?.geofence_radius) || 200} pathOptions={{ color: "#059669", fillColor: "#059669", fillOpacity: 0.10, weight: 2, dashArray: "6 4" }} />
+                              {currentGPS && <Marker position={[currentGPS.lat, currentGPS.lon]} icon={L.divIcon({ className: "", html: `<div style="width:20px;height:20px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 2px 8px rgba(59,130,246,0.5);"></div>`, iconSize: [20, 20], iconAnchor: [10, 10] })} />}
                             </MapContainer>
-
-                            {/* Get Directions overlay button */}
-                            <a
-                              href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                position: "absolute", bottom: 10, right: 10,
-                                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                                color: "white", padding: "6px 14px",
-                                borderRadius: 20, fontSize: 10, fontWeight: 900,
-                                textDecoration: "none", zIndex: 600,
-                                boxShadow: "0 4px 12px rgba(99,102,241,0.4)",
-                                display: "flex", alignItems: "center", gap: 5,
-                                letterSpacing: "0.04em",
-                              }}
-                            >
-                              📍 Get Directions
-                            </a>
-
-                            {/* Location confirmed badge */}
-                            <div style={{
-                              position: "absolute", top: 8, left: 8,
-                              background: "rgba(99,102,241,0.9)",
-                              color: "white", padding: "3px 10px",
-                              borderRadius: 20, fontSize: 9, fontWeight: 900,
-                              zIndex: 600, letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                            }}>
-                              Work Location
-                            </div>
+                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`} target="_blank" rel="noopener noreferrer" style={{ position: "absolute", bottom: 10, right: 10, background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white", padding: "6px 14px", borderRadius: 20, fontSize: 10, fontWeight: 900, textDecoration: "none", zIndex: 600, boxShadow: "0 4px 12px rgba(99,102,241,0.4)", display: "flex", alignItems: "center", gap: 5, letterSpacing: "0.04em" }}>📍 Get Directions</a>
+                            <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(99,102,241,0.9)", color: "white", padding: "3px 10px", borderRadius: 20, fontSize: 9, fontWeight: 900, zIndex: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>Work Location</div>
                           </div>
                         )}
-
-                        {/* No GPS — plain confirmation */}
-                        {!hasLoc && (
-                          <div style={{ padding: "10px 14px", borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", fontSize: 11, fontWeight: 700, color: "#3b82f6" }}>
-                            ✅ Task linked. No GPS coordinates set for this work order.
-                          </div>
-                        )}
+                        {!hasLoc && <div style={{ padding: "10px 14px", borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe", fontSize: 11, fontWeight: 700, color: "#3b82f6" }}>✅ Task linked. No GPS coordinates set for this work order.</div>}
                       </div>
                     )
                   })()}
                 </div>
               )}
-
-              {/* Identity Verification (Clock-in only) */}
               {!openLog && (
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Identity Verification</label>
-                  <button
-                    onClick={() => setShowSelfie(true)}
-                    className={`w-full h-40 rounded-3xl border-2 border-dashed transition-all overflow-hidden relative ${selfiePreview ? 'border-indigo-600 dark:border-indigo-500' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-bg dark:bg-slate-950 shadow-sm'}`}
-                  >
-                    {selfiePreview ? (
-                      <img src={selfiePreview} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        <Camera size={32} className="text-slate-300 dark:text-slate-700" />
-                        <span className="text-xs font-black text-slate-400 dark:text-slate-600">TAP TO CAPTURE SELFIE</span>
-                      </div>
-                    )}
+                  <button onClick={() => setShowSelfie(true)} className={`w-full h-40 rounded-3xl border-2 border-dashed transition-all overflow-hidden relative ${selfiePreview ? 'border-indigo-600 dark:border-indigo-500' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-600 bg-bg dark:bg-slate-950 shadow-sm'}`}>
+                    {selfiePreview ? <img src={selfiePreview} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center gap-3"><Camera size={32} className="text-slate-300 dark:text-slate-700" /><span className="text-xs font-black text-slate-400 dark:text-slate-600">TAP TO CAPTURE SELFIE</span></div>}
                   </button>
-                  {selfiePreview && (
-                    <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 uppercase">
-                      <Check size={12} strokeWidth={3} /> Verification Locked
-                    </div>
-                  )}
+                  {selfiePreview && <div className="flex items-center gap-2 text-[10px] font-black text-emerald-600 uppercase"><Check size={12} strokeWidth={3} /> Verification Locked</div>}
                 </div>
               )}
-
-              {/* Operation Notes */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Operation Notes</label>
-                <textarea
-                  value={sessionNotes}
-                  onChange={e => setSessionNotes(e.target.value)}
-                  placeholder={openLog ? "Summary of completed tasks..." : "Briefly describe your objectives..."}
-                  className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm"
-                  rows={4}
-                />
+                <textarea value={sessionNotes} onChange={e => setSessionNotes(e.target.value)} placeholder={openLog ? "Summary of completed tasks..." : "Briefly describe your objectives..."} className="w-full bg-bg dark:bg-slate-950 border border-stroke dark:border-slate-800 rounded-2xl p-4 text-sm font-bold text-slate-900 dark:text-white focus:border-indigo-500 outline-none transition-all shadow-sm" rows={4} />
               </div>
-
-              {/* Job Site Intelligence (Clocked-in with active task) */}
               {openLog && openLog.task && (
                 <div className="p-6 bg-slate-900 rounded-3xl space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Camera size={16} className="text-indigo-400" />
-                      <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Intelligence Report</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {["before", "progress", "after"].map(t => (
-                      <button
-                        key={t}
-                        onClick={() => setJobPhotoType(t)}
-                        className={`py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${jobPhotoType === t ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-
+                  <div className="flex items-center gap-2"><Camera size={16} className="text-indigo-400" /><span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Intelligence Report</span></div>
+                  <div className="grid grid-cols-3 gap-2">{["before", "progress", "after"].map(t => <button key={t} onClick={() => setJobPhotoType(t)} className={`py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${jobPhotoType === t ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}>{t}</button>)}</div>
                   {!jobPhotoPreview ? (
-                    <button
-                      onClick={() => setShowJobPhotoCamera(true)}
-                      className="w-full h-24 rounded-2xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 transition-all"
-                    >
-                      <Camera size={20} />
-                      <span className="text-[9px] font-black uppercase">Capture Photo</span>
-                    </button>
+                    <button onClick={() => setShowJobPhotoCamera(true)} className="w-full h-24 rounded-2xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-2 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 transition-all"><Camera size={20} /><span className="text-[9px] font-black uppercase">Capture Photo</span></button>
                   ) : (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-xl overflow-hidden relative group">
-                          <img src={jobPhotoPreview} className="w-full h-full object-cover" />
-                          <button onClick={() => { setJobPhotoFile(null); setJobPhotoPreview(null) }} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">✕</button>
-                        </div>
-                        <input
-                          placeholder="Brief caption..."
-                          value={jobPhotoCaption}
-                          onChange={e => setJobPhotoCaption(e.target.value)}
-                          className="flex-1 bg-white/5 border border-slate-700 rounded-xl h-12 px-4 text-xs font-bold text-white outline-none"
-                        />
+                        <div className="w-16 h-16 rounded-xl overflow-hidden relative group"><img src={jobPhotoPreview} className="w-full h-full object-cover" /><button onClick={() => { setJobPhotoFile(null); setJobPhotoPreview(null) }} className="absolute inset-0 bg-red-500/80 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">✕</button></div>
+                        <input placeholder="Brief caption..." value={jobPhotoCaption} onChange={e => setJobPhotoCaption(e.target.value)} className="flex-1 bg-white/5 border border-slate-700 rounded-xl h-12 px-4 text-xs font-bold text-white outline-none" />
                       </div>
-                      <button
-                        onClick={uploadJobPhoto}
-                        disabled={busy}
-                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center justify-center gap-2 transition-all"
-                      >
-                        {busy ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                        {busy ? 'REPORTING...' : 'UPLOAD INTEL'}
-                      </button>
+                      <button onClick={uploadJobPhoto} disabled={busy} className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl flex items-center justify-center gap-2 transition-all">{busy ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}{busy ? 'REPORTING...' : 'UPLOAD INTEL'}</button>
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Break Management System */}
               {openLog && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <Coffee size={14} className="text-amber-500" /> Break Management System
-                    </label>
-                    {openBreak && (
-                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-lg animate-pulse uppercase">
-                        Active Session
-                      </span>
-                    )}
-                  </div>
-
+                  <div className="flex items-center justify-between"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Coffee size={14} className="text-amber-500" /> Break Management System</label>{openBreak && <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-lg animate-pulse uppercase">Active Session</span>}</div>
                   {!openBreak ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-3">
-                        {["tea", "lunch", "personal"].map(t => (
-                          <button
-                            key={t}
-                            disabled={busy}
-                            onClick={() => setBreakType(t)}
-                            className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 ${breakType === t ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-100 dark:shadow-none' : 'border-bg dark:border-slate-800 bg-surface dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-700'}`}
-                          >
-                            {t === 'tea' && <Coffee size={16} />}
-                            {t === 'lunch' && <Clock size={16} />}
-                            {t === 'personal' && <Users size={16} />}
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => action("/time/break/start/")}
-                        disabled={busy}
-                        className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-amber-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                      >
-                        {busy ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
-                        START {breakType.toUpperCase()} BREAK
-                      </button>
+                      <div className="grid grid-cols-3 gap-3">{["tea", "lunch", "personal"].map(t => <button key={t} disabled={busy} onClick={() => setBreakType(t)} className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 ${breakType === t ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-100 dark:shadow-none' : 'border-bg dark:border-slate-800 bg-surface dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-700'}`}>{t === 'tea' && <Coffee size={16} />}{t === 'lunch' && <Clock size={16} />}{t === 'personal' && <Users size={16} />}{t}</button>)}</div>
+                      <button onClick={() => action("/time/break/start/")} disabled={busy} className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-sm font-black shadow-xl shadow-amber-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50">{busy ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />} START {breakType.toUpperCase()} BREAK</button>
                     </div>
                   ) : (
                     <div className="bg-surface dark:bg-slate-950 rounded-3xl border-2 border-amber-100 dark:border-amber-900/30 p-6 shadow-xl shadow-amber-50 dark:shadow-none space-y-6 animate-in zoom-in duration-300">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100 dark:shadow-none">
-                            <Coffee size={24} className="animate-bounce" />
-                          </div>
-                          <div>
-                            <div className="text-lg font-black text-slate-900 dark:text-white">{openBreak.break_type?.toUpperCase()} BREAK</div>
-                            <div className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">In Progress</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{formatDuration(breakElapsed)}</div>
-                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Live Timer</div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 py-4 border-y border-stroke dark:border-slate-800">
-                        <div className="space-y-1">
-                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Started At</div>
-                          <div className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDateTime(openBreak.break_start).split(",")[1]}</div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Current Status</div>
-                          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            ON BREAK
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => action("/time/break/end/")}
-                        disabled={busy}
-                        className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-sm font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                      >
-                        {busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />}
-                        END BREAK SESSION
-                      </button>
+                      <div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100 dark:shadow-none"><Coffee size={24} className="animate-bounce" /></div><div><div className="text-lg font-black text-slate-900 dark:text-white">{openBreak.break_type?.toUpperCase()} BREAK</div><div className="text-[10px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">In Progress</div></div></div><div className="text-right"><div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{formatDuration(breakElapsed)}</div><div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Live Timer</div></div></div>
+                      <div className="grid grid-cols-2 gap-4 py-4 border-y border-stroke dark:border-slate-800"><div className="space-y-1"><div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Started At</div><div className="text-sm font-bold text-slate-700 dark:text-slate-300">{formatDateTime(openBreak.break_start).split(",")[1]}</div></div><div className="space-y-1"><div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Current Status</div><div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> ON BREAK</div></div></div>
+                      <button onClick={() => action("/time/break/end/")} disabled={busy} className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-2xl text-sm font-black shadow-xl shadow-slate-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50">{busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />} END BREAK SESSION</button>
                     </div>
                   )}
-
-                  {completedBreaks.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Recent Sessions</div>
-                      <div className="space-y-2">
-                        {completedBreaks.slice(-2).reverse().map(b => (
-                          <div key={b.id} className="p-3 bg-bg dark:bg-slate-950 rounded-xl border border-stroke dark:border-slate-800 flex items-center justify-between shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600">
-                                <Coffee size={14} />
-                              </div>
-                              <div>
-                                <div className="text-xs font-bold text-slate-700 dark:text-slate-300">{b.break_type?.toUpperCase()}</div>
-                                <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500">{formatDateTime(b.break_start).split(",")[1]} - {formatDateTime(b.break_end).split(",")[1]}</div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-xs font-black text-slate-900 dark:text-white">{Math.round(b.duration_seconds / 60)}m</div>
-                              <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase">Done</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {completedBreaks.length > 0 && <div className="space-y-3"><div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Recent Sessions</div><div className="space-y-2">{completedBreaks.slice(-2).reverse().map(b => <div key={b.id} className="p-3 bg-bg dark:bg-slate-950 rounded-xl border border-stroke dark:border-slate-800 flex items-center justify-between shadow-sm"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-lg bg-surface dark:bg-slate-900 border border-stroke dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600"><Coffee size={14} /></div><div><div className="text-xs font-bold text-slate-700 dark:text-slate-300">{b.break_type?.toUpperCase()}</div><div className="text-[9px] font-medium text-slate-400 dark:text-slate-500">{formatDateTime(b.break_start).split(",")[1]} - {formatDateTime(b.break_end).split(",")[1]}</div></div></div><div className="text-right"><div className="text-xs font-black text-slate-900 dark:text-white">{Math.round(b.duration_seconds / 60)}m</div><div className="text-[9px] font-black text-emerald-600 dark:text-emerald-500 uppercase">Done</div></div></div>)}</div></div>}
                 </div>
               )}
             </div>
-
-            {/* Sliding Panel Footer */}
             <div className="px-8 pt-4 pb-2 border-t border-slate-100 bg-slate-50/50">
-              {/* Phase 5 — preflight pill: instant geofence feedback */}
               {preflightPill && !openLog && (
-                <div
-                  className={`mb-4 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs font-bold ${preflightPill.tone === "ok"
-                    ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    : preflightPill.tone === "warn"
-                      ? "bg-amber-50 text-amber-800 border border-amber-200"
-                      : preflightPill.tone === "block"
-                        ? "bg-rose-50 text-rose-800 border border-rose-200"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
-                    }`}
-                  role="status"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`inline-block w-2 h-2 rounded-full ${preflightPill.tone === "ok"
-                      ? "bg-emerald-500"
-                      : preflightPill.tone === "warn"
-                        ? "bg-amber-500"
-                        : preflightPill.tone === "block"
-                          ? "bg-rose-500"
-                          : "bg-slate-400"
-                      }`}
-                  />
+                <div className={`mb-4 rounded-xl px-4 py-2.5 flex items-center gap-2 text-xs font-bold ${preflightPill.tone === "ok" ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : preflightPill.tone === "warn" ? "bg-amber-50 text-amber-800 border border-amber-200" : preflightPill.tone === "block" ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-600 border border-slate-200"}`} role="status">
+                  <span aria-hidden="true" className={`inline-block w-2 h-2 rounded-full ${preflightPill.tone === "ok" ? "bg-emerald-500" : preflightPill.tone === "warn" ? "bg-amber-500" : preflightPill.tone === "block" ? "bg-rose-500" : "bg-slate-400"}`} />
                   {preflightPill.label}
                 </div>
               )}
             </div>
             <div className="px-8 pb-8 bg-slate-50/50 dark:bg-slate-950/20 flex gap-4">
-              <button
-                onClick={() => setPanelOpen(false)}
-                className="flex-1 py-4 rounded-2xl text-sm font-black text-slate-600 dark:text-slate-400 bg-surface dark:bg-slate-800 border border-stroke dark:border-slate-700 hover:bg-bg dark:hover:bg-slate-950/40 transition-all"
-              >
-                Cancel
-              </button>
+              <button onClick={() => setPanelOpen(false)} className="flex-1 py-4 rounded-2xl text-sm font-black text-slate-600 dark:text-slate-400 bg-surface dark:bg-slate-800 border border-stroke dark:border-slate-700 hover:bg-bg dark:hover:bg-slate-950/40 transition-all">Cancel</button>
               {openLog ? (
                 openLog.task ? (
-                  <button
-                    onClick={handleClockOut}
-                    disabled={busy}
-                    className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-red-500 hover:bg-red-600 shadow-xl shadow-red-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />}
-                    COMPLETE & EXIT
-                  </button>
+                  <button onClick={handleClockOut} disabled={busy} className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-red-500 hover:bg-red-600 shadow-xl shadow-red-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50">{busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />} COMPLETE &amp; EXIT</button>
                 ) : selectedTaskId ? (
-                  <button
-                    onClick={() => { setPanelOpen(false); action(`/tasks/my/${selectedTaskId}/start/`) }}
-                    disabled={busy}
-                    className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Play size={14} />}
-                    START TASK
-                  </button>
+                  <button onClick={() => { setPanelOpen(false); action(`/tasks/my/${selectedTaskId}/start/`) }} disabled={busy} className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50">{busy ? <Loader2 size={18} className="animate-spin" /> : <Play size={14} />} START TASK</button>
                 ) : (
-                  <button
-                    onClick={handleClockOut}
-                    disabled={busy}
-                    className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-red-500 hover:bg-red-600 shadow-xl shadow-red-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  >
-                    {busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />}
-                    CLOCK OUT
-                  </button>
+                  <button onClick={handleClockOut} disabled={busy} className="flex-[2] py-4 rounded-2xl text-sm font-black text-white bg-red-500 hover:bg-red-600 shadow-xl shadow-red-100 flex items-center justify-center gap-2 transition-all disabled:opacity-50">{busy ? <Loader2 size={18} className="animate-spin" /> : <Square size={14} fill="currentColor" />} CLOCK OUT</button>
                 )
               ) : (
                 <button
@@ -2566,9 +2162,6 @@ function EmployeeTimePage() {
                     || (!resolvedAddr && gpsStatus !== "error")
                     || !selfieFile
                     || (!geofencePassed && geofenceStatus?.geofence_enabled && geofenceStatus?.strict_mode)
-                    // Phase 5: also block client-side when the preflight came
-                    // back with allowed=false (server will reject too — this
-                    // just saves a network round-trip).
                     || (preflight && preflight.allowed === false)
                   }
                   className={`flex-[2] py-4 rounded-2xl text-sm font-black text-white flex items-center justify-center gap-2 transition-all shadow-xl ${(!selfieFile || (!resolvedAddr && gpsStatus !== "error")) ? 'bg-slate-400' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100'}`}

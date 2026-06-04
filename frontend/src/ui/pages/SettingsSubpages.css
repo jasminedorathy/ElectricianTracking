@@ -1732,3 +1732,412 @@ a.psHighlight:hover {
         flex-shrink: 0;
     }
 }
+
+/* ─── Dark Mode Overrides ────────────────────────────────────────── */
+.dark .settingsSubpage {
+    background: #0B111D;
+}
+
+.dark .pageTitle {
+    color: #f9fafb;
+}
+
+.dark .tabNav {
+    border-bottom-color: #1f2937;
+}
+
+.dark .tabBtn {
+    color: #9ca3af;
+}
+
+.dark .tabBtn:hover:not(.active) {
+    color: #f9fafb;
+}
+
+.dark .tabBtn.active {
+    color: #f97316;
+    border-bottom-color: #f97316;
+}
+
+.dark .actionBar {
+    border-bottom-color: #1f2937;
+}
+
+.dark .searchWrap {
+    background: #111827;
+    border-color: #1f2937;
+}
+
+.dark .searchWrap input {
+    background: transparent;
+    color: #f9fafb;
+}
+
+.dark .filterBtn,
+.dark .addFilterBtn {
+    background: #111827;
+    border-color: #1f2937;
+    color: #cbd5e1;
+}
+
+.dark .filterBtn:hover,
+.dark .addFilterBtn:hover {
+    border-color: #f97316;
+    color: #f97316;
+}
+
+.dark .filterBtn.active,
+.dark .addFilterBtn.active {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: #f97316;
+    color: #f97316;
+}
+
+.dark .psDropdown {
+    background: #111827;
+    border-color: #1f2937;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dark .psDropdownItem {
+    color: #cbd5e1;
+}
+
+.dark .psDropdownItem:hover {
+    background: #1f2937;
+}
+
+.dark .psClearFilter {
+    border-top-color: #1f2937;
+    color: #f97316;
+}
+
+.dark .psQuickFilter {
+    background: #111827;
+    border-color: #1f2937;
+    color: #cbd5e1;
+}
+
+.dark .psQuickFilter:hover {
+    border-color: #f97316;
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.15);
+}
+
+.dark .tableWrap {
+    background: #111827;
+    border-color: #1f2937;
+}
+
+.dark .membersTable th {
+    background: #1f2937;
+    color: #9ca3af;
+    border-bottom-color: #374151;
+}
+
+.dark .membersTable td {
+    color: #cbd5e1;
+    border-bottom-color: #1f2937;
+}
+
+.dark .userAvatar {
+    background: #1f2937;
+    color: #9ca3af;
+}
+
+.dark .userName {
+    color: #f9fafb;
+}
+
+.dark .userRole {
+    color: #9ca3af;
+}
+
+.dark .psRowMenuBtn:hover,
+.dark .psRowMenuBtn.open {
+    background: #1f2937;
+    color: #f9fafb;
+}
+
+.dark .psRowMenu {
+    background: #111827;
+    border-color: #1f2937;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dark .psRowMenuItem {
+    color: #cbd5e1;
+}
+
+.dark .psRowMenuItem:hover {
+    background: #1f2937;
+}
+
+.dark .psRowMenuItem.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.dark .psRowMenuItem.separator {
+    border-top-color: #1f2937;
+}
+
+.dark .psColIconBtn {
+    background: #111827;
+    border-color: #1f2937;
+    color: #9ca3af;
+}
+
+.dark .psColIconBtn:hover,
+.dark .psColIconBtn.active {
+    border-color: #f97316;
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.15);
+}
+
+.dark .psColDropdownTitle {
+    color: #9ca3af;
+}
+
+.dark .psAddFilterItem {
+    color: #cbd5e1;
+}
+
+.dark .psAddFilterItem:hover {
+    background: #1f2937;
+}
+
+.dark .psAddFilterItem.selected {
+    color: #f9fafb;
+}
+
+.dark .psExtraTag {
+    border-color: rgba(249, 115, 22, 0.3);
+    background: rgba(249, 115, 22, 0.15);
+    color: #f97316;
+}
+
+.dark .psExtraTag:hover {
+    background: rgba(249, 115, 22, 0.25);
+}
+
+/* Modals */
+.dark .psModalOverlay {
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.dark .psModal {
+    background: #111827;
+    border: 1px solid #1f2937;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.dark .psModalHeader {
+    border-bottom-color: #1f2937;
+}
+
+.dark .psModalTitle {
+    color: #f9fafb;
+}
+
+.dark .psModalClose:hover {
+    color: #f9fafb;
+    background: #1f2937;
+}
+
+.dark .psModalBanner {
+    background: #1f2937;
+    color: #cbd5e1;
+    border-bottom-color: #374151;
+}
+
+.dark .psModalTab {
+    color: #9ca3af;
+}
+
+.dark .psModalTab.active {
+    color: #f97316;
+    border-bottom-color: #f97316;
+}
+
+.dark .psModalTab:hover:not(.active) {
+    color: #f9fafb;
+}
+
+.dark .psInviteInfo {
+    color: #cbd5e1;
+}
+
+.dark .psDivider {
+    border-top-color: #1f2937;
+}
+
+.dark .psLinkInput {
+    border-color: #1f2937;
+    color: #cbd5e1;
+    background: #1f2937;
+}
+
+.dark .psMemberRowWrap {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+.dark .psMemberInput {
+    background: #111827;
+    border-color: #1f2937;
+    color: #f9fafb;
+}
+
+.dark .psMemberInput:focus {
+    border-color: #f97316;
+}
+
+.dark .psPhoneInputGroup {
+    border-color: #1f2937;
+}
+
+.dark .psPhoneInputGroup:focus-within {
+    border-color: #f97316;
+}
+
+.dark .psPhoneInput {
+    color: #f9fafb;
+}
+
+.dark .psDeleteRowBtn {
+    border-color: rgba(239, 68, 68, 0.3);
+    background: #111827;
+    color: #ef4444;
+}
+
+.dark .psDeleteRowBtn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+}
+
+.dark .psCountryBtn {
+    background: #1f2937;
+    color: #f9fafb;
+    border-right-color: #374151;
+}
+
+.dark .psCountryBtn:hover {
+    background: #374151;
+}
+
+.dark .psCountryDropdown {
+    background: #111827;
+    border-color: #1f2937;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.dark .psCountrySearch {
+    border-bottom-color: #1f2937;
+    background: #1f2937;
+}
+
+.dark .psCountrySearch input {
+    color: #f9fafb;
+}
+
+.dark .psCountryItem {
+    color: #cbd5e1;
+}
+
+.dark .psCountryItem:hover {
+    background: #1f2937;
+}
+
+.dark .psCountryItem.selected {
+    background: rgba(249, 115, 22, 0.15);
+}
+
+.dark .psCountryCode {
+    color: #9ca3af;
+}
+
+.dark .psModalFooter {
+    border-top-color: #1f2937;
+}
+
+.dark .psCancelBtn {
+    border-color: #1f2937;
+    background: #1f2937;
+    color: #cbd5e1;
+}
+
+.dark .psCancelBtn:hover {
+    border-color: #f97316;
+    color: #f97316;
+}
+
+.dark .psFieldLabel {
+    color: #cbd5e1;
+}
+
+.dark .psFieldHint {
+    color: #9ca3af;
+}
+
+/* Premium Component */
+.dark .premiumPlaceholder {
+    background: #111827;
+    border-color: #1f2937;
+}
+
+.dark .premiumBadge {
+    background: rgba(37, 99, 235, 0.15);
+    color: #3b82f6;
+}
+
+.dark .premiumTitle {
+    color: #f9fafb;
+}
+
+.dark .premiumSub {
+    color: #9ca3af;
+}
+
+.dark .premiumGraphicWrap {
+    opacity: 0.4;
+}
+
+/* Queue List */
+.dark .sectionTitle {
+    color: #f9fafb;
+}
+
+.dark .sectionDesc {
+    color: #9ca3af;
+}
+
+.dark .statusBadge.queued {
+    background: rgba(7, 89, 133, 0.25);
+    color: #38bdf8;
+}
+
+.dark .statusBadge.processing {
+    background: rgba(133, 77, 14, 0.25);
+    color: #facc15;
+}
+
+.dark .statusBadge.error {
+    background: rgba(153, 27, 27, 0.25);
+    color: #f87171;
+}
+
+.dark .psActionBtn:hover {
+    color: #f9fafb;
+    background: #1f2937;
+}
+
+.dark .psActionBtn.edit:hover {
+    color: #818cf8;
+    background: rgba(99, 102, 241, 0.15);
+}
+
+.dark .psActionBtn.delete:hover {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.15);
+}
+

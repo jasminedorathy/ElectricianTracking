@@ -733,12 +733,12 @@ function AuditTrailPanel({ apiBase }) {
               <thead>
                 <tr style={{ borderBottom: "2px solid var(--stroke)", fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   <th style={{ padding: "5px 8px", textAlign: "left" }}>Timestamp</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left" }}>Employee</th>
+                  <th style={{ padding: "5px 8px", textAlign: "left" }}>User</th>
                   <th style={{ padding: "5px 8px", textAlign: "left" }}>Action</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left" }}>Field</th>
+                  <th style={{ padding: "5px 8px", textAlign: "left" }}>Resource</th>
                   <th style={{ padding: "5px 8px", textAlign: "left" }}>Before</th>
                   <th style={{ padding: "5px 8px", textAlign: "left" }}>After</th>
-                  <th style={{ padding: "5px 8px", textAlign: "left" }}>By / Reason</th>
+                  <th style={{ padding: "5px 8px", textAlign: "left" }}>IP / Reason</th>
                 </tr>
               </thead>
               <tbody>
@@ -747,22 +747,22 @@ function AuditTrailPanel({ apiBase }) {
                     <td style={{ padding: "6px 8px", color: "var(--muted)", whiteSpace: "nowrap", fontFamily: "monospace", fontSize: 11 }}>
                       {entry.timestamp?.slice(0, 19).replace("T", " ")}
                     </td>
-                    <td style={{ padding: "6px 8px", fontWeight: 600, fontSize: 12 }}>{entry.employee_id || "—"}</td>
+                    <td style={{ padding: "6px 8px", fontWeight: 600, fontSize: 12 }}>{entry.user || entry.actor_name || "—"}</td>
                     <td style={{ padding: "6px 8px" }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: ACTION_COLOR[entry.action] || "var(--muted)", background: "var(--surface)", padding: "2px 6px", borderRadius: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: ACTION_COLOR[entry.action?.toUpperCase()] || "var(--muted)", background: "var(--surface)", padding: "2px 6px", borderRadius: 4 }}>
                         {entry.action}
                       </span>
                     </td>
-                    <td style={{ padding: "6px 8px", color: "var(--muted)", fontSize: 11 }}>{entry.field_changed || "—"}</td>
+                    <td style={{ padding: "6px 8px", color: "var(--muted)", fontSize: 11 }}>{entry.resource || entry.employee_name || "—"}</td>
                     <td style={{ padding: "6px 8px", color: "var(--muted)", fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {JSON.stringify(entry.before_state)?.slice(0, 50) || "—"}
+                      {entry.before_state ? JSON.stringify(entry.before_state).slice(0, 50) : "—"}
                     </td>
                     <td style={{ padding: "6px 8px", color: "var(--muted)", fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {JSON.stringify(entry.after_state)?.slice(0, 50) || "—"}
+                      {entry.after_state ? JSON.stringify(entry.after_state).slice(0, 50) : "—"}
                     </td>
                     <td style={{ padding: "6px 8px", fontSize: 11 }}>
-                      <div>{entry.changed_by_name || "—"}</div>
-                      {entry.reason && <div style={{ color: "var(--muted)" }}>{entry.reason.slice(0, 40)}</div>}
+                      <div style={{ fontFamily: "monospace", color: "var(--muted)" }}>{entry.ip_address || "—"}</div>
+                      {entry.reason && <div style={{ color: "var(--subtle)", marginTop: 2 }}>{entry.reason.slice(0, 40)}</div>}
                     </td>
                   </tr>
                 ))}

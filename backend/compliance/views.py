@@ -717,14 +717,15 @@ class AuditLogExportView(APIView):
                 emp_label = entry.employee.employee_id or str(entry.employee.pk)
             before = str(entry.before_state or "")[:60]
             after = str(entry.after_state or "")[:60]
+            actor_name = (entry.actor.get_full_name() or entry.actor.username) if entry.actor else "system"
             table_data.append([
                 entry.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                 emp_label,
                 entry.action,
-                entry.field_changed or "",
+                getattr(entry, 'field_changed', '') or "",
                 before,
                 after,
-                (entry.reason or entry.changed_by_name or "")[:40],
+                (entry.reason or actor_name)[:40],
             ])
 
         col_widths = [38*mm, 25*mm, 20*mm, 22*mm, 30*mm, 30*mm, 30*mm]

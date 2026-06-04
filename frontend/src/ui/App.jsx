@@ -21,6 +21,10 @@ const DashboardPage = lazy(() =>
   import("./pages/DashboardPage.jsx").then(m => ({ default: m.DashboardPage }))
 )
 
+const AnalysisPage = lazy(() =>
+  import("./pages/AnalysisPage.jsx").then(m => ({ default: m.AnalysisPage }))
+)
+
 const ResetPasswordPage = lazy(() =>
   import("./pages/ResetPasswordPage.jsx").then(m => ({ default: m.ResetPasswordPage }))
 )
@@ -247,6 +251,10 @@ export function App() {
           >
             {/* ── Routes accessible by ALL authenticated roles ── */}
             <Route path={routes.dashboard} element={<DashboardPage />} />
+            <Route
+              path={routes.analysis}
+              element={isAdmin ? <Navigate to={routes.dashboard} replace /> : <AnalysisPage />}
+            />
             <Route path={routes.time} element={<TimePage />} />
             <Route path={routes.tasks} element={<TasksPage />} />
             <Route path={routes.leaves} element={<LeavesPage />} />

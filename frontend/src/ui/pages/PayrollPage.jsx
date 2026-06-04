@@ -4,31 +4,46 @@ import { apiRequest, unwrapResults } from "../../api/client.js"
 import { useRole } from "../../state/auth/useRole.js"
 import { Banknote, X, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Clock, Users, TrendingUp, DollarSign, Loader2, FileText, Download, Printer, Share2, Globe, Mail, Eye, Palette, Layout, Type, Sparkles, User, MapPin } from "lucide-react"
 
+// Custom hook to detect if dark mode is active
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
+
+  return isDark
+}
 
 const fmt = (n, curr = "$") => `${curr}${Number(n || 0).toFixed(2)}`
 const fmtH = (n) => `${Number(n || 0).toFixed(2)}h`
 const fmtId = (v) => { if (!v) return "—"; const m = /^EMP(\d+)$/i.exec(String(v).replace(/\s+/g, "")); return m ? `EMP ${m[1].padStart(3, "0")}` : v }
 
 function KpiCard({ icon, label, value, sub, color }) {
+  const isDark = useDarkMode()
   return (
     <div className="kpi-card-3d" style={{
-      background: "#fff",
-      border: "1.5px solid #e2e8f0",
+      background: isDark ? "#111827" : "#fff",
+      border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
       borderRadius: 16,
       padding: "16px 20px",
       display: "flex",
       alignItems: "center",
       gap: 14,
-      boxShadow: "0 2px 12px rgba(0,0,0,0.02)",
+      boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 2px 12px rgba(0,0,0,0.02)",
       transformStyle: "preserve-3d",
       perspective: "1000px",
       transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
     }}>
       <div className="kpi-icon-3d" style={{ width: 40, height: 40, borderRadius: 10, background: `${color}18`, border: `1.5px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", color, flexShrink: 0, transform: "translateZ(0px)", transition: "transform 0.4s" }}>{icon}</div>
       <div style={{ transform: "translateZ(10px)", transition: "transform 0.4s" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
-        <div style={{ fontSize: 20, fontWeight: 900, color: "#0f172a", lineHeight: 1 }}>{value}</div>
-        {sub && <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, marginTop: 3 }}>{sub}</div>}
+        <div style={{ fontSize: 10, fontWeight: 800, color: isDark ? "#9ca3af" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>{label}</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color: isDark ? "#f9fafb" : "#0f172a", lineHeight: 1 }}>{value}</div>
+        {sub && <div style={{ fontSize: 10, color: isDark ? "#6b7280" : "#94a3b8", fontWeight: 600, marginTop: 3 }}>{sub}</div>}
       </div>
     </div>
   )
@@ -52,6 +67,7 @@ const savePref = (key, value) => {
 }
 
 export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, inline = false }) {
+  const isDark = useDarkMode()
   const isDummy = record?.id === "DUMMY-INV-PREVIEW-999"
   // Customizer state
   const [theme, setTheme] = useState(() => loadPref("theme", "modern_slate"))
@@ -510,7 +526,7 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
 
   const innerLayout = (
     <div style={inline ? {
-      background: "#ffffff",
+      background: isDark ? "#111827" : "#ffffff",
       borderRadius: 24,
       width: "100%",
       height: "85vh",
@@ -518,11 +534,11 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
       display: "grid",
       gridTemplateColumns: isDummy ? "320px 1fr" : "1fr",
       overflow: "hidden",
-      border: "1px solid #e2e8f0",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
+      border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
+      boxShadow: isDark ? "0 10px 30px rgba(0,0,0,0.5)" : "0 10px 30px rgba(0,0,0,0.03)",
       cursor: "default"
     } : {
-      background: "#ffffff",
+      background: isDark ? "#111827" : "#ffffff",
       borderRadius: 32,
       width: "100%",
       maxWidth: 1200,
@@ -530,8 +546,8 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
       display: "grid",
       gridTemplateColumns: isDummy ? "320px 1fr" : "1fr",
       overflow: "hidden",
-      boxShadow: "0 32px 80px rgba(0,0,0,0.25)",
-      border: "1px solid rgba(255,255,255,0.2)",
+      boxShadow: isDark ? "0 32px 80px rgba(0,0,0,0.6)" : "0 32px 80px rgba(0,0,0,0.25)",
+      border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.2)"}`,
       cursor: "default"
     }}>
       <style>{printStyle}</style>
@@ -818,21 +834,21 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
       )}
 
       {/* RIGHT SIDE: LIVE A4 PREVIEW CANVAS */}
-      <div style={{ background: "#f1f5f9", display: "flex", flexDirection: "column", height: "100%", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: isDark ? "#0f172a" : "#f1f5f9", display: "flex", flexDirection: "column", height: "100%", position: "relative", overflow: "hidden" }}>
         {/* Top Canvas Bar */}
-        <div className="no-print" style={{ background: "#fff", borderBottom: "1.5px solid #e2e8f0", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="no-print" style={{ background: isDark ? "#1e293b" : "#fff", borderBottom: `1.5px solid ${isDark ? "#334155" : "#e2e8f0"}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Eye size={16} color="#64748b" />
-              <span style={{ fontSize: 13, fontWeight: 800, color: "#475569" }}>A4 Print/PDF Preview</span>
+              <Eye size={16} color={isDark ? "#94a3b8" : "#64748b"} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569" }}>A4 Print/PDF Preview</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={handleEmail} disabled={isEmailing}
               style={{
                 padding: "10px 18px",
-                background: emailSent ? "#059669" : "#f1f5f9",
-                color: emailSent ? "#fff" : "#475569",
+                background: emailSent ? "#059669" : (isDark ? "#334155" : "#f1f5f9"),
+                color: emailSent ? "#fff" : (isDark ? "#cbd5e1" : "#475569"),
                 border: "none",
                 borderRadius: 12,
                 fontSize: 12,
@@ -850,8 +866,8 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
             <button onClick={() => setShowShiftHistory(true)}
               style={{
                 padding: "10px 18px",
-                background: "#eff6ff",
-                color: "#1d4ed8",
+                background: isDark ? "rgba(59,130,246,0.15)" : "#eff6ff",
+                color: isDark ? "#60a5fa" : "#1d4ed8",
                 border: "none",
                 borderRadius: 12,
                 fontSize: 12,
@@ -862,7 +878,7 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
                 gap: 6,
                 transition: "all 0.2s"
               }}
-              className="hover:bg-blue-100"
+              className="hover:bg-blue-100 dark:hover:bg-blue-900/30"
             >
               <Clock size={13} />
               View Shift History
@@ -890,8 +906,8 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
               <button onClick={onClose}
                 style={{
                   padding: "10px 18px",
-                  background: "#fee2e2",
-                  color: "#991b1b",
+                  background: isDark ? "rgba(239,68,68,0.2)" : "#fee2e2",
+                  color: isDark ? "#f87171" : "#991b1b",
                   border: "none",
                   borderRadius: 12,
                   fontSize: 12,
@@ -902,7 +918,7 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
                   gap: 6,
                   transition: "all 0.2s"
                 }}
-                className="hover:bg-red-200"
+                className="hover:bg-red-200 dark:hover:bg-red-900/30"
               >
                 <X size={14} />
                 Close
@@ -912,7 +928,7 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
         </div>
 
         {/* Canvas sheet container */}
-        <div id="invoice-preview-container" style={{ flex: 1, overflowY: "auto", padding: "32px 16px", background: "#f1f5f9" }}>
+        <div id="invoice-preview-container" style={{ flex: 1, overflowY: "auto", padding: "32px 16px", background: isDark ? "#0b0f19" : "#f1f5f9" }}>
           <div id="print-area" className="print-invoice-sheet"
             style={{
               background: getPaperBackground(),
@@ -1679,6 +1695,7 @@ export function EmployeeInvoiceHubModal({ record, autoPrint = false, onClose, in
 
 
 export function PayrollPage() {
+  const isDark = useDarkMode()
   const { isAdmin } = useRole()
   const [records, setRecords] = useState([])
   const [employees, setEmployees] = useState([])
@@ -1759,23 +1776,23 @@ export function PayrollPage() {
     : <ChevronDown size={12} style={{ opacity: 0.3 }} />
 
   const thStyle = (field) => ({
-    padding: "12px 14px", fontSize: 10, fontWeight: 800, color: "#94a3b8",
+    padding: "12px 14px", fontSize: 10, fontWeight: 800, color: isDark ? "#9ca3af" : "#94a3b8",
     textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap",
     cursor: "pointer", userSelect: "none",
-    background: sortField === field ? "#f1f5f9" : "transparent",
+    background: sortField === field ? (isDark ? "#1f2937" : "#f1f5f9") : "transparent",
   })
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#f8fafc", overflow: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: isDark ? "#0B111D" : "#f8fafc", overflow: "auto" }}>
       {/* Header */}
-      <div style={{ background: "#ffffff", borderBottom: "1.5px solid #e2e8f0", padding: "18px 32px", position: "relative" }}>
+      <div style={{ background: isDark ? "#111827" : "#ffffff", borderBottom: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, padding: "18px 32px", position: "relative" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Banknote size={20} color="#4f46e5" />
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: isDark ? "#1f2937" : "#f5f3ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Banknote size={20} color={isDark ? "#818cf8" : "#4f46e5"} />
           </div>
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>Payroll</h1>
-            <p style={{ color: "#64748b", fontSize: 12, fontWeight: 500, margin: 0, marginTop: 1 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 900, color: isDark ? "#f9fafb" : "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>Payroll</h1>
+            <p style={{ color: isDark ? "#9ca3af" : "#64748b", fontSize: 12, fontWeight: 500, margin: 0, marginTop: 1 }}>
               Transparent pay — regular, overtime, leave, and deductions all reconciled.
             </p>
           </div>
@@ -1784,15 +1801,15 @@ export function PayrollPage() {
 
       <div style={{ width: "100%", padding: "24px 32px", display: "flex", flexDirection: "column", gap: 20, flexGrow: 1 }}>
         {error && (
-          <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, color: "#dc2626", fontSize: 13, fontWeight: 700 }}>
+          <div style={{ background: isDark ? "rgba(220,38,38,0.1)" : "#fef2f2", border: `1.5px solid ${isDark ? "rgba(220,38,38,0.2)" : "#fecaca"}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, color: "#dc2626", fontSize: 13, fontWeight: 700 }}>
             <AlertTriangle size={16} /> {error}
           </div>
         )}
 
         {/* KPI Cards */}
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${flagged > 0 ? 5 : 4}, 1fr)`, gap: 12 }}>
-          <KpiCard icon={regionFilter === "UK" ? <span style={{ fontSize: 18, fontWeight: 900, color: "#4f46e5" }}>£</span> : <DollarSign size={20} />} label="Total Gross" value={`${regionFilter === "UK" ? "£" : "$"}${totalGross.toFixed(2)}`} sub={regionFilter === "all" ? "All regions" : `${regionFilter} Region`} color="#4f46e5" />
-          <KpiCard icon={regionFilter === "UK" ? <span style={{ fontSize: 18, fontWeight: 900, color: "#059669" }}>£</span> : <TrendingUp size={20} />} label="Total Net Pay" value={`${regionFilter === "UK" ? "£" : "$"}${totalNet.toFixed(2)}`} sub="After deductions" color="#059669" />
+          <KpiCard icon={regionFilter === "UK" ? <span style={{ fontSize: 18, fontWeight: 900, color: "#818cf8" }}>£</span> : <DollarSign size={20} />} label="Total Gross" value={`${regionFilter === "UK" ? "£" : "$"}${totalGross.toFixed(2)}`} sub={regionFilter === "all" ? "All regions" : `${regionFilter} Region`} color="#4f46e5" />
+          <KpiCard icon={regionFilter === "UK" ? <span style={{ fontSize: 18, fontWeight: 900, color: "#34d399" }}>£</span> : <TrendingUp size={20} />} label="Total Net Pay" value={`${regionFilter === "UK" ? "£" : "$"}${totalNet.toFixed(2)}`} sub="After deductions" color="#059669" />
           <KpiCard icon={<Users size={20} />} label="Employees Paid" value={uniqueEmps} sub={`${filtered.length} records active`} color="#2563eb" />
           <KpiCard icon={<Clock size={20} />} label="Regular Hours" value={fmtH(totalRegHrs)} sub="Across filtered records" color="#f59e0b" />
           {flagged > 0 && <KpiCard icon={<AlertTriangle size={20} />} label="Wage Violations" value={flagged} sub="Below minimum wage" color="#dc2626" />}
@@ -1800,18 +1817,18 @@ export function PayrollPage() {
 
         {/* Generate Form */}
         {isAdmin && (
-          <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, padding: "20px 24px", boxShadow: "0 2px 12px rgba(0,0,0,0.01)" }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              <Banknote size={15} style={{ color: "#4f46e5" }} /> Generate Payroll
+          <div style={{ background: isDark ? "#111827" : "#fff", border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, borderRadius: 16, padding: "20px 24px", boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.2)" : "0 2px 12px rgba(0,0,0,0.01)" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: isDark ? "#f9fafb" : "#0f172a", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+              <Banknote size={15} style={{ color: isDark ? "#818cf8" : "#4f46e5" }} /> Generate Payroll
             </div>
             <form onSubmit={generate} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 12, alignItems: "end" }}>
               <div>
-                <label style={{ fontSize: 10, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>Employee</label>
+                <label style={{ fontSize: 10, fontWeight: 800, color: isDark ? "#9ca3af" : "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>Employee</label>
                 <select value={empId} onChange={e => setEmpId(e.target.value)} required
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0f172a", background: "#fff", outline: "none" }}>
-                  <option value="">Select employee…</option>
+                  style={{ width: "100%", padding: "10px 12px", border: `1px solid ${isDark ? "#374151" : "#cbd5e1"}`, borderRadius: 8, fontSize: 13, fontWeight: 600, color: isDark ? "#f9fafb" : "#0f172a", background: isDark ? "#1f2937" : "#fff", outline: "none" }}>
+                  <option value="" style={{ background: isDark ? "#1f2937" : "#fff", color: isDark ? "#f9fafb" : "#0f172a" }}>Select employee…</option>
                   {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
+                    <option key={emp.id} value={emp.id} style={{ background: isDark ? "#1f2937" : "#fff", color: isDark ? "#f9fafb" : "#0f172a" }}>
                       {emp.user?.first_name || emp.user?.username} ({emp.employee_id})
                     </option>
                   ))}
@@ -1819,13 +1836,13 @@ export function PayrollPage() {
               </div>
               {[["Start Date", start, setStart], ["End Date", end, setEnd]].map(([lbl, val, set]) => (
                 <div key={lbl}>
-                  <label style={{ fontSize: 10, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>{lbl}</label>
+                  <label style={{ fontSize: 10, fontWeight: 800, color: isDark ? "#9ca3af" : "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", display: "block", marginBottom: 4 }}>{lbl}</label>
                   <input type="date" value={val} onChange={e => set(e.target.value)} required
-                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#0f172a", background: "#fff", outline: "none" }} />
+                    style={{ width: "100%", padding: "10px 12px", border: `1px solid ${isDark ? "#374151" : "#cbd5e1"}`, borderRadius: 8, fontSize: 13, fontWeight: 600, color: isDark ? "#f9fafb" : "#0f172a", background: isDark ? "#1f2937" : "#fff", outline: "none" }} />
                 </div>
               ))}
               <button type="submit" disabled={submitting}
-                style={{ padding: "10px 20px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, opacity: submitting ? 0.7 : 1, height: "40px" }}
+                style={{ padding: "10px 20px", background: isDark ? "#6366f1" : "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, opacity: submitting ? 0.7 : 1, height: "40px" }}
                 className="hover:bg-indigo-600 active:scale-95 transition-all">
                 {submitting ? <><Loader2 size={14} style={{ animation: "spin 0.7s linear infinite" }} /> Generating…</> : "Generate"}
               </button>
@@ -1834,21 +1851,21 @@ export function PayrollPage() {
         )}
 
         {/* Records Table */}
-        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.01)", overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
-              <FileText size={15} style={{ color: "#4f46e5" }} /> Payroll Records
-              <span style={{ fontSize: 10, background: "#ede9fe", color: "#7c3aed", fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{filtered.length}</span>
+        <div style={{ background: isDark ? "#111827" : "#fff", border: `1px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, borderRadius: 16, boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.2)" : "0 2px 12px rgba(0,0,0,0.01)", overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${isDark ? "#1f2937" : "#f1f5f9"}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: isDark ? "#f9fafb" : "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+              <FileText size={15} style={{ color: isDark ? "#818cf8" : "#4f46e5" }} /> Payroll Records
+              <span style={{ fontSize: 10, background: isDark ? "#312e81" : "#ede9fe", color: isDark ? "#c084fc" : "#7c3aed", fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>{filtered.length}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)}
-                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, color: "#0f172a", background: "#fff", outline: "none", fontWeight: 600, cursor: "pointer" }}>
-                <option value="all">🌐 All Regions</option>
-                <option value="US">🇺🇸 US Payroll</option>
-                <option value="UK">🇬🇧 UK Payroll</option>
+                style={{ padding: "6px 12px", border: `1px solid ${isDark ? "#374151" : "#cbd5e1"}`, borderRadius: 8, fontSize: 12, color: isDark ? "#f9fafb" : "#0f172a", background: isDark ? "#1f2937" : "#fff", outline: "none", fontWeight: 600, cursor: "pointer" }}>
+                <option value="all" style={{ background: isDark ? "#1f2937" : "#fff" }}>🌐 All Regions</option>
+                <option value="US" style={{ background: isDark ? "#1f2937" : "#fff" }}>🇺🇸 US Payroll</option>
+                <option value="UK" style={{ background: isDark ? "#1f2937" : "#fff" }}>🇬🇧 UK Payroll</option>
               </select>
               <input placeholder="Search employee…" value={filterEmp} onChange={e => setFilterEmp(e.target.value)}
-                style={{ padding: "6px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, color: "#0f172a", outline: "none", width: 160 }} />
+                style={{ padding: "6px 12px", border: `1px solid ${isDark ? "#374151" : "#cbd5e1"}`, borderRadius: 8, fontSize: 12, color: isDark ? "#f9fafb" : "#0f172a", background: isDark ? "#1f2937" : "#fff", outline: "none", width: 160 }} />
             </div>
           </div>
 
@@ -1864,7 +1881,7 @@ export function PayrollPage() {
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1.5px solid #f1f5f9" }}>
+                  <tr style={{ borderBottom: `1.5px solid ${isDark ? "#1f2937" : "#f1f5f9"}` }}>
                     {[
                       ["Employee", "employee"], ["Period", "period"], ["Region", "region"],
                       ["Rate/hr", "hourly_rate"], ["Gross", "gross_pay"], ["Net Pay", "net_pay"],
@@ -1895,9 +1912,9 @@ export function PayrollPage() {
                     
                     return (
                       <tr key={r.id} onClick={() => setSelected(r)}
-                        style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.15s" }}
+                        style={{ borderBottom: `1px solid ${isDark ? "#1f2937" : "#f1f5f9"}`, cursor: "pointer", transition: "background 0.15s" }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.background = "#f8fafc"
+                          e.currentTarget.style.background = isDark ? "#1f2937" : "#f8fafc"
                           setHoveredRow(r.id)
                         }}
                         onMouseLeave={e => {
@@ -1905,43 +1922,43 @@ export function PayrollPage() {
                           setHoveredRow(null)
                         }}>
                         <td style={{ padding: "14px 14px" }}>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: "#0f172a" }}>{fmtId(r.employee)}</div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", marginTop: 2 }}>{r.employee_name}</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: isDark ? "#f9fafb" : "#0f172a" }}>{fmtId(r.employee)}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: isDark ? "#6b7280" : "#94a3b8", textTransform: "uppercase", marginTop: 2 }}>{r.employee_name}</div>
                         </td>
                         <td style={{ padding: "14px 14px" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", whiteSpace: "nowrap" }}>{r.period?.start_date}</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>{r.period?.end_date}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#9ca3af" : "#64748b", whiteSpace: "nowrap" }}>{r.period?.start_date}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#9ca3af" : "#64748b" }}>{r.period?.end_date}</div>
                         </td>
                         <td style={{ padding: "14px 14px" }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.employee_country || r.region || "—"}</span>
-                          {r.is_exempt && <div style={{ fontSize: 9, fontWeight: 800, color: "#059669", textTransform: "uppercase", marginTop: 2 }}>FLSA EXEMPT</div>}
+                          <span style={{ fontSize: 10, fontWeight: 800, color: isDark ? "#818cf8" : "#4f46e5", textTransform: "uppercase", letterSpacing: "0.06em" }}>{r.employee_country || r.region || "—"}</span>
+                          {r.is_exempt && <div style={{ fontSize: 9, fontWeight: 800, color: isDark ? "#34d399" : "#059669", textTransform: "uppercase", marginTop: 2 }}>FLSA EXEMPT</div>}
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: "#64748b" }}>{fmt(r.hourly_rate, curr)}</td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 13, fontWeight: 900, color: "#0f172a" }}>{fmt(r.gross_pay, curr)}</td>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: isDark ? "#9ca3af" : "#64748b" }}>{fmt(r.hourly_rate, curr)}</td>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 13, fontWeight: 900, color: isDark ? "#f9fafb" : "#0f172a" }}>{fmt(r.gross_pay, curr)}</td>
                         <td style={{ padding: "14px 14px", textAlign: "right" }}>
-                          <span style={{ fontSize: 13, fontWeight: 900, color: "#059669", background: "#ecfdf5", padding: "4px 10px", borderRadius: 8 }}>{fmt(r.net_pay, curr)}</span>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: isDark ? "#34d399" : "#059669", background: isDark ? "rgba(52,211,153,0.1)" : "#ecfdf5", padding: "4px 10px", borderRadius: 8 }}>{fmt(r.net_pay, curr)}</span>
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: "#475569" }}>{fmtH(r.regular_hours)}</td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.overtime_hours) > 0 ? "#d97706" : "#cbd5e1" }}>{fmtH(r.overtime_hours)}</td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.daily_ot_hours) > 0 ? "#ea580c" : "#cbd5e1" }}>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: isDark ? "#cbd5e1" : "#475569" }}>{fmtH(r.regular_hours)}</td>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.overtime_hours) > 0 ? "#d97706" : (isDark ? "#4b5563" : "#cbd5e1") }}>{fmtH(r.overtime_hours)}</td>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.daily_ot_hours) > 0 ? "#ea580c" : (isDark ? "#4b5563" : "#cbd5e1") }}>
                           {Number(r.daily_ot_hours) > 0 ? fmtH(r.daily_ot_hours) : "—"}
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.double_time_hours) > 0 ? "#dc2626" : "#cbd5e1" }}>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 800, color: Number(r.double_time_hours) > 0 ? "#dc2626" : (isDark ? "#4b5563" : "#cbd5e1") }}>
                           {Number(r.double_time_hours) > 0 ? fmtH(r.double_time_hours) : "—"}
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: isDark ? "#9ca3af" : "#64748b" }}>
                           {isUK && Number(r.uk_income_tax) > 0 ? fmt(r.uk_income_tax, "£") : "—"}
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: "#64748b" }}>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: isDark ? "#9ca3af" : "#64748b" }}>
                           {isUK && Number(r.uk_employee_ni) > 0 ? fmt(r.uk_employee_ni, "£") : "—"}
                         </td>
-                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: Number(r.holiday_hours_accrued) > 0 ? "#059669" : "#cbd5e1" }}>
+                        <td style={{ padding: "14px 14px", textAlign: "right", fontSize: 12, fontWeight: 700, color: Number(r.holiday_hours_accrued) > 0 ? (isDark ? "#34d399" : "#059669") : (isDark ? "#4b5563" : "#cbd5e1") }}>
                           {Number(r.holiday_hours_accrued) > 0 ? fmtH(r.holiday_hours_accrued) : "—"}
                         </td>
                         <td style={{ padding: "14px 14px", textAlign: "center", position: "relative" }}>
                           {r.wage_floor_compliant
-                            ? <CheckCircle2 size={16} style={{ color: "#059669" }} />
-                            : <span style={{ fontSize: 9, fontWeight: 800, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: 5, textTransform: "uppercase" }}>MIN WAGE ⚠</span>}
+                            ? <CheckCircle2 size={16} style={{ color: isDark ? "#34d399" : "#059669" }} />
+                            : <span style={{ fontSize: 9, fontWeight: 800, background: isDark ? "rgba(220,38,38,0.1)" : "#fef2f2", color: "#dc2626", border: `1px solid ${isDark ? "rgba(220,38,38,0.2)" : "#fecaca"}`, padding: "3px 8px", borderRadius: 5, textTransform: "uppercase" }}>MIN WAGE ⚠</span>}
 
                           {hoveredRow === r.id && (
                             <div style={{

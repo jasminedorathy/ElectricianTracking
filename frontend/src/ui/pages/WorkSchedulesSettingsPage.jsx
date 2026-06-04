@@ -28,7 +28,23 @@ const DEFAULT_LOCATIONS = [
     { id: 3, name: "Warehouse & Logistics South" }
 ]
 
+// Custom hook to detect if dark mode is active
+function useDarkMode() {
+    const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
+
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setIsDark(document.documentElement.classList.contains("dark"))
+        })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+        return () => observer.disconnect()
+    }, [])
+
+    return isDark
+}
+
 export function WorkSchedulesSettingsPage() {
+    const isDark = useDarkMode()
     const [activeTab, setActiveTab] = useState("schedules")
     const [editingCard, setEditingCard] = useState(null)
     const [saving, setSaving] = useState(null)
@@ -199,14 +215,14 @@ export function WorkSchedulesSettingsPage() {
     }
 
     return (
-        <div className="settingsSubpage" style={{ padding: "32px" }}>
+        <div className="settingsSubpage" style={{ padding: "32px", background: isDark ? "#0B111D" : "#f8fafc" }}>
             <header className="pageHeader" style={{ marginBottom: "28px" }}>
-                <h1 className="pageTitle" style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.03em" }}>Work Schedules & Policies</h1>
-                <p style={{ color: "#64748b", fontSize: "14px", marginTop: "4px" }}>Configure baseline operating hours, flexitime bounds, and allocate biometric shift schedules.</p>
+                <h1 className="pageTitle" style={{ fontSize: "28px", fontWeight: 900, letterSpacing: "-0.03em", color: isDark ? "#f9fafb" : "#1e293b" }}>Work Schedules & Policies</h1>
+                <p style={{ color: isDark ? "#9ca3af" : "#64748b", fontSize: "14px", marginTop: "4px" }}>Configure baseline operating hours, flexitime bounds, and allocate biometric shift schedules.</p>
             </header>
 
             {/* Tabs */}
-            <div className="tabNav" style={{ display: "flex", gap: "28px", borderBottom: "1.5px solid #e2e8f0", marginBottom: "32px" }}>
+            <div className="tabNav" style={{ display: "flex", gap: "28px", borderBottom: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, marginBottom: "32px" }}>
                 <button
                     className={`tabBtn ${activeTab === "schedules" ? "active" : ""}`}
                     onClick={() => setActiveTab("schedules")}
@@ -215,7 +231,12 @@ export function WorkSchedulesSettingsPage() {
                         fontSize: "15px",
                         fontWeight: 800,
                         borderBottom: activeTab === "schedules" ? "3px solid #f97316" : "3px solid transparent",
-                        color: activeTab === "schedules" ? "#f97316" : "#64748b"
+                        color: activeTab === "schedules" ? "#f97316" : (isDark ? "#9ca3af" : "#64748b"),
+                        background: "none",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        borderRight: "none",
+                        cursor: "pointer"
                     }}
                 >
                     Operating Hours
@@ -228,7 +249,12 @@ export function WorkSchedulesSettingsPage() {
                         fontSize: "15px",
                         fontWeight: 800,
                         borderBottom: activeTab === "shifts" ? "3px solid #f97316" : "3px solid transparent",
-                        color: activeTab === "shifts" ? "#f97316" : "#64748b"
+                        color: activeTab === "shifts" ? "#f97316" : (isDark ? "#9ca3af" : "#64748b"),
+                        background: "none",
+                        borderTop: "none",
+                        borderLeft: "none",
+                        borderRight: "none",
+                        cursor: "pointer"
                     }}
                 >
                     Shifts & Allocations
@@ -242,30 +268,30 @@ export function WorkSchedulesSettingsPage() {
                         
                         {/* ── DEFAULT WORKING HOURS CARD ── */}
                         <div className={`policyCard ${editingCard === "DEFAULT WORKING HOURS" ? "editing" : ""}`} style={{
-                            background: "#fff",
-                            border: "1.5px solid #e2e8f0",
+                            background: isDark ? "#111827" : "#fff",
+                            border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
                             borderRadius: "20px",
                             padding: "28px",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.01)"
+                            boxShadow: isDark ? "0 4px 30px rgba(0,0,0,0.4)" : "0 4px 20px rgba(0,0,0,0.01)"
                         }}>
                             <div className="cardHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                                <div className="cardTitle" style={{ fontSize: "16px", fontWeight: 900, color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div className="cardTitle" style={{ fontSize: "16px", fontWeight: 900, color: isDark ? "#f9fafb" : "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                     COMPANY STANDARD WORKING HOURS
-                                    <Info size={14} className="infoIcon" style={{ color: "#94a3b8" }} />
+                                    <Info size={14} className="infoIcon" style={{ color: isDark ? "#4b5563" : "#94a3b8" }} />
                                 </div>
 
                                 {editingCard === "DEFAULT WORKING HOURS" ? (
                                     <div style={{ display: "flex", gap: "8px" }}>
                                         <button
                                             onClick={() => setEditingCard(null)}
-                                            style={{ padding: "8px 14px", borderRadius: "10px", background: "#f1f5f9", fontSize: "12px", fontWeight: 800, color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}
+                                            style={{ padding: "8px 14px", borderRadius: "10px", background: isDark ? "#1f2937" : "#f1f5f9", border: `1px solid ${isDark ? "#374151" : "transparent"}`, fontSize: "12px", fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                                         >
                                             <X size={14} /> Cancel
                                         </button>
                                         <button
                                             onClick={handleSaveSchedules}
                                             disabled={saving === "DEFAULT WORKING HOURS"}
-                                            style={{ padding: "8px 16px", borderRadius: "10px", background: "#f97316", fontSize: "12px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 12px rgba(249,115,22,0.2)" }}
+                                            style={{ padding: "8px 16px", borderRadius: "10px", background: "#f97316", border: "none", fontSize: "12px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 12px rgba(249,115,22,0.2)", cursor: "pointer" }}
                                         >
                                             {saving === "DEFAULT WORKING HOURS" ? <RefreshCcw size={14} className="psSpin animate-spin" /> : <Check size={14} />} Save Hours
                                         </button>
@@ -273,7 +299,7 @@ export function WorkSchedulesSettingsPage() {
                                 ) : (
                                     <button
                                         onClick={() => setEditingCard("DEFAULT WORKING HOURS")}
-                                        style={{ padding: "8px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "12px", fontWeight: 800, color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}
+                                        style={{ padding: "8px 14px", borderRadius: "10px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, background: isDark ? "#1f2937" : "#fff", fontSize: "12px", fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                                     >
                                         <Edit3 size={14} /> Edit Schedule
                                     </button>
@@ -281,12 +307,12 @@ export function WorkSchedulesSettingsPage() {
                             </div>
 
                             {success === "DEFAULT WORKING HOURS" && (
-                                <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "12px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div style={{ background: isDark ? "rgba(16,185,129,0.15)" : "#ecfdf5", border: `1px solid ${isDark ? "#10b981" : "#a7f3d0"}`, color: isDark ? "#34d399" : "#065f46", padding: "12px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                                     <CheckCircle2 size={16} /> Changes saved successfully! Standard work schedules updated.
                                 </div>
                             )}
 
-                            <p style={{ color: "#64748b", fontSize: "13.5px", margin: "0 0 24px" }}>Specify standard clock-in/out ranges for active business days across the company.</p>
+                            <p style={{ color: isDark ? "#9ca3af" : "#64748b", fontSize: "13.5px", margin: "0 0 24px" }}>Specify standard clock-in/out ranges for active business days across the company.</p>
 
                             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                                 {Object.entries(schedules).map(([day, config]) => (
@@ -296,8 +322,8 @@ export function WorkSchedulesSettingsPage() {
                                         justifyContent: "space-between",
                                         padding: "14px 20px",
                                         borderRadius: "14px",
-                                        background: config.active ? "#fff" : "#f8fafc",
-                                        border: config.active ? "1px solid #f1f5f9" : "1px solid #f1f5f9",
+                                        background: config.active ? (isDark ? "#1f2937" : "#fff") : (isDark ? "rgba(31,41,55,0.4)" : "#f8fafc"),
+                                        border: `1px solid ${isDark ? "#1f2937" : "#f1f5f9"}`,
                                         opacity: config.active ? 1 : 0.6
                                     }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -308,7 +334,7 @@ export function WorkSchedulesSettingsPage() {
                                                 onChange={(e) => updateDaySchedule(day, "active", e.target.checked)}
                                                 style={{ accentColor: "#f97316", width: "16px", height: "16px", cursor: "pointer" }}
                                             />
-                                            <span style={{ fontSize: "14px", fontWeight: 900, color: "#1e293b", minWidth: "48px" }}>{day}</span>
+                                            <span style={{ fontSize: "14px", fontWeight: 900, color: isDark ? "#f9fafb" : "#1e293b", minWidth: "48px" }}>{day}</span>
                                         </div>
 
                                         {config.active ? (
@@ -318,19 +344,19 @@ export function WorkSchedulesSettingsPage() {
                                                     value={config.start}
                                                     disabled={editingCard !== "DEFAULT WORKING HOURS"}
                                                     onChange={(e) => updateDaySchedule(day, "start", e.target.value)}
-                                                    style={{ padding: "6px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 700, outline: "none", color: "#1e293b" }}
+                                                    style={{ padding: "6px 12px", border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, borderRadius: "8px", fontSize: "13px", fontWeight: 700, outline: "none", color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff" }}
                                                 />
-                                                <span style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 600 }}>to</span>
+                                                <span style={{ fontSize: "13px", color: isDark ? "#9ca3af" : "#94a3b8", fontWeight: 600 }}>to</span>
                                                 <input
                                                     type="time"
                                                     value={config.end}
                                                     disabled={editingCard !== "DEFAULT WORKING HOURS"}
                                                     onChange={(e) => updateDaySchedule(day, "end", e.target.value)}
-                                                    style={{ padding: "6px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 700, outline: "none", color: "#1e293b" }}
+                                                    style={{ padding: "6px 12px", border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, borderRadius: "8px", fontSize: "13px", fontWeight: 700, outline: "none", color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff" }}
                                                 />
                                             </div>
                                         ) : (
-                                            <span style={{ fontSize: "13px", color: "#94a3b8", fontWeight: 600, italic: true }}>Rest Day (Off)</span>
+                                            <span style={{ fontSize: "13px", color: isDark ? "#9ca3af" : "#94a3b8", fontWeight: 600, fontStyle: "italic" }}>Rest Day (Off)</span>
                                         )}
                                     </div>
                                 ))}
@@ -339,30 +365,30 @@ export function WorkSchedulesSettingsPage() {
 
                         {/* ── FLEXIBLE SCHEDULES CARD ── */}
                         <div className={`policyCard ${editingCard === "FLEXIBLE SCHEDULES" ? "editing" : ""}`} style={{
-                            background: "#fff",
-                            border: "1.5px solid #e2e8f0",
+                            background: isDark ? "#111827" : "#fff",
+                            border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
                             borderRadius: "20px",
                             padding: "28px",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.01)"
+                            boxShadow: isDark ? "0 4px 30px rgba(0,0,0,0.4)" : "0 4px 20px rgba(0,0,0,0.01)"
                         }}>
                             <div className="cardHeader" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                                <div className="cardTitle" style={{ fontSize: "16px", fontWeight: 900, color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div className="cardTitle" style={{ fontSize: "16px", fontWeight: 900, color: isDark ? "#f9fafb" : "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                     FLEXIBLE WORK POLICY
-                                    <Info size={14} className="infoIcon" style={{ color: "#94a3b8" }} />
+                                    <Info size={14} className="infoIcon" style={{ color: isDark ? "#4b5563" : "#94a3b8" }} />
                                 </div>
 
                                 {editingCard === "FLEXIBLE SCHEDULES" ? (
                                     <div style={{ display: "flex", gap: "8px" }}>
                                         <button
                                             onClick={() => setEditingCard(null)}
-                                            style={{ padding: "8px 14px", borderRadius: "10px", background: "#f1f5f9", fontSize: "12px", fontWeight: 800, color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}
+                                            style={{ padding: "8px 14px", borderRadius: "10px", background: isDark ? "#1f2937" : "#f1f5f9", border: `1px solid ${isDark ? "#374151" : "transparent"}`, fontSize: "12px", fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                                         >
                                             <X size={14} /> Cancel
                                         </button>
                                         <button
                                             onClick={handleSaveFlexible}
                                             disabled={saving === "FLEXIBLE SCHEDULES"}
-                                            style={{ padding: "8px 16px", borderRadius: "10px", background: "#f97316", fontSize: "12px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 12px rgba(249,115,22,0.2)" }}
+                                            style={{ padding: "8px 16px", borderRadius: "10px", background: "#f97316", border: "none", fontSize: "12px", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: "6px", boxShadow: "0 4px 12px rgba(249,115,22,0.2)", cursor: "pointer" }}
                                         >
                                             {saving === "FLEXIBLE SCHEDULES" ? <RefreshCcw size={14} className="psSpin animate-spin" /> : <Check size={14} />} Save Policy
                                         </button>
@@ -370,7 +396,7 @@ export function WorkSchedulesSettingsPage() {
                                 ) : (
                                     <button
                                         onClick={() => setEditingCard("FLEXIBLE SCHEDULES")}
-                                        style={{ padding: "8px 14px", borderRadius: "10px", border: "1.5px solid #e2e8f0", background: "#fff", fontSize: "12px", fontWeight: 800, color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}
+                                        style={{ padding: "8px 14px", borderRadius: "10px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, background: isDark ? "#1f2937" : "#fff", fontSize: "12px", fontWeight: 800, color: isDark ? "#cbd5e1" : "#475569", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}
                                     >
                                         <Edit3 size={14} /> Edit Policy
                                     </button>
@@ -378,12 +404,12 @@ export function WorkSchedulesSettingsPage() {
                             </div>
 
                             {success === "FLEXIBLE SCHEDULES" && (
-                                <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "12px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div style={{ background: isDark ? "rgba(16,185,129,0.15)" : "#ecfdf5", border: `1px solid ${isDark ? "#10b981" : "#a7f3d0"}`, color: isDark ? "#34d399" : "#065f46", padding: "12px 16px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                                     <CheckCircle2 size={16} /> Changes saved successfully! Flexitime configuration updated.
                                 </div>
                             )}
 
-                            <p style={{ color: "#64748b", fontSize: "13.5px", margin: "0 0 24px" }}>Configure core hours windows and minimum mandatory active session constraints.</p>
+                            <p style={{ color: isDark ? "#9ca3af" : "#64748b", fontSize: "13.5px", margin: "0 0 24px" }}>Configure core hours windows and minimum mandatory active session constraints.</p>
 
                             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -395,7 +421,7 @@ export function WorkSchedulesSettingsPage() {
                                         onChange={(e) => setFlexible(prev => ({ ...prev, enabled: e.target.checked }))}
                                         style={{ accentColor: "#f97316", width: "18px", height: "18px", cursor: "pointer" }}
                                     />
-                                    <label htmlFor="flexi-enabled" style={{ fontSize: "14px", fontWeight: 800, color: "#1e293b", cursor: "pointer" }}>
+                                    <label htmlFor="flexi-enabled" style={{ fontSize: "14px", fontWeight: 800, color: isDark ? "#f9fafb" : "#1e293b", cursor: "pointer" }}>
                                         Enable flexible scheduling windows
                                     </label>
                                 </div>
@@ -405,35 +431,35 @@ export function WorkSchedulesSettingsPage() {
                                         display: "grid",
                                         gridTemplateColumns: "1fr 1fr",
                                         gap: "20px",
-                                        background: "#f8fafc",
+                                        background: isDark ? "#1f2937" : "#f8fafc",
                                         padding: "20px",
                                         borderRadius: "16px",
-                                        border: "1px solid #f1f5f9",
+                                        border: `1px solid ${isDark ? "#374151" : "#f1f5f9"}`,
                                         marginTop: "8px"
                                     }}>
                                         <div>
-                                            <label style={{ display: "block", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "8px" }}>Mandatory Core Hours Window</label>
+                                            <label style={{ display: "block", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", color: isDark ? "#cbd5e1" : "#64748b", marginBottom: "8px" }}>Mandatory Core Hours Window</label>
                                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                                 <input
                                                     type="time"
                                                     value={flexible.coreStart}
                                                     disabled={editingCard !== "FLEXIBLE SCHEDULES"}
                                                     onChange={(e) => setFlexible(prev => ({ ...prev, coreStart: e.target.value }))}
-                                                    style={{ padding: "8px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 700 }}
+                                                    style={{ padding: "8px 12px", border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                                 />
-                                                <span style={{ fontSize: "12px", color: "#94a3b8" }}>to</span>
+                                                <span style={{ fontSize: "12px", color: isDark ? "#9ca3af" : "#94a3b8" }}>to</span>
                                                 <input
                                                     type="time"
                                                     value={flexible.coreEnd}
                                                     disabled={editingCard !== "FLEXIBLE SCHEDULES"}
                                                     onChange={(e) => setFlexible(prev => ({ ...prev, coreEnd: e.target.value }))}
-                                                    style={{ padding: "8px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", fontSize: "13px", fontWeight: 700 }}
+                                                    style={{ padding: "8px 12px", border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                                 />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label style={{ display: "block", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "8px" }}>Min Core Hours Per Session</label>
+                                            <label style={{ display: "block", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.05em", color: isDark ? "#cbd5e1" : "#64748b", marginBottom: "8px" }}>Min Core Hours Per Session</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -441,7 +467,7 @@ export function WorkSchedulesSettingsPage() {
                                                 value={flexible.minCoreHours}
                                                 disabled={editingCard !== "FLEXIBLE SCHEDULES"}
                                                 onChange={(e) => setFlexible(prev => ({ ...prev, minCoreHours: Number(e.target.value) }))}
-                                                style={{ padding: "8px 12px", border: "1.5px solid #e2e8f0", borderRadius: "8px", width: "90px", fontSize: "13px", fontWeight: 700 }}
+                                                style={{ padding: "8px 12px", border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, borderRadius: "8px", width: "90px", fontSize: "13px", fontWeight: 700, color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                             />
                                         </div>
                                     </div>
@@ -454,8 +480,8 @@ export function WorkSchedulesSettingsPage() {
                     <div className="shiftsView" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <div>
-                                <h3 style={{ fontSize: "16px", fontWeight: 900, color: "#1e293b" }}>Shift Allocations Ledger</h3>
-                                <p style={{ color: "#64748b", fontSize: "13px", marginTop: "2px" }}>Assign shift windows to specific employees and configure biometric geofencing enforcement overrides.</p>
+                                <h3 style={{ fontSize: "16px", fontWeight: 900, color: isDark ? "#f9fafb" : "#1e293b" }}>Shift Allocations Ledger</h3>
+                                <p style={{ color: isDark ? "#9ca3af" : "#64748b", fontSize: "13px", marginTop: "2px" }}>Assign shift windows to specific employees and configure biometric geofencing enforcement overrides.</p>
                             </div>
                             <button
                                 onClick={() => setShowShiftModal(true)}
@@ -480,69 +506,69 @@ export function WorkSchedulesSettingsPage() {
 
                         {/* Shift List Card */}
                         <div style={{
-                            background: "#fff",
-                            border: "1.5px solid #e2e8f0",
+                            background: isDark ? "#111827" : "#fff",
+                            border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`,
                             borderRadius: "20px",
                             overflow: "hidden"
                         }}>
                             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                                 <thead>
-                                    <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Employee</th>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Date</th>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Timing Window</th>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Assigned Location</th>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Biometric Enforcement</th>
-                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b", textAlign: "right" }}>Action</th>
+                                    <tr style={{ background: isDark ? "#1f2937" : "#f8fafc", borderBottom: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}` }}>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b" }}>Employee</th>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b" }}>Date</th>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b" }}>Timing Window</th>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b" }}>Assigned Location</th>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b" }}>Biometric Enforcement</th>
+                                        <th style={{ padding: "18px 24px", fontSize: "11px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: isDark ? "#cbd5e1" : "#64748b", textAlign: "right" }}>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {shifts.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" style={{ padding: "48px 24px", textAlign: "center", color: "#94a3b8", fontSize: "14px", italic: true }}>
+                                            <td colSpan="6" style={{ padding: "48px 24px", textAlign: "center", color: "#94a3b8", fontSize: "14px", fontStyle: "italic" }}>
                                                 No shifts assigned yet. Click "Allocate New Shift" to get started.
                                             </td>
                                         </tr>
                                     ) : (
                                         shifts.map((sh, idx) => (
-                                            <tr key={sh.id || idx} style={{ borderBottom: "1px solid #f1f5f9", background: idx % 2 === 0 ? "#fff" : "#fafbfd" }}>
+                                            <tr key={sh.id || idx} style={{ borderBottom: `1px solid ${isDark ? "#1f2937" : "#f1f5f9"}`, background: idx % 2 === 0 ? (isDark ? "#111827" : "#fff") : (isDark ? "#1c2431" : "#fafbfd") }}>
                                                 <td style={{ padding: "18px 24px" }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                                        <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: "#f5f3ff", color: "#8b5cf6", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: "13px", fontWeight: 900, flexShrink: 0, justifyContent: "center" }}>
+                                                        <div style={{ width: "32px", height: "32px", borderRadius: "10px", background: isDark ? "rgba(139,92,246,0.15)" : "#f5f3ff", color: isDark ? "#c084fc" : "#8b5cf6", display: "flex", alignItems: "center", justifyCenter: "center", fontSize: "13px", fontWeight: 900, flexShrink: 0, justifyContent: "center" }}>
                                                             {sh.employeeName.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <div style={{ fontSize: "13.5px", fontWeight: 800, color: "#1e293b" }}>{sh.employeeName}</div>
-                                                            <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", marginTop: "1px" }}>{sh.employeeCode}</div>
+                                                            <div style={{ fontSize: "13.5px", fontWeight: 800, color: isDark ? "#f9fafb" : "#1e293b" }}>{sh.employeeName}</div>
+                                                            <div style={{ fontSize: "11px", color: isDark ? "#9ca3af" : "#94a3b8", fontWeight: 700, textTransform: "uppercase", marginTop: "1px" }}>{sh.employeeCode}</div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: "18px 24px", fontSize: "13.5px", fontWeight: 700, color: "#475569" }}>
+                                                <td style={{ padding: "18px 24px", fontSize: "13.5px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#475569" }}>
                                                     {new Date(sh.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                                                 </td>
                                                 <td style={{ padding: "18px 24px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13.5px", fontWeight: 800, color: "#1e293b" }}>
-                                                        <Clock size={14} style={{ color: "#94a3b8" }} />
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13.5px", fontWeight: 800, color: isDark ? "#f9fafb" : "#1e293b" }}>
+                                                        <Clock size={14} style={{ color: isDark ? "#9ca3af" : "#94a3b8" }} />
                                                         {sh.start} – {sh.end}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: "18px 24px" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 700, color: "#475569" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#475569" }}>
                                                         <MapPin size={13} style={{ color: "#f97316" }} />
                                                         {sh.locationName}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: "18px 24px" }}>
                                                     {sh.enforcement === "block" ? (
-                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: "#fee2e2", color: "#991b1b", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
+                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: isDark ? "rgba(220,38,38,0.15)" : "#fee2e2", color: isDark ? "#f87171" : "#991b1b", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
                                                             <ShieldAlert size={12} /> Strict Block
                                                         </span>
                                                     ) : sh.enforcement === "warn" ? (
-                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: "#fffbeb", color: "#854d0e", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
+                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: isDark ? "rgba(245,158,11,0.15)" : "#fffbeb", color: isDark ? "#facc15" : "#854d0e", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
                                                             <AlertCircle size={12} /> Warn Only
                                                         </span>
                                                     ) : (
-                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: "#f1f5f9", color: "#475569", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
+                                                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "99px", background: isDark ? "#1f2937" : "#f1f5f9", color: isDark ? "#cbd5e1" : "#475569", fontSize: "11px", fontWeight: 800, textTransform: "uppercase" }}>
                                                             No Enforcement
                                                         </span>
                                                     )}
@@ -559,8 +585,8 @@ export function WorkSchedulesSettingsPage() {
                                                             cursor: "pointer",
                                                             transition: "background 0.2s"
                                                         }}
-                                                        onMouseEnter={(e) => e.target.style.background = "#fef2f2"}
-                                                        onMouseLeave={(e) => e.target.style.background = "transparent"}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = isDark ? "rgba(239,68,68,0.15)" : "#fef2f2" }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent" }}
                                                     >
                                                         <Trash2 size={15} />
                                                     </button>
@@ -580,7 +606,7 @@ export function WorkSchedulesSettingsPage() {
                 <div style={{
                     position: "fixed",
                     inset: 0,
-                    background: "rgba(10, 15, 30, 0.45)",
+                    background: "rgba(0, 0, 0, 0.65)",
                     backdropFilter: "blur(12px)",
                     zIndex: 999999,
                     display: "flex",
@@ -588,20 +614,20 @@ export function WorkSchedulesSettingsPage() {
                     justifyContent: "center"
                 }}>
                     <form onSubmit={handleCreateShift} style={{
-                        background: "#fff",
+                        background: isDark ? "#111827" : "#fff",
                         width: "100%",
                         maxWidth: "500px",
                         borderRadius: "24px",
                         padding: "32px",
-                        boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
-                        border: "1.5px solid #e2e8f0"
+                        boxShadow: isDark ? "0 20px 50px rgba(0,0,0,0.5)" : "0 20px 50px rgba(0,0,0,0.15)",
+                        border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`
                     }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-                            <h4 style={{ fontSize: "18px", fontWeight: 900, color: "#1e293b" }}>Allocate New Shift</h4>
+                            <h4 style={{ fontSize: "18px", fontWeight: 900, color: isDark ? "#f9fafb" : "#1e293b", margin: 0 }}>Allocate New Shift</h4>
                             <button
                                 type="button"
                                 onClick={() => setShowShiftModal(false)}
-                                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "4px" }}
+                                style={{ background: "none", border: "none", color: isDark ? "#9ca3af" : "#94a3b8", cursor: "pointer", padding: "4px" }}
                             >
                                 <X size={20} />
                             </button>
@@ -610,16 +636,16 @@ export function WorkSchedulesSettingsPage() {
                         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                             {/* Employee Select */}
                             <div>
-                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>Select Personnel</label>
+                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>Select Personnel</label>
                                 <select
                                     value={newShift.employeeId}
                                     onChange={(e) => setNewShift(prev => ({ ...prev, employeeId: e.target.value }))}
                                     required
-                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                 >
-                                    <option value="">Choose Employee...</option>
+                                    <option value="" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>Choose Employee...</option>
                                     {employees.map(emp => (
-                                        <option key={emp.id} value={emp.id}>
+                                        <option key={emp.id} value={emp.id} style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>
                                             {emp.name || `${emp.first_name || "Employee"} ${emp.last_name || ""}`} ({emp.employee_id || `ID: ${emp.id}`})
                                         </option>
                                     ))}
@@ -628,68 +654,68 @@ export function WorkSchedulesSettingsPage() {
 
                             {/* Date Picker */}
                             <div>
-                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>Shift Date</label>
+                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>Shift Date</label>
                                 <input
                                     type="date"
                                     value={newShift.date}
                                     onChange={(e) => setNewShift(prev => ({ ...prev, date: e.target.value }))}
                                     required
-                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                 />
                             </div>
 
                             {/* Time Window */}
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>Start Time</label>
+                                    <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>Start Time</label>
                                     <input
                                         type="time"
                                         value={newShift.start}
                                         onChange={(e) => setNewShift(prev => ({ ...prev, start: e.target.value }))}
                                         required
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>End Time</label>
+                                    <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>End Time</label>
                                     <input
                                         type="time"
                                         value={newShift.end}
                                         onChange={(e) => setNewShift(prev => ({ ...prev, end: e.target.value }))}
                                         required
-                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                        style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                     />
                                 </div>
                             </div>
 
                             {/* Geofence Location */}
                             <div>
-                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>Assigned Location (Geofenced Site)</label>
+                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>Assigned Location (Geofenced Site)</label>
                                 <select
                                     value={newShift.locationId}
                                     onChange={(e) => setNewShift(prev => ({ ...prev, locationId: e.target.value }))}
                                     required
-                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                 >
-                                    <option value="">Select Geofenced Site...</option>
+                                    <option value="" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>Select Geofenced Site...</option>
                                     {locations.map(loc => (
-                                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                        <option key={loc.id} value={loc.id} style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>{loc.name}</option>
                                     ))}
                                 </select>
                             </div>
 
                             {/* Biometric Enforcement Mode */}
                             <div>
-                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: "#94a3b8", marginBottom: "8px" }}>Biometric Geofence Enforcement Mode</label>
+                                <label style={{ display: "block", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em", color: isDark ? "#cbd5e1" : "#94a3b8", marginBottom: "8px" }}>Biometric Geofence Enforcement Mode</label>
                                 <select
                                     value={newShift.enforcement}
                                     onChange={(e) => setNewShift(prev => ({ ...prev, enforcement: e.target.value }))}
                                     required
-                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "14px", fontWeight: 700, color: "#1e293b", outline: "none" }}
+                                    style={{ width: "100%", padding: "12px 16px", borderRadius: "12px", border: `1.5px solid ${isDark ? "#1f2937" : "#e2e8f0"}`, fontSize: "14px", fontWeight: 700, color: isDark ? "#cbd5e1" : "#1e293b", background: isDark ? "#111827" : "#fff", outline: "none" }}
                                 >
-                                    <option value="block">Strict Block (Prevent clock in outside site)</option>
-                                    <option value="warn">Warn Only (Flag mismatch with warning)</option>
-                                    <option value="off">No Enforcement (Standard logging)</option>
+                                    <option value="block" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>Strict Block (Prevent clock in outside site)</option>
+                                    <option value="warn" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>Warn Only (Flag mismatch with warning)</option>
+                                    <option value="off" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#cbd5e1" : "#1e293b" }}>No Enforcement (Standard logging)</option>
                                 </select>
                             </div>
                         </div>
@@ -699,7 +725,7 @@ export function WorkSchedulesSettingsPage() {
                             <button
                                 type="button"
                                 onClick={() => setShowShiftModal(false)}
-                                style={{ padding: "12px 24px", borderRadius: "12px", background: "#f1f5f9", fontSize: "13px", fontWeight: 900, color: "#475569", border: "none", cursor: "pointer" }}
+                                style={{ padding: "12px 24px", borderRadius: "12px", background: isDark ? "#1f2937" : "#f1f5f9", fontSize: "13px", fontWeight: 900, color: isDark ? "#cbd5e1" : "#475569", border: "none", cursor: "pointer" }}
                             >
                                 Discard
                             </button>

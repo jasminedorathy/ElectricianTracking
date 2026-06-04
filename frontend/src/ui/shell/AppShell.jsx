@@ -26,6 +26,7 @@ import {
 // Items visible to all authenticated users (employees + admins)
 const NAV_SHARED = [
   { label: "Dashboard", to: routes.dashboard, icon: <Home size={20} />, color: "#10B981" },
+  { label: "Analysis", to: routes.analysis, icon: <BarChart3 size={20} />, color: "#6366F1" },
   { label: "Time", to: routes.time, icon: <Clock size={20} />, color: "#F59E0B" },
   { label: "Jobs", to: routes.tasks, icon: <CheckSquare size={20} />, color: "#14B8A6" },
   { label: "Leaves", to: routes.leaves, icon: <CalendarDays size={20} />, color: "#EC4899" },
@@ -199,9 +200,12 @@ export function AppShell() {
     if (!user) return []
     const isAdminUser = user.role === "admin" || user.role === "manager"
     // Employees only see shared nav; admins see shared + admin items (Get Started first, then Dashboard, then others)
-    return isAdminUser
-      ? [NAV_ADMIN[0], NAV_SHARED[0], ...NAV_ADMIN.slice(1), ...NAV_SHARED.slice(1)]
-      : NAV_SHARED
+    // We remove the "Analysis" link for admin/manager roles
+    if (isAdminUser) {
+      const sharedForAdmin = NAV_SHARED.filter(item => item.to !== routes.analysis)
+      return [NAV_ADMIN[0], sharedForAdmin[0], ...NAV_ADMIN.slice(1), ...sharedForAdmin.slice(1)]
+    }
+    return NAV_SHARED
   }, [user])
 
   useEffect(() => {

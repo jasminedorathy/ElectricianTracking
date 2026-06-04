@@ -53,6 +53,7 @@ class AuditLog(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="audit_actions",
     )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
 
     action = models.CharField(max_length=20, choices=Action.choices)
     reason = models.TextField(blank=True)  # required for admin edits

@@ -18,7 +18,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Employee.objects.select_related("user").filter(company=self.request.company).order_by("employee_id")
 
     def get_permissions(self):
-        if self.action in {"list", "create", "update", "partial_update", "destroy", "history"}:
+        if self.action in {"list", "create", "update", "partial_update", "destroy"}:
             return [permissions.IsAuthenticated(), IsAdminRole()]
         return [permissions.IsAuthenticated()]
 
@@ -49,11 +49,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
           - task_history: last 20 tasks
           - performance: placeholder ratings for feedback, functionality, attitude, self_respect
         """
+        employee = self.get_object()
+        if not is_admin_role(request.user) and employee.user_id != request.user.id:
+            return Response({"detail": "Not found."}, status=404)
+
         from leaves.models import LeaveRequest
         from tasks.models import Task
         from time_tracking.models import TimeLog
 
-        employee = self.get_object()
         today = timezone.localdate()
 
         # ── Leave History ──────────────────────────────────────────────────

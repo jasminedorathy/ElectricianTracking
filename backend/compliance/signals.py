@@ -5,11 +5,12 @@ Django signals that write immutable AuditLog entries whenever a TimeLog
 is created, edited, or deleted.
 """
 
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import pre_save, post_save, pre_delete
 from django.dispatch import receiver
 
 from time_tracking.models import TimeLog
 from .models import AuditLog
+from .middleware import get_current_user_and_ip
 
 
 def _timelog_snapshot(log):
@@ -28,6 +29,17 @@ def _timelog_snapshot(log):
     }
 
 
+@receiver(pre_save, sender=TimeLog)
+def timelog_pre_save(sender, instance, **kwargs):
+    """Capture the state of the TimeLog before saving for the EDIT before_state field."""
+    if instance.pk:
+        try:
+            old_instance = TimeLog.objects.get(pk=instance.pk)
+            instance._pre_save_state = _timelog_snapshot(old_instance)
+        except TimeLog.DoesNotExist:
+            instance._pre_save_state = None
+
+
 @receiver(post_save, sender=TimeLog)
 def timelog_post_save(sender, instance, created, **kwargs):
     """Write CREATE or EDIT audit entries. Skips if company not available."""
@@ -38,11 +50,14 @@ def timelog_post_save(sender, instance, created, **kwargs):
 
     action = AuditLog.Action.CREATE if created else AuditLog.Action.EDIT
     after = _timelog_snapshot(instance)
+    user, ip = get_current_user_and_ip()
 
     AuditLog(
         company=company,
         time_log_id=instance.pk,
         employee=instance.employee,
+        actor=user,
+        ip_address=ip,
         action=action,
         after_state=after,
         before_state=None if created else getattr(instance, "_pre_save_state", None),
@@ -57,10 +72,14 @@ def timelog_pre_delete(sender, instance, **kwargs):
     except Exception:
         return
 
+    user, ip = get_current_user_and_ip()
+
     AuditLog(
         company=company,
         time_log_id=instance.pk,
         employee=instance.employee,
+        actor=user,
+        ip_address=ip,
         action=AuditLog.Action.DELETE,
         before_state=_timelog_snapshot(instance),
         after_state=None,

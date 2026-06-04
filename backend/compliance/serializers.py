@@ -5,13 +5,15 @@ from .models import AuditLog, HolidayAccrual, RightToWork, WTROptOut, OvertimeAl
 class AuditLogSerializer(serializers.ModelSerializer):
     actor_name = serializers.SerializerMethodField()
     employee_name = serializers.SerializerMethodField()
+    user = serializers.SerializerMethodField()
+    resource = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditLog
         fields = [
             "id", "time_log_id", "employee", "employee_name", "actor",
             "actor_name", "action", "reason", "before_state", "after_state",
-            "timestamp", "retention_until",
+            "timestamp", "retention_until", "user", "resource", "ip_address",
         ]
         read_only_fields = fields
 
@@ -21,9 +23,17 @@ class AuditLogSerializer(serializers.ModelSerializer):
         return "system"
 
     def get_employee_name(self, obj):
-        if obj.employee:
+        if obj.employee and obj.employee.user:
             return obj.employee.user.get_full_name() or obj.employee.user.username
         return ""
+
+    def get_user(self, obj):
+        return self.get_actor_name(obj)
+
+    def get_resource(self, obj):
+        emp_name = self.get_employee_name(obj)
+        emp_part = f" ({emp_name})" if emp_name else ""
+        return f"TimeLog #{obj.time_log_id}{emp_part}"
 
 
 class HolidayAccrualSerializer(serializers.ModelSerializer):

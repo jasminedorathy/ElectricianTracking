@@ -128,12 +128,48 @@ export function ApprovedEmployeesPage() {
 
   useEffect(() => {
     async function load() {
+      let simulatedApproved = null
+      let savedDossier = localStorage.getItem("caltrack_activation_dossier")
+      try {
+        const backendDossier = await apiFetchRegistrationDossier()
+        if (backendDossier && backendDossier.regForm?.fullName) {
+          savedDossier = JSON.stringify(backendDossier)
+          localStorage.setItem("caltrack_activation_dossier", savedDossier)
+        }
+      } catch (e) {}
+
+      if (savedDossier) {
+        try {
+          const parsed = JSON.parse(savedDossier)
+          if (parsed.adminClearance?.status === "approved") {
+            simulatedApproved = {
+              id: "EMP-2048",
+              employee_id: "EMP-2048",
+              name: parsed.regForm.fullName,
+              title: "Field Operations Tech (L2)",
+              country: "IN",
+              is_active: true
+            }
+          }
+        } catch (e) {}
+      }
+
       try {
         const res = await apiRequest("/employees/")
         const data = Array.isArray(res) ? res : res.results || []
-        setEmployees(data.filter(e => e.is_active))
+        let activeEmployees = data.filter(e => e.is_active)
+        if (simulatedApproved) {
+          const exists = activeEmployees.some(e => e.employee_id === simulatedApproved.employee_id || e.name === simulatedApproved.name)
+          if (!exists) {
+            activeEmployees = [simulatedApproved, ...activeEmployees]
+          }
+        }
+        setEmployees(activeEmployees)
       } catch (err) {
         console.error("Failed to load approved employees", err)
+        if (simulatedApproved) {
+          setEmployees([simulatedApproved])
+        }
       } finally {
         setLoading(false)
       }

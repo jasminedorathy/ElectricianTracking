@@ -19,6 +19,21 @@ import { Pill, Button, Card, Input, Select, TextArea } from "../components/kit.j
 import { ClipboardList, Clock, CheckCircle2, AlertCircle, MapPin, Calendar as CalIcon, Play, Save, Trash2, Tag, Loader2, Paperclip, User, Flag, ListChecks, Plus, X, Building2, Camera, ThumbsUp, ThumbsDown, RefreshCw, UserCheck, AlertTriangle, DollarSign, Battery, Wifi, ShieldAlert, Sparkles, Navigation, Upload, Activity, Search, ChevronRight, ChevronDown, Phone, Car, Wrench, MessageSquare, Compass, MoreHorizontal, Hammer, ChevronLeft } from "lucide-react"
 import { SelfieCapture, getPosition } from "./TimePage.jsx"
 
+// Custom hook to detect if dark mode is active
+function useDarkMode() {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"))
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    return () => observer.disconnect()
+  }, [])
+
+  return isDark
+}
+
 // ─── Constants & Helpers ─────────────────────────────────────
 const CATEGORIES = [
   { value: "electrician", label: "Electrician" },
@@ -4333,6 +4348,7 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
 
 // ─── ADMIN LAYOUT ────────────────────────────────────────────
 function AdminTasksPage({ tasks, employees, availableEmployees, jobSites, declinedTasks, loadTasks }) {
+  const isDark = useDarkMode()
   const [open, setOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState(null)
   const [search, setSearch] = useState("")
@@ -4597,7 +4613,7 @@ function AdminTasksPage({ tasks, employees, availableEmployees, jobSites, declin
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             {/* Search */}
             <div style={{ position: "relative", flex: "1 1 220px", minWidth: 180 }}>
-              <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }} />
+              <Search size={14} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: isDark ? "#9ca3af" : "#94a3b8", pointerEvents: "none" }} />
               <input
                 type="text"
                 placeholder="Search by title, client, employee..."
@@ -4605,8 +4621,8 @@ function AdminTasksPage({ tasks, employees, availableEmployees, jobSites, declin
                 onChange={e => setSearch(e.target.value)}
                 style={{
                   width: "100%", paddingLeft: 36, paddingRight: 12, paddingTop: 9, paddingBottom: 9,
-                  borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, fontWeight: 600,
-                  outline: "none", color: "#1e293b", boxSizing: "border-box",
+                  borderRadius: 12, border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, fontSize: 12, fontWeight: 600,
+                  outline: "none", color: isDark ? "#f9fafb" : "#1e293b", background: isDark ? "#111827" : "#fff", boxSizing: "border-box",
                   fontFamily: "inherit",
                 }}
               />
@@ -4615,45 +4631,45 @@ function AdminTasksPage({ tasks, employees, availableEmployees, jobSites, declin
             <select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              style={{ padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, fontWeight: 700, color: "#334155", outline: "none", cursor: "pointer", background: "#fff" }}
+              style={{ padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, fontSize: 12, fontWeight: 700, color: isDark ? "#f9fafb" : "#334155", outline: "none", cursor: "pointer", background: isDark ? "#111827" : "#fff" }}
             >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="suspended">Suspended</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>All Statuses</option>
+              <option value="pending" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>Pending</option>
+              <option value="in_progress" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>In Progress</option>
+              <option value="suspended" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>Suspended</option>
+              <option value="completed" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>Completed</option>
+              <option value="cancelled" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>Cancelled</option>
             </select>
             {/* Priority Filter */}
             <select
               value={filterPriority}
               onChange={e => setFilterPriority(e.target.value)}
-              style={{ padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, fontWeight: 700, color: "#334155", outline: "none", cursor: "pointer", background: "#fff" }}
+              style={{ padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, fontSize: 12, fontWeight: 700, color: isDark ? "#f9fafb" : "#334155", outline: "none", cursor: "pointer", background: isDark ? "#111827" : "#fff" }}
             >
-              <option value="all">All Priorities</option>
-              <option value="urgent">🔴 Urgent</option>
-              <option value="high">🟠 High</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="low">🟢 Low</option>
+              <option value="all" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>All Priorities</option>
+              <option value="urgent" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>🔴 Urgent</option>
+              <option value="high" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>🟠 High</option>
+              <option value="medium" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>🟡 Medium</option>
+              <option value="low" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>🟢 Low</option>
             </select>
             {/* Employee Filter */}
             <select
               value={filterEmployee}
               onChange={e => setFilterEmployee(e.target.value)}
-              style={{ padding: "9px 12px", borderRadius: 12, border: "1.5px solid #e2e8f0", fontSize: 12, fontWeight: 700, color: "#334155", outline: "none", cursor: "pointer", background: "#fff", maxWidth: 180 }}
+              style={{ padding: "9px 12px", borderRadius: 12, border: `1.5px solid ${isDark ? "#374151" : "#e2e8f0"}`, fontSize: 12, fontWeight: 700, color: isDark ? "#f9fafb" : "#334155", outline: "none", cursor: "pointer", background: isDark ? "#111827" : "#fff", maxWidth: 180 }}
             >
-              <option value="all">All Employees</option>
+              <option value="all" style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>All Employees</option>
               {employees.map(emp => {
                 const uid = emp.user?.id || emp.id
                 const name = `${emp.first_name || emp.user?.first_name || emp.user?.username || "?"} ${emp.last_name || ""}`.trim()
-                return <option key={uid} value={uid}>{name}</option>
+                return <option key={uid} value={uid} style={{ background: isDark ? "#111827" : "#fff", color: isDark ? "#f9fafb" : "#000" }}>{name}</option>
               })}
             </select>
             {/* Clear filters */}
             {(search || filterStatus !== "all" || filterPriority !== "all" || filterEmployee !== "all") && (
               <button
                 onClick={() => { setSearch(""); setFilterStatus("all"); setFilterPriority("all"); setFilterEmployee("all") }}
-                style={{ padding: "9px 14px", borderRadius: 12, border: "1.5px solid #fca5a5", background: "#fff5f5", color: "#dc2626", fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.04em" }}
+                style={{ padding: "9px 14px", borderRadius: 12, border: `1.5px solid ${isDark ? "rgba(220,38,38,0.3)" : "#fca5a5"}`, background: isDark ? "rgba(220,38,38,0.1)" : "#fff5f5", color: isDark ? "#f87171" : "#dc2626", fontSize: 11, fontWeight: 900, cursor: "pointer", letterSpacing: "0.04em" }}
               >
                 Clear Filters
               </button>

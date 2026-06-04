@@ -181,45 +181,6 @@ export function LoginPage() {
       const ve = validateLoginForm({ identifier: username, password })
       if (ve) return setError(ve)
       setLoading(true)
-      
-      // Sync dossier from backend first
-      let savedDossier = localStorage.getItem("caltrack_activation_dossier")
-      try {
-        const backendDossier = await apiFetchRegistrationDossier()
-        if (backendDossier && backendDossier.regForm?.fullName) {
-          savedDossier = JSON.stringify(backendDossier)
-          localStorage.setItem("caltrack_activation_dossier", savedDossier)
-        }
-      } catch (err) {
-        console.error("Fetch registration dossier pre-login intercept error", err)
-      }
-      if (savedDossier) {
-        try {
-          const parsed = JSON.parse(savedDossier)
-          const dossierEmail = (parsed.regForm?.email || "").trim().toLowerCase()
-          const dossierName = (parsed.regForm?.fullName || "").trim().toLowerCase()
-          const inputUser = username.trim().toLowerCase()
-          const isMatch = inputUser === dossierEmail || 
-                          (dossierEmail && inputUser.includes(dossierEmail.split("@")[0])) || 
-                          dossierName.includes(inputUser)
-
-          if (isMatch) {
-            const status = parsed.adminClearance?.status
-            if (status === "pending") {
-              setLoading(false)
-              navigate(routes.activation_journey)
-              return
-            } else if (status === "rejected") {
-              setEmployeeStatus("rejected")
-              setDossierInfo(parsed)
-              setLoading(false)
-              return
-            }
-          }
-        } catch (err) {
-          console.error("Dossier pre-login intercept check error", err)
-        }
-      }
 
       try { 
         const u = await login(username.trim(), password)
@@ -227,12 +188,19 @@ export function LoginPage() {
         if (savedDossier && u.role === "employee") {
           try {
             const parsed = JSON.parse(savedDossier)
-            const status = parsed.adminClearance?.status
-            if (status === "approved" || status === "rejected") {
-              setEmployeeStatus(status)
-              setDossierInfo(parsed)
-              setLoading(false)
-              return
+            const dossierEmail = (parsed.regForm?.email || "").trim().toLowerCase()
+            const inputEmail = (u.email || "").trim().toLowerCase()
+            const inputUsername = (u.username || "").trim().toLowerCase()
+            const isMatch = inputEmail === dossierEmail || inputUsername === dossierEmail.split("@")[0]
+            
+            if (isMatch) {
+              const status = parsed.adminClearance?.status
+              if (status === "approved" || status === "rejected") {
+                setEmployeeStatus(status)
+                setDossierInfo(parsed)
+                setLoading(false)
+                return
+              }
             }
           } catch (e) {
             console.error("Dossier parse error", e)

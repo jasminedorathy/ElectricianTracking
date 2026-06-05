@@ -154,10 +154,13 @@ export function LoginPage() {
   const [employeeStatus, setEmployeeStatus] = useState(null)
   const [dossierInfo, setDossierInfo] = useState(null)
 
+  const ONBOARDING_DISMISSED_KEY = "caltrack.onboarding.dismissed"
   const postLoginRoute = (usr) => {
     const role = usr?.role
     const isAdmin = role === "admin" || role === "manager"
-    return isAdmin ? routes.get_started : routes.dashboard
+    if (!isAdmin) return routes.dashboard
+    const dismissed = localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true"
+    return dismissed ? routes.dashboard : routes.get_started
   }
 
   const googleLoginHandler = useGoogleLogin({

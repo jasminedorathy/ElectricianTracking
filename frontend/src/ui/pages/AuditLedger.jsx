@@ -291,7 +291,33 @@ export default function AuditLedger({ logs, loading, elapsed, downloadLogPdf, su
 
                 {/* Right side: status + actions */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                  <StatusBadge status={l.status} isActive={isActive} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+                    <StatusBadge status={l.status} isActive={isActive} />
+                    {l.face_match_status && l.face_match_status !== 'skipped' && (
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 3,
+                        fontSize: 9, fontWeight: 900, textTransform: "uppercase",
+                        color: l.face_match_status === 'matched' ? "var(--al-approved-text)" : "var(--al-rejected-text)"
+                      }}>
+                        {l.face_match_status === 'matched' ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />}
+                        {l.face_match_status === 'matched' ? 'Verified' : 'Mismatch'}
+                      </div>
+                    )}
+                    {l.status === 'rejected' && l.admin_notes && (
+                      <div style={{
+                        display: "flex", alignItems: "flex-start", gap: 3,
+                        fontSize: 9, fontWeight: 900,
+                        color: "var(--al-rejected-text)",
+                        marginTop: 2,
+                        maxWidth: 150,
+                        textAlign: "right",
+                        lineHeight: 1.2
+                      }}>
+                        <AlertCircle size={10} style={{ flexShrink: 0, marginTop: 1 }} />
+                        <span>{l.admin_notes}</span>
+                      </div>
+                    )}
+                  </div>
 
                   {l.status === "draft" && l.clock_out && (
                     <button
@@ -333,13 +359,13 @@ export default function AuditLedger({ logs, loading, elapsed, downloadLogPdf, su
               </div>
 
               {/* Rejection note */}
-              {l.status === "rejected" && l.rejection_reason && (
+              {l.status === "rejected" && l.admin_notes && (
                 <div style={{
                   marginTop: 12, padding: "8px 12px", borderRadius: 10,
                   background: "var(--al-rejected-bg)", border: "1px solid var(--al-rejected-border)",
                   fontSize: 11, color: "var(--al-rejected-text)", fontWeight: 600,
                 }}>
-                  ⚠️ {l.rejection_reason}
+                  ⚠️ {l.admin_notes}
                 </div>
               )}
             </div>

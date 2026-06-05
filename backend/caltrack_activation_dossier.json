@@ -57,7 +57,7 @@
         "isCompleted": true
     },
     "interviewState": {
-        "status": "Completed",
+        "status": "Scheduled",
         "activeQuestionIndex": 0,
         "callDuration": 0,
         "subtitles": "Call completed. Uploading audio-visual audit log to Admin console.",
@@ -76,7 +76,7 @@
                 "answer": "Confirm standard operational policies"
             }
         ],
-        "isCompleted": true
+        "isCompleted": false
     },
     "adminClearance": {
         "status": "rejected",

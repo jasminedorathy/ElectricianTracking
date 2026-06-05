@@ -939,243 +939,193 @@ function AdminTimePage() {
         </div>
       </div>
 
-      {/* ⏳ Shift Workflow History Overlay */}
+      {/* ⏳ Shift Summary Overlay */}
       {selectedAuditLog && createPortal(
-        <div className="no-print animate-fadeIn" style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          background: "rgba(10, 15, 30, 0.75)",
-          backdropFilter: "blur(16px)",
-          zIndex: 999999,
-          display: "flex",
-          flexDirection: "column",
-          padding: "28px 36px",
-          boxSizing: "border-box",
-          color: "#f8fafc",
-          overflowY: "auto"
-        }}>
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1.5px solid rgba(255,255,255,0.1)", paddingBottom: 18, marginBottom: 24 }}>
-            <div>
-              <h2 style={{ fontSize: 22, fontWeight: 900, color: "#fff", display: "flex", alignItems: "center", gap: 10, margin: 0, letterSpacing: "-0.03em" }}>
-                <Clock size={24} color="#60a5fa" className="animate-pulse" />
-                Shift Workflow Audit Ledger
-              </h2>
-              <p style={{ fontSize: 12, color: "#94a3b8", margin: "6px 0 0 0", fontWeight: 500 }}>
-                Verifiable trace ledger, location geofencing data, and face verification photos for <strong style={{ color: "#38bdf8" }}>{selectedAuditLog.employee_name}</strong>
-              </p>
+        <div className="no-print fixed inset-0 z-[999999] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div className="bg-surface dark:bg-slate-900 w-full max-w-5xl rounded-[2rem] shadow-2xl border border-stroke dark:border-slate-800 flex flex-col my-auto relative overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-8 border-b border-stroke dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-950/50">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3 tracking-tight">
+                  <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <Clock size={24} />
+                  </div>
+                  Shift Summary
+                </h2>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-2">
+                  Detailed timeline of work hours, breaks, and location records for <strong className="text-indigo-600 dark:text-indigo-400">{selectedAuditLog.employee_name}</strong>
+                </p>
+              </div>
+              <button onClick={() => setSelectedAuditLog(null)} className="p-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-xl border border-stroke dark:border-slate-700 shadow-sm transition-all">
+                <X size={20} />
+              </button>
             </div>
-            <button onClick={() => setSelectedAuditLog(null)} style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 12,
-              padding: "10px 20px",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-              transition: "all 0.2s"
-            }} className="hover:bg-indigo-600 transition-all active:scale-95">
-              <X size={14} /> Close Audit
-            </button>
-          </div>
 
-          {/* Main Ledger Content */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 20 }}>
-            {(() => {
-              const log = selectedAuditLog;
-              const isApproved = log.status === "approved";
-              const clockInTime = log.clock_in ? new Date(log.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—";
-              const clockOutTime = log.clock_out ? new Date(log.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
+            {/* Main Content */}
+            <div className="p-8 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
+              {(() => {
+                const log = selectedAuditLog;
+                const isApproved = log.status === "approved";
+                const clockInTime = log.clock_in ? new Date(log.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—";
+                const clockOutTime = log.clock_out ? new Date(log.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "In Progress";
+                
+                const allocateTime = "09:00 AM - 05:00 PM (8.00h Shift)";
+                const teaBreaks = log.breaks?.filter(b => b.break_type === "tea") || [];
+                const lunchBreaks = log.breaks?.filter(b => b.break_type === "lunch") || [];
+                const otherBreaks = log.breaks?.filter(b => b.break_type === "other") || [];
+                const totalTeaMin = teaBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
+                const totalLunchMin = lunchBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
+                const totalOtherMin = otherBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
 
-              // Allocate time
-              const allocateTime = "09:00 AM - 05:00 PM (8.00h Shift)";
+                const adminName = isApproved ? log.approved_by_name || "Admin" : "System Verified";
 
-              // Breaks mapping
-              const teaBreaks = log.breaks?.filter(b => b.break_type === "tea") || [];
-              const lunchBreaks = log.breaks?.filter(b => b.break_type === "lunch") || [];
-              const otherBreaks = log.breaks?.filter(b => b.break_type === "other") || [];
-              const totalTeaMin = teaBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
-              const totalLunchMin = lunchBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
-              const totalOtherMin = otherBreaks.reduce((acc, curr) => acc + (curr.duration_minutes || 0), 0);
-
-              // Admin
-              const adminName = isApproved ? log.approved_by_name || "Jane Doe (Finance Director)" : "System Verified";
-
-              return (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.45)",
-                  border: "1.5px solid rgba(255,255,255,0.08)",
-                  borderRadius: 20,
-                  padding: 28,
-                  display: "grid",
-                  gridTemplateColumns: "220px 1fr 260px",
-                  gap: 28,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-                  backdropFilter: "blur(8px)"
-                }} className="hover:border-indigo-500/45 transition-all">
-
-                  {/* 1. PHOTO VERIFICATION PORTRAIT VIEW */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                    <span style={{ fontSize: 10, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Verification Photos</span>
-
-                    {/* Clock In Portrait */}
-                    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.12)", background: "#090d16", height: 120 }}>
-                      {log.clock_in_photo ? (
-                        <img src={log.clock_in_photo} alt="Clock In Verification" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContext: "center", gap: 6, color: "#475569" }}>
-                          <User size={24} />
-                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>No In Photo</span>
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    {/* 1. PHOTOS (Left Column) */}
+                    <div className="col-span-1 lg:col-span-3 flex flex-col gap-4">
+                      <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shift Photos</h3>
+                      
+                      <div className="flex flex-col gap-4">
+                        <div className="relative rounded-2xl overflow-hidden border border-stroke dark:border-slate-800 bg-slate-50 dark:bg-slate-950 h-32 group">
+                          {log.clock_in_photo ? (
+                            <img src={log.clock_in_photo} alt="Clock In" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400">
+                              <Camera size={24} />
+                              <span className="text-[10px] font-bold uppercase tracking-widest">No In Photo</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white text-[9px] font-black rounded-lg shadow-sm">CLOCK IN</div>
                         </div>
-                      )}
-                      <div style={{ position: "absolute", bottom: 6, left: 6, background: "rgba(16, 185, 129, 0.9)", color: "#fff", padding: "3px 8px", borderRadius: 6, fontSize: 8, fontWeight: 900, letterSpacing: "0.05em" }}>CLOCK IN</div>
-                    </div>
 
-                    {/* Clock Out Portrait */}
-                    <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.12)", background: "#090d16", height: 120 }}>
-                      {log.clock_out_photo ? (
-                        <img src={log.clock_out_photo} alt="Clock Out Verification" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      ) : (
-                        <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContext: "center", gap: 6, color: "#475569" }}>
-                          <User size={24} />
-                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>No Out Photo</span>
-                        </div>
-                      )}
-                      <div style={{ position: "absolute", bottom: 6, left: 6, background: log.clock_out ? "rgba(239, 68, 68, 0.9)" : "rgba(245, 158, 11, 0.9)", color: "#fff", padding: "3px 8px", borderRadius: 6, fontSize: 8, fontWeight: 900, letterSpacing: "0.05em" }}>
-                        {log.clock_out ? "CLOCK OUT" : "IN PROGRESS"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 2. CENTRAL WORKFLOW TIMELINE PATH */}
-                  <div style={{ borderLeft: "2px dashed rgba(255,255,255,0.15)", paddingLeft: 28, display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ display: "flex", justifyContext: "space-between", alignItems: "center" }}>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>
-                        {new Date(log.work_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                      </div>
-                      <span style={{
-                        fontSize: 9,
-                        fontWeight: 900,
-                        padding: "4px 10px",
-                        borderRadius: 8,
-                        border: "1.5px solid",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                        background: isApproved ? "rgba(16, 185, 129, 0.12)" : "rgba(99, 102, 241, 0.12)",
-                        color: isApproved ? "#34d399" : "#818cf8",
-                        borderColor: isApproved ? "rgba(16, 185, 129, 0.3)" : "rgba(99, 102, 241, 0.3)"
-                      }}>
-                        {log.status}
-                      </span>
-                    </div>
-
-                    {/* Timeline steps */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "relative" }}>
-
-                      {/* Step 1: Allocated Time */}
-                      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#60a5fa", marginTop: 4, boxShadow: "0 0 8px #60a5fa" }} />
-                        <div>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: "#60a5fa", textTransform: "uppercase", letterSpacing: "0.08em" }}>Shift Allocated</span>
-                          <div style={{ fontSize: 13, color: "#e2e8f0", marginTop: 3 }}>
-                            Standard Target Slot: <strong style={{ color: "#fff" }}>{allocateTime}</strong>
+                        <div className="relative rounded-2xl overflow-hidden border border-stroke dark:border-slate-800 bg-slate-50 dark:bg-slate-950 h-32 group">
+                          {log.clock_out_photo ? (
+                            <img src={log.clock_out_photo} alt="Clock Out" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-400">
+                              <Camera size={24} />
+                              <span className="text-[10px] font-bold uppercase tracking-widest">No Out Photo</span>
+                            </div>
+                          )}
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm text-slate-900 dark:text-white text-[9px] font-black rounded-lg shadow-sm">
+                            {log.clock_out ? "CLOCK OUT" : "IN PROGRESS"}
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Step 2: Clock In / Reach */}
-                      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981", marginTop: 4, boxShadow: "0 0 8px #10b981" }} />
-                        <div>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em" }}>Reached & Clocked In</span>
-                          <div style={{ fontSize: 13, color: "#e2e8f0", marginTop: 3 }}>
-                            Work Start Time: <strong style={{ color: "#fff" }}>{clockInTime}</strong>
-                            {log.distance_from_site_meters !== undefined && (
-                              <span style={{ marginLeft: 12, fontSize: 11, background: "rgba(16,185,129,0.15)", color: "#34d399", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>
-                                Geofence: {log.distance_from_site_meters}m from Site
-                              </span>
-                            )}
+                    {/* 2. TIMELINE (Middle Column) */}
+                    <div className="col-span-1 lg:col-span-6 flex flex-col gap-6 lg:border-l lg:border-r border-stroke dark:border-slate-800 lg:px-8">
+                      <div className="flex items-center justify-between">
+                        <div className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                          {new Date(log.work_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                        <Pill variant={isApproved ? "success" : "neutral"}>{log.status}</Pill>
+                      </div>
+
+                      <div className="flex flex-col gap-6 relative before:absolute before:inset-y-0 before:left-2 before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                        
+                        {/* Timeline Step */}
+                        <div className="relative flex gap-4">
+                          <div className="absolute left-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 ring-4 ring-white dark:ring-slate-900"></div>
+                          <div className="pl-6 flex flex-col">
+                            <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Shift Allocated</span>
+                            <span className="text-sm font-bold text-slate-900 dark:text-white mt-1">Standard Target Slot: {allocateTime}</span>
+                          </div>
+                        </div>
+
+                        {/* Timeline Step */}
+                        <div className="relative flex gap-4">
+                          <div className="absolute left-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-slate-900"></div>
+                          <div className="pl-6 flex flex-col">
+                            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Reached & Clocked In</span>
+                            <div className="text-sm font-bold text-slate-900 dark:text-white mt-1 flex items-center gap-3">
+                              {clockInTime}
+                              {log.distance_from_site_meters !== undefined && (
+                                <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] rounded-md">
+                                  {log.distance_from_site_meters}m from Site
+                                </span>
+                              )}
+                            </div>
                             {log.clock_in_address && (
-                              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                                <MapPin size={11} />
-                                {log.clock_in_address}
+                              <div className="text-[11px] font-bold text-slate-500 mt-2 flex items-center gap-1.5">
+                                <MapPin size={12} /> {log.clock_in_address}
                               </div>
                             )}
                           </div>
                         </div>
-                      </div>
 
-                      {/* Step 3: Breaks */}
-                      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b", marginTop: 4, boxShadow: "0 0 8px #f59e0b" }} />
-                        <div>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em" }}>Shift Health Breaks</span>
-                          <div style={{ fontSize: 13, color: "#cbd5e1", marginTop: 3, display: "flex", flexWrap: "wrap", gap: 20 }}>
-                            <span>Tea Break: <strong style={{ color: "#fff" }}>{totalTeaMin || 15} mins</strong></span>
-                            <span>Lunch Break: <strong style={{ color: "#fff" }}>{totalLunchMin || 30} mins</strong></span>
-                            {totalOtherMin > 0 && <span>Other Break: <strong style={{ color: "#fff" }}>{totalOtherMin} mins</strong></span>}
+                        {/* Timeline Step */}
+                        <div className="relative flex gap-4">
+                          <div className="absolute left-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-white dark:ring-slate-900"></div>
+                          <div className="pl-6 flex flex-col">
+                            <span className="text-[11px] font-black text-amber-600 dark:text-amber-500 uppercase tracking-widest">Health & Rest Breaks</span>
+                            <div className="flex flex-wrap gap-3 mt-2">
+                              <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Tea: {totalTeaMin || 0}m
+                              </span>
+                              <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300">
+                                Lunch: {totalLunchMin || 0}m
+                              </span>
+                              {totalOtherMin > 0 && (
+                                <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300">
+                                  Other: {totalOtherMin}m
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Step 4: Finished Work */}
-                      <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", marginTop: 4, boxShadow: "0 0 8px #ef4444" }} />
-                        <div>
-                          <span style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em" }}>Shift Finished & Clock Out</span>
-                          <div style={{ fontSize: 13, color: "#e2e8f0", marginTop: 3 }}>
-                            Work Finished Time: <strong style={{ color: "#fff" }}>{clockOutTime}</strong>
+                        {/* Timeline Step */}
+                        <div className="relative flex gap-4">
+                          <div className="absolute left-[3px] top-1.5 w-2.5 h-2.5 rounded-full bg-rose-500 ring-4 ring-white dark:ring-slate-900"></div>
+                          <div className="pl-6 flex flex-col">
+                            <span className="text-[11px] font-black text-rose-600 dark:text-rose-500 uppercase tracking-widest">Shift Finished & Clock Out</span>
+                            <div className="text-sm font-bold text-slate-900 dark:text-white mt-1">
+                              {clockOutTime}
+                            </div>
                             {log.clock_out_address && (
-                              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                                <MapPin size={11} />
-                                {log.clock_out_address}
+                              <div className="text-[11px] font-bold text-slate-500 mt-2 flex items-center gap-1.5">
+                                <MapPin size={12} /> {log.clock_out_address}
                               </div>
                             )}
                           </div>
                         </div>
-                      </div>
 
-                    </div>
-                  </div>
-
-                  {/* 3. METADATA STATS TABLE COLUMN */}
-                  <div style={{ borderLeft: "1.5px solid rgba(255,255,255,0.08)", paddingLeft: 28, display: "flex", flexDirection: "column", gap: 14 }}>
-                    <span style={{ fontSize: 10, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Ledger details</span>
-
-                    <div>
-                      <div style={{ fontSize: 10, color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Admin Assignor</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#e2e8f0", marginTop: 3 }}>{adminName}</div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 10, color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Company Portal</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#e2e8f0", marginTop: 3 }}>Caltrack Technologies Ltd</div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 10, color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Location Permitted</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#38bdf8", marginTop: 3 }}>{log.location_name || "Corporate HQ"}</div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: 10, color: "#64748b", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Log Issue Details</div>
-                      <div style={{ fontSize: 11, color: "#cbd5e1", marginTop: 4, lineHeight: 1.4, fontStyle: "italic" }}>
-                        {log.admin_notes || log.clock_in_notes || log.clock_out_notes || "Verified by biometric match. Compliance 100% stable, zero violations."}
                       </div>
                     </div>
-                  </div>
 
-                </div>
-              );
-            })()}
+                    {/* 3. DETAILS (Right Column) */}
+                    <div className="col-span-1 lg:col-span-3 flex flex-col gap-6">
+                      <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shift Details</h3>
+
+                      <div className="flex flex-col gap-5">
+                        <div>
+                          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Approved By</div>
+                          <div className="text-sm font-bold text-slate-900 dark:text-white">{adminName}</div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Location Permitted</div>
+                          <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-md inline-block">
+                            {log.location_name || "Any Location"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Shift Notes</div>
+                          <div className="text-xs font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-stroke dark:border-slate-800 italic">
+                            {log.admin_notes || log.clock_out_notes || log.clock_in_notes || "No notes provided for this shift."}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>,
         document.body
@@ -1273,6 +1223,12 @@ function AdminLogRow({ log, onAction, onView }) {
             <div className={`flex items-center gap-1 text-[9px] font-black uppercase ${log.face_match_status === 'matched' ? 'text-emerald-500' : 'text-red-500'}`}>
               {log.face_match_status === 'matched' ? <Check size={10} /> : <AlertCircle size={10} />}
               {log.face_match_status === 'matched' ? 'Verified' : 'Mismatch'}
+            </div>
+          )}
+          {log.status === 'rejected' && log.admin_notes && (
+            <div className="flex items-start gap-1 text-[9px] font-bold text-red-500 mt-1 max-w-[120px] leading-tight">
+              <AlertCircle size={10} className="shrink-0 mt-0.5" />
+              <span>{log.admin_notes}</span>
             </div>
           )}
         </div>
@@ -1602,7 +1558,7 @@ function EmployeeTimePage() {
   }, [filterFrom, filterTo])
   useEffect(() => { load() }, [load])
 
-  async function action(path, overridePhoto = null) {
+  async function action(path, overridePhoto = null, overrideStatus = null, overrideScore = null) {
     setBusy(true); setError("")
     try {
       if (path.includes("break/start") || path.includes("break/end")) {
@@ -1627,9 +1583,11 @@ function EmployeeTimePage() {
           if (photoToSend) fd.append("photo", photoToSend)
 
           // Attach face verification result for clock-out
-          if (path.includes("clock-out") && faceVerifyStatus) {
-            fd.append("face_match_status", faceVerifyStatus)
-            if (faceVerifyScore !== null) fd.append("face_match_score", faceVerifyScore)
+          const finalFaceStatus = overrideStatus !== null ? overrideStatus : faceVerifyStatus;
+          const finalFaceScore = overrideScore !== null ? overrideScore : faceVerifyScore;
+          if (path.includes("clock-out") && finalFaceStatus) {
+            fd.append("face_match_status", finalFaceStatus)
+            if (finalFaceScore !== null) fd.append("face_match_score", finalFaceScore)
           }
         }
         await apiRequest(path, { method: "POST", body: fd })
@@ -1720,24 +1678,33 @@ return (
                 clockInPhoto = `${host}${clockInPhoto}`;
               }
               if (clockInPhoto && preview) {
+                let finalStatus = 'matched';
+                let finalScore = 100;
                 try {
                   const result = await verifyFaces(clockInPhoto, preview);
                   setFaceVerifyScore(result.score);
+                  finalScore = result.score;
                   if (result.status === 'mismatch') {
+                    finalStatus = 'mismatch';
                     setFaceVerifyStatus('mismatch');
                     setError('⚠️ Identity Verification Anomaly: Your selfie does not match your clock-in photo. Your admin has been notified, but you may proceed to clock out.');
-                  }
-                  if (result.status === 'no_face') {
+                  } else if (result.status === 'no_face') {
+                    finalStatus = 'no_face';
                     setFaceVerifyStatus('no_face');
                     setError('⚠️ No face detected in the photos! You may proceed, but please contact your admin to verify this shift manually.');
+                  } else {
+                    setFaceVerifyStatus('matched');
                   }
-                  setFaceVerifyStatus('matched');
                 } catch (err) {
                   console.error('Face verify error', err);
                   setFaceVerifyStatus(null);
+                  finalStatus = null;
+                  finalScore = null;
                 }
+                setTimeout(() => action("/time/clock-out/", file, finalStatus, finalScore), 100);
+              } else {
+                setTimeout(() => action("/time/clock-out/", file), 100);
               }
-              setTimeout(() => action("/time/clock-out/", file), 100);
             } else {
               setShowSelfie(false);
               setFaceVerifyStatus('verifying');

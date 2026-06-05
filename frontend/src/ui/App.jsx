@@ -152,9 +152,17 @@ function RequireAdminSettings() {
   return <Outlet />
 }
 
+const ONBOARDING_DISMISSED_KEY = "caltrack.onboarding.dismissed"
+
 export function App() {
   const { isReady, user } = useAuth()
   const { isAdmin } = useRole()
+
+  // Helper: where should an admin land after login?
+  const adminDefaultRoute = () => {
+    const dismissed = localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true"
+    return dismissed ? routes.dashboard : routes.get_started
+  }
 
   const PageLoader = () => (
     <div className="flex items-center justify-center min-h-[400px] w-full">
@@ -197,7 +205,7 @@ export function App() {
             element={
               user ? (
                 user.companyId ? (
-                  <Navigate to={isAdmin ? routes.get_started : routes.dashboard} replace />
+                  <Navigate to={isAdmin ? adminDefaultRoute() : routes.dashboard} replace />
                 ) : (
                   <Navigate to={routes.onboarding} replace />
                 )
@@ -213,7 +221,7 @@ export function App() {
               !user ? (
                 <Navigate to={routes.login} replace />
               ) : user.companyId ? (
-                <Navigate to={isAdmin ? routes.get_started : routes.dashboard} replace />
+                <Navigate to={isAdmin ? adminDefaultRoute() : routes.dashboard} replace />
               ) : (
                 <OnboardingPage />
               )
@@ -228,7 +236,7 @@ export function App() {
           <Route
             path={routes.reset_password}
             element={
-              user ? <Navigate to={isAdmin ? routes.get_started : routes.dashboard} replace /> : <ResetPasswordPage />
+              user ? <Navigate to={isAdmin ? adminDefaultRoute() : routes.dashboard} replace /> : <ResetPasswordPage />
             }
           />
 
@@ -236,7 +244,7 @@ export function App() {
             path={routes.accept_invite}
             element={
               user ? (
-                <Navigate to={isAdmin ? routes.get_started : routes.dashboard} replace />
+                <Navigate to={isAdmin ? adminDefaultRoute() : routes.dashboard} replace />
               ) : (
                 <AcceptInvitePage />
               )

@@ -1793,15 +1793,70 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
 
               {/* ── JOURNEY PROGRESS — improved ── */}
               {(() => {
+                const getStepDuration = (start, end, isCurrent) => {
+                  if (!start) return null;
+                  if (!end && !isCurrent) return null;
+                  const e = end ? new Date(end).getTime() : Date.now();
+                  const s = new Date(start).getTime();
+                  if (isNaN(s) || isNaN(e)) return null;
+                  const diffMinutes = Math.round((e - s) / 60000);
+                  if (diffMinutes < 0) return null;
+                  if (diffMinutes < 60) return `${diffMinutes}m`;
+                  const hrs = Math.floor(diffMinutes / 60);
+                  const mins = diffMinutes % 60;
+                  return `${hrs}h ${mins}m`;
+                };
+
+                const formatTime = (dateStr) => {
+                  if (!dateStr) return "--:--";
+                  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                };
+
+                const getWorkTimeStr = () => {
+                  if (!task.work_started_at) return "--:--";
+                  const start = new Date(task.work_started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  if (!task.completed_at) return start;
+                  const end = new Date(task.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  return `${start} - ${end}`;
+                };
+
                 const travelSteps = [
-                  { key: null,           icon: <UserCheck size={16} />, label: "Accepted" },
-                  { key: "on_the_way",   icon: <Car size={16} />, label: "On The Way" },
-                  { key: "reached_site", icon: <MapPin size={16} />, label: "Reached Site" },
-                  { key: "working",      icon: <Hammer size={16} />, label: "Working" },
+                  { 
+                    key: null,           
+                    icon: <UserCheck size={16} />, 
+                    label: "Accepted",
+                    duration: task.accepted_at ? getStepDuration(task.created_at, task.accepted_at, !task.travel_status) : null,
+                    time: formatTime(task.accepted_at)
+                  },
+                  { 
+                    key: "on_the_way",   
+                    icon: <Car size={16} />, 
+                    label: "On The Way",
+                    duration: task.started_at ? getStepDuration(task.started_at, task.reached_site_at, task.travel_status === "on_the_way") : null,
+                    time: formatTime(task.started_at)
+                  },
+                  { 
+                    key: "reached_site", 
+                    icon: <MapPin size={16} />, 
+                    label: "Reached Site",
+                    duration: task.reached_site_at ? getStepDuration(task.reached_site_at, task.work_started_at, task.travel_status === "reached_site") : null,
+                    time: formatTime(task.reached_site_at)
+                  },
+                  { 
+                    key: "working",      
+                    icon: <Hammer size={16} />, 
+                    label: "Working",
+                    duration: task.work_started_at ? getStepDuration(task.work_started_at, task.completed_at, task.travel_status === "working") : null,
+                    time: getWorkTimeStr()
+                  },
                 ]
-                const curIdx = task.travel_status
-                  ? travelSteps.findIndex(s => s.key === task.travel_status)
-                  : 0
+                let curIdx = 0;
+                if (task.status === "completed" || task.travel_status === "done") {
+                  curIdx = travelSteps.length;
+                } else if (task.travel_status) {
+                  curIdx = travelSteps.findIndex(s => s.key === task.travel_status);
+                }
+
                 return (
                   <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 shadow-sm">
                     <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.12em] mb-5">Task Progress</div>
@@ -1832,16 +1887,26 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
                                 {isDone ? <CheckCircle2 size={16} /> : step.icon}
                               </div>
                               <div 
-                                className="text-[9px] font-black uppercase tracking-wider text-center transition-all duration-300"
+                                className="text-[9px] font-black uppercase tracking-wider text-center transition-all duration-300 flex flex-col gap-1 items-center"
                                 style={{
                                   color: isDone ? "#10b981" : isActive ? "#2563eb" : "var(--muted, #94a3b8)"
                                 }}
                               >
-                                {step.label}
+                                <span>{step.label}</span>
+                                {step.time && (
+                                  <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 normal-case tracking-normal">
+                                    {step.time}
+                                  </span>
+                                )}
+                                {step.duration && (
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md mt-0.5">
+                                    {step.duration}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             {idx < travelSteps.length - 1 && (
-                              <div className="flex-1 h-[2px] -mt-5 relative overflow-hidden" style={{ background: "var(--stroke2, #e2e8f0)" }}>
+                              <div className="flex-1 h-[2px] -mt-10 relative overflow-hidden" style={{ background: "var(--stroke2, #e2e8f0)" }}>
                                 <div 
                                   className="absolute top-0 left-0 h-full transition-all duration-500"
                                   style={{
@@ -2608,9 +2673,9 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
                             {/* Start Photo Preview */}
                             <div className="flex flex-col gap-1 items-center">
                               <span className="text-[9px] font-black text-slate-400 uppercase">Start Photo</span>
-                              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                              <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                                 {task.start_photo ? (
-                                  <img src={`http://localhost:8000${task.start_photo}`} className="w-full h-full object-cover" />
+                                  <img src={`http://localhost:8000${task.start_photo}`} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase">No Start Photo</div>
                                 )}
@@ -2620,9 +2685,9 @@ const TaskCard = memo(({ task, onAction, busy, tasks }) => {
                             {/* End Photo Preview */}
                             <div className="flex flex-col gap-1 items-center">
                               <span className="text-[9px] font-black text-slate-400 uppercase">End Photo</span>
-                              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                              <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                                 {afterPhotoPreview ? (
-                                  <img src={afterPhotoPreview} className="w-full h-full object-cover" />
+                                  <img src={afterPhotoPreview} className="w-full h-full object-contain" />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold uppercase">Awaiting Photo</div>
                                 )}
@@ -4488,15 +4553,32 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
             <div style={{ padding: "14px 16px", borderRadius: 14, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
               <div style={{ fontSize: 9, fontWeight: 900, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Journey Progress</div>
               {(() => {
+                const formatTime = (dateStr) => {
+                  if (!dateStr) return "--:--";
+                  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                };
+
+                const getWorkTimeStr = () => {
+                  if (!task.work_started_at) return "--:--";
+                  const start = new Date(task.work_started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  if (!task.completed_at) return start;
+                  const end = new Date(task.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                  return `${start} - ${end}`;
+                };
+
                 const travelSteps = [
-                  { key: null, icon: "✅", label: "Accepted" },
-                  { key: "on_the_way", icon: "🚗", label: "On The Way" },
-                  { key: "reached_site", icon: "📍", label: "Reached Site" },
-                  { key: "working", icon: "🔨", label: "Working" },
+                  { key: null, icon: "✅", label: "Accepted", time: formatTime(task.accepted_at) },
+                  { key: "on_the_way", icon: "🚗", label: "On The Way", time: formatTime(task.started_at) },
+                  { key: "reached_site", icon: "📍", label: "Reached Site", time: formatTime(task.reached_site_at) },
+                  { key: "working", icon: "🔨", label: "Working", time: getWorkTimeStr() },
                 ]
-                const curIdx = task.travel_status
-                  ? travelSteps.findIndex(s => s.key === task.travel_status)
-                  : 0
+                let curIdx = 0;
+                if (task.status === "completed" || task.travel_status === "done") {
+                  curIdx = travelSteps.length;
+                } else if (task.travel_status) {
+                  curIdx = travelSteps.findIndex(s => s.key === task.travel_status);
+                }
+
                 return (
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     {travelSteps.map((step, idx) => {
@@ -4526,6 +4608,7 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
                             </div>
                             <div
                               style={{
+                                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
                                 fontSize: 8,
                                 fontWeight: 900,
                                 textTransform: "uppercase",
@@ -4535,7 +4618,18 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
                                 color: isDone ? "#059669" : isActive ? "#2563eb" : "#64748b",
                               }}
                             >
-                              {step.label}
+                              <span>{step.label}</span>
+                              {step.time && (
+                                <span style={{ 
+                                  fontSize: 8, 
+                                  fontWeight: 600, 
+                                  color: "#64748b", 
+                                  textTransform: "none",
+                                  letterSpacing: "normal" 
+                                }}>
+                                  {step.time}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {idx < travelSteps.length - 1 && (
@@ -4544,7 +4638,7 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
                                 height: 2,
                                 flex: 1,
                                 background: idx < curIdx ? "#10b981" : "#cbd5e1",
-                                marginBottom: 16,
+                                marginBottom: 20,
                                 transition: "all 0.5s ease",
                               }}
                             />
@@ -4612,11 +4706,11 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
                 <div>
                   <div style={{ fontSize: 8, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Start Photo</div>
                   <div style={{
-                    width: "100%", height: 120, borderRadius: 10, border: "1.5px solid #cbd5e1",
+                    width: "100%", height: 180, borderRadius: 10, border: "1.5px solid #cbd5e1",
                     overflow: "hidden", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center"
                   }}>
                     {task.start_photo ? (
-                      <img src={task.start_photo} alt="Start Photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={task.start_photo} alt="Start Photo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : (
                       <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8" }}>No Start Photo</span>
                     )}
@@ -4625,11 +4719,11 @@ function AdminTaskDetailPanel({ task, employees, availableEmployees, jobSites, o
                 <div>
                   <div style={{ fontSize: 8, fontWeight: 900, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>End Photo</div>
                   <div style={{
-                    width: "100%", height: 120, borderRadius: 10, border: "1.5px solid #cbd5e1",
+                    width: "100%", height: 180, borderRadius: 10, border: "1.5px solid #cbd5e1",
                     overflow: "hidden", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center"
                   }}>
                     {task.end_photo ? (
-                      <img src={task.end_photo} alt="End Photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <img src={task.end_photo} alt="End Photo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     ) : (
                       <span style={{ fontSize: 9, fontWeight: 700, color: "#94a3b8" }}>No End Photo</span>
                     )}

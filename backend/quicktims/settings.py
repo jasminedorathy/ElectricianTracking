@@ -98,7 +98,7 @@ if USE_POSTGRES:
             },
             # Reuse DB connections for up to 60 s — eliminates per-request TCP
             # handshakes and auth round-trips (major latency win).
-            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "0")),
             "CONN_HEALTH_CHECKS": True,
         }
     }

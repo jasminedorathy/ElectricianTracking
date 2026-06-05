@@ -384,7 +384,8 @@ def generate_shift_summary_pdf(time_log):
     report_id = f"CAL-{time_log.id:06d}-{time_log.work_date.strftime('%y%m%d')}"
     generated_ts = _dt.now().strftime("%d %b %Y, %I:%M %p")
     # QR verification payload
-    qr_payload = f"CALTRACK|{report_id}|{emp_id}|{time_log.work_date}|verified"
+    backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+    qr_payload = f"{backend_url}/api/time-logs/{time_log.id}/download_pdf/"
     qr_buf = _qr_image(qr_payload, box_size=5)
 
     # ══════════════════════════════════════════════════════════════════════
@@ -551,54 +552,8 @@ def generate_shift_summary_pdf(time_log):
     elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 4 — AI Productivity Score (Gauge)
+    # (AI Productivity Score section removed)
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🤖", "AI PRODUCTIVITY SCORE", C["purple"]))
-    elements.append(_sec_divider())
-
-    gauge = _GaugeFlowable(prod_pct, prod_label, prod_color, size=140)
-
-    ai_analysis_rows = [
-        ["PRODUCTIVITY SCORE",    f"{prod_pct}%"],
-        ["PERFORMANCE RATING",    prod_label],
-        ["TIME EFFICIENCY",       f"{int(net_sec / total_sec * 100) if total_sec else 0}%"],
-        ["FACE MATCH SCORE",      f"{face_pct}%"],
-        ["GPS COMPLIANCE",        "✔ Passed" if time_log.geofence_passed else "✘ Not Verified"],
-        ["TASK SUCCESS RATE",     f"{success_rate:.0f}%"],
-    ]
-
-    ai_tbl = Table(ai_analysis_rows, colWidths=[140, 100])
-    ai_tbl.setStyle(TableStyle([
-        ("FONTNAME",      (0,0), (-1,-1), "Helvetica"),
-        ("FONTSIZE",      (0,0), (-1,-1), 9),
-        ("TEXTCOLOR",     (0,0), (0,-1), C["slate5"]),
-        ("TEXTCOLOR",     (1,0), (1,-1), C["primary"]),
-        ("FONTNAME",      (1,0), (1,-1), "Helvetica-Bold"),
-        ("ROWBACKGROUNDS",(0,0), (-1,-1), [C["card"], C["slate1"]]),
-        ("PADDING",       (0,0), (-1,-1), 7),
-        ("GRID",          (0,0), (-1,-1), 0.4, C["slate2"]),
-    ]))
-
-    ai_label_rows = [
-        [Paragraph("AI Analysis Breakdown",
-                   _S("aih", fontSize=10, fontName="Helvetica-Bold",
-                      textColor=C["primary"]))],
-        [Spacer(1, 6)],
-        [ai_tbl],
-    ]
-    ai_label_inner = Table(ai_label_rows, colWidths=[260])
-    ai_label_inner.setStyle(TableStyle([("BOTTOMPADDING", (0,0), (-1,-1), 2)]))
-
-    prod_row = Table([[gauge, ai_label_inner]], colWidths=[160, 368])
-    prod_row.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["card"]),
-        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-        ("PADDING",       (0,0), (-1,-1), 16),
-        ("BOX",           (0,0), (-1,-1), 0.5, C["slate2"]),
-        ("ROUNDEDCORNERS", [10]),
-    ]))
-    elements.append(prod_row)
-    elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 5 — Smart Shift Timeline
@@ -661,25 +616,25 @@ def generate_shift_summary_pdf(time_log):
     elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 6 — AI Face Verification Center
+    # SECTION 6 — Shift Verification Photos
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🪪", "AI FACE VERIFICATION CENTER", C["green"]))
+    elements.append(_sec_hdr("📷", "SHIFT VERIFICATION PHOTOS", C["green"]))
     elements.append(_sec_divider())
 
     def _photo_box(img_field, label, accent):
         if img_field:
             try:
-                img = RLImage(img_field.path, width=130, height=105)
+                img = RLImage(img_field.path, width=160, height=120)
                 inner = Table([
                     [img],
-                    [Paragraph(label, _S(f"pbl_{label}", fontSize=7,
+                    [Paragraph(label, _S(f"pbl_{label}", fontSize=8,
                                          fontName="Helvetica-Bold",
                                          textColor=accent, alignment=TA_CENTER,
                                          letterSpacing=1))],
-                ], colWidths=[148])
+                ], colWidths=[180])
                 inner.setStyle(TableStyle([
                     ("ALIGN",      (0,0), (-1,-1), "CENTER"),
-                    ("PADDING",    (0,0), (-1,-1), 10),
+                    ("PADDING",    (0,0), (-1,-1), 12),
                     ("BACKGROUND", (0,0), (-1,-1), C["slate1"]),
                     ("ROUNDEDCORNERS", [8]),
                     ("BOX",        (0,0), (-1,-1), 1, accent),
@@ -690,43 +645,16 @@ def generate_shift_summary_pdf(time_log):
         return Table([[Paragraph(f"[No {label}]",
                                  _S(f"nph_{label}", fontSize=9, textColor=C["slate4"],
                                     alignment=TA_CENTER))]],
-                     colWidths=[148])
+                     colWidths=[180])
 
     ci_box = _photo_box(time_log.clock_in_photo,  "CLOCK-IN PHOTO",  C["green"])
-    co_box = _photo_box(time_log.clock_out_photo, "CLOCK-OUT PHOTO", C["red"])
+    co_box = _photo_box(time_log.clock_out_photo, "CLOCK-OUT PHOTO", C["blue"])
 
-    # Verification result panel
-    fv_color = C["green"] if face_status == "matched" else (
-        C["red"] if face_status == "mismatch" else C["amber"])
-    fv_icon  = "✔" if face_status == "matched" else "✘" if face_status == "mismatch" else "⏳"
-    fv_label = face_status.upper()
-
-    fv_result = Table([
-        [Paragraph("AI Match Engine", _S("aim", fontSize=9, fontName="Helvetica-Bold",
-                                          textColor=C["blue"], alignment=TA_CENTER))],
-        [Spacer(1, 6)],
-        [Paragraph(f"{fv_icon} {fv_label}",
-                   _S("fvl", fontSize=14, fontName="Helvetica-Bold",
-                      textColor=fv_color, alignment=TA_CENTER))],
-        [Spacer(1, 4)],
-        [Paragraph(f"Face Match:  <b>{face_pct}%</b>",
-                   _S("fm", fontSize=9, textColor=C["primary"], alignment=TA_CENTER))],
-        [Paragraph(f"Liveness:  <b>Passed</b>",
-                   _S("lv", fontSize=9, textColor=C["green"], alignment=TA_CENTER))],
-        [Paragraph(f"Confidence:  <b>{'High' if face_pct >= 80 else 'Medium' if face_pct >= 60 else 'Low'}</b>",
-                   _S("cf", fontSize=9, textColor=C["primary"], alignment=TA_CENTER))],
-    ], colWidths=[180])
-    fv_result.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,-1), C["card"]),
-        ("PADDING",    (0,0), (-1,-1), 10),
-        ("BOX",        (0,0), (-1,-1), 0.5, C["slate2"]),
-        ("ROUNDEDCORNERS", [10]),
-    ]))
-
-    face_row = Table([[ci_box, fv_result, co_box]], colWidths=[150, 188, 150])
+    face_row = Table([[ci_box, co_box]], colWidths=[244, 244])
     face_row.setStyle(TableStyle([
         ("VALIGN",  (0,0), (-1,-1), "MIDDLE"),
-        ("PADDING", (0,0), (-1,-1), 6),
+        ("ALIGN",   (0,0), (-1,-1), "CENTER"),
+        ("PADDING", (0,0), (-1,-1), 16),
         ("BACKGROUND", (0,0), (-1,-1), C["card"]),
         ("BOX",     (0,0), (-1,-1), 0.5, C["slate2"]),
         ("ROUNDEDCORNERS", [10]),
@@ -735,41 +663,15 @@ def generate_shift_summary_pdf(time_log):
     elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 7 — GPS Route Intelligence
+    # (GPS Route Intelligence section removed)
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🗺️", "GPS ROUTE INTELLIGENCE", C["blue"]))
-    elements.append(_sec_divider())
-
-    gps_rows = [
-        ["CLOCK-IN LOCATION",  time_log.clock_in_address  or "—"],
-        ["CLOCK-OUT LOCATION", time_log.clock_out_address or "—"],
-        ["DISTANCE TRAVELLED", dist_str],
-        ["GEOFENCE PASSED",    "✔ Yes" if time_log.geofence_passed else "✘ No"],
-        ["DISTANCE FROM SITE", f"{time_log.distance_from_site_meters}m"
-                               if time_log.distance_from_site_meters is not None else "—"],
-        ["GPS TRUST SCORE",    gps_trust],
-        ["ADMIN OVERRIDE",     "Yes" if time_log.admin_override_used else "No"],
-    ]
-
-    gps_tbl = Table(gps_rows, colWidths=[160, 348])
-    gps_tbl.setStyle(TableStyle([
-        ("FONTNAME",  (0,0), (0,-1), "Helvetica-Bold"),
-        ("FONTSIZE",  (0,0), (-1,-1), 9),
-        ("TEXTCOLOR", (0,0), (0,-1), C["slate5"]),
-        ("TEXTCOLOR", (1,0), (1,-1), C["primary"]),
-        ("ROWBACKGROUNDS", (0,0), (-1,-1), [C["card"], C["blue_lt"]]),
-        ("PADDING",   (0,0), (-1,-1), 8),
-        ("GRID",      (0,0), (-1,-1), 0.4, C["slate2"]),
-        ("ROUNDEDCORNERS", [8]),
-    ]))
-    elements.append(gps_tbl)
-    elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 8 — Task Performance Analytics
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("📋", "TASK PERFORMANCE ANALYTICS"))
-    elements.append(_sec_divider())
+    task_elements = []
+    task_elements.append(_sec_hdr("📋", "TASK PERFORMANCE ANALYTICS"))
+    task_elements.append(_sec_divider())
 
     def _task_pill(label, value, bg, fg):
         inner = Table([
@@ -778,7 +680,7 @@ def generate_shift_summary_pdf(time_log):
             [Paragraph(label,      _S(f"tl_{label}", fontSize=7, fontName="Helvetica-Bold",
                                       textColor=C["slate5"], alignment=TA_CENTER,
                                       letterSpacing=0.8))],
-        ], colWidths=[115])
+        ], colWidths=[125])
         inner.setStyle(TableStyle([
             ("BACKGROUND",    (0,0), (-1,-1), bg),
             ("PADDING",       (0,0), (-1,-1), 12),
@@ -791,15 +693,15 @@ def generate_shift_summary_pdf(time_log):
         _task_pill("ASSIGNED",    tasks_assigned,  C["blue_lt"],   C["blue"]),
         _task_pill("ACCEPTED",    tasks_accepted,  C["purple_lt"], C["purple"]),
         _task_pill("COMPLETED",   tasks_completed, C["green_lt"],  C["green"]),
-        _task_pill("FAILED",      tasks_failed,    C["red_lt"],    C["red"]),
         _task_pill("SUCCESS RATE",f"{success_rate:.0f}%", C["amber_lt"], C["amber"]),
-    ]], colWidths=[117] * 5)
+    ]], colWidths=[127] * 4)
     task_pills.setStyle(TableStyle([
         ("LEFTPADDING",  (0,0), (-1,-1), 2),
         ("RIGHTPADDING", (0,0), (-1,-1), 2),
+        ("ALIGN",        (0,0), (-1,-1), "CENTER"),
     ]))
-    elements.append(task_pills)
-    elements.append(Spacer(1, 8))
+    task_elements.append(task_pills)
+    task_elements.append(Spacer(1, 8))
 
     # Task list table
     if task_list:
@@ -827,119 +729,26 @@ def generate_shift_summary_pdf(time_log):
             ("PADDING",     (0,0), (-1,-1), 7),
             ("GRID",        (0,0), (-1,-1), 0.4, C["slate2"]),
         ]))
-        elements.append(task_detail_tbl)
+        task_elements.append(task_detail_tbl)
     else:
-        elements.append(Paragraph("No tasks assigned on this shift date.",
+        task_elements.append(Paragraph("No tasks assigned on this shift date.",
                                    _S("notask", fontSize=9, textColor=C["slate4"])))
-    elements.append(Spacer(1, 14))
+    task_elements.append(Spacer(1, 14))
+    elements.append(KeepTogether(task_elements))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 9 — Attendance Trust Engine
+    # (Attendance Trust Engine section removed)
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🎯", "ATTENDANCE TRUST ENGINE", C["green"]))
-    elements.append(_sec_divider())
 
-    att_gauge = _GaugeFlowable(att_score, "Trust Score", trust_color, size=130)
-    att_label = ("Excellent Reliability" if att_score >= 85 else
-                 "Good Reliability"     if att_score >= 70 else
-                 "Average Reliability"  if att_score >= 50 else
-                 "Needs Improvement")
-
-    att_breakdown = [
-        ["FACTOR",             "RESULT",        "WEIGHT"],
-        ["Face Verification",  f"{face_pct}%",  "30 pts"],
-        ["GPS Verification",   "Passed" if time_log.geofence_passed else "Not Verified", "30 pts"],
-        ["Task Completion",    f"{success_rate:.0f}%", "25 pts"],
-        ["Shift Status",       status_str,      "15 pts"],
-        ["FINAL SCORE",        f"{att_score}%", "100 pts"],
-    ]
-    att_tbl = Table(att_breakdown, colWidths=[140, 100, 80])
-    att_tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,0), C["primary"]),
-        ("TEXTCOLOR",     (0,0), (-1,0), C["white"]),
-        ("FONTNAME",      (0,0), (-1,0), "Helvetica-Bold"),
-        ("FONTNAME",      (0,-1), (-1,-1), "Helvetica-Bold"),
-        ("BACKGROUND",    (0,-1), (-1,-1), C["green_lt"]),
-        ("TEXTCOLOR",     (0,-1), (-1,-1), C["green"]),
-        ("FONTSIZE",      (0,0), (-1,-1), 8),
-        ("ALIGN",         (1,0), (-1,-1), "CENTER"),
-        ("ROWBACKGROUNDS",(0,1), (-1,-2), [C["card"], C["slate1"]]),
-        ("PADDING",       (0,0), (-1,-1), 8),
-        ("GRID",          (0,0), (-1,-1), 0.4, C["slate2"]),
-    ]))
-
-    att_label_p = Paragraph(att_label,
-                             _S("atl", fontSize=11, fontName="Helvetica-Bold",
-                                textColor=trust_color, alignment=TA_CENTER))
-
-    att_row = Table([[att_gauge,
-                      Table([[att_label_p], [Spacer(1,8)], [att_tbl]],
-                             colWidths=[330])]],
-                    colWidths=[148, 356])
-    att_row.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["card"]),
-        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-        ("PADDING",       (0,0), (-1,-1), 14),
-        ("BOX",           (0,0), (-1,-1), 0.5, C["slate2"]),
-        ("ROUNDEDCORNERS", [10]),
-    ]))
-    elements.append(att_row)
-    elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 10 — AI Workforce Insights
+    # (AI Workforce Insights section removed)
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("💡", "AI WORKFORCE INSIGHTS", C["purple"]))
-    elements.append(_sec_divider())
-
-    insights = []
-    insights.append(f"✅  Employee completed shift from {ci_time} to {co_time}  ({total_hrs} total).")
-    if face_status == "matched":
-        insights.append(f"✅  Identity verification passed  ({face_pct}% face match confidence).")
-    elif face_status == "skipped":
-        insights.append("⏳  Face verification was not performed for this shift.")
-    else:
-        insights.append(f"⚠️  Face verification result: {face_status}  ({face_pct}% score).")
-    if time_log.geofence_passed:
-        insights.append("✅  GPS geofence verification passed — employee clocked in from authorised location.")
-    else:
-        insights.append("⚠️  GPS geofence check did not pass — location may not match the assigned site.")
-    if tasks_assigned > 0:
-        if success_rate >= 80:
-            insights.append(f"✅  Task performance excellent — {tasks_completed}/{tasks_assigned} tasks completed ({success_rate:.0f}% success rate).")
-        else:
-            insights.append(f"⚠️  Task completion at {success_rate:.0f}% — {tasks_assigned - tasks_completed} task(s) unfinished.")
-    else:
-        insights.append("ℹ️  No tasks were assigned for this shift date.")
-    if prod_pct >= 80:
-        insights.append(f"✅  AI Productivity score of {prod_pct}% is above team average — excellent performance.")
-    elif prod_pct >= 60:
-        insights.append(f"ℹ️  AI Productivity score of {prod_pct}% — performance within acceptable range.")
-    else:
-        insights.append(f"⚠️  AI Productivity score of {prod_pct}% — performance requires attention.")
-    if breaks:
-        insights.append(f"ℹ️  Employee took {len(breaks)} break(s) totalling {break_hrs}.")
-    insights.append("🔒  No suspicious activity detected during this shift period.")
-
-    insight_rows = [[Paragraph(ins, _S(f"ins_{i}", fontSize=9, fontName="Helvetica",
-                                       textColor=C["primary"], leading=14))]
-                    for i, ins in enumerate(insights)]
-    insight_tbl = Table(insight_rows, colWidths=[508])
-    insight_tbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["card"]),
-        ("ROWBACKGROUNDS",(0,0), (-1,-1), [C["card"], C["slate1"]]),
-        ("PADDING",       (0,0), (-1,-1), 9),
-        ("BOX",           (0,0), (-1,-1), 0.5, C["slate2"]),
-        ("ROUNDEDCORNERS", [8]),
-    ]))
-    elements.append(insight_tbl)
-    elements.append(Spacer(1, 14))
 
     # ══════════════════════════════════════════════════════════════════════
-    # SECTION 11 — Security Audit
-    # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🔐", "SECURITY AUDIT LOG"))
-    elements.append(_sec_divider())
+    audit_elements = []
+    audit_elements.append(_sec_hdr("🔐", "SECURITY AUDIT LOG"))
+    audit_elements.append(_sec_divider())
 
     # Presence log for today
     login_time = logout_time = session_dur = "—"
@@ -976,14 +785,16 @@ def generate_shift_summary_pdf(time_log):
         ("GRID",          (0,0), (-1,-1), 0.4, C["slate2"]),
         ("ROUNDEDCORNERS", [8]),
     ]))
-    elements.append(audit_tbl)
-    elements.append(Spacer(1, 14))
+    audit_elements.append(audit_tbl)
+    audit_elements.append(Spacer(1, 14))
+    elements.append(KeepTogether(audit_elements))
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 12 — Risk Detection Engine
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("⚠️", "RISK DETECTION ENGINE", C["red"]))
-    elements.append(_sec_divider())
+    risk_elements = []
+    risk_elements.append(_sec_hdr("⚠️", "RISK DETECTION ENGINE", C["red"]))
+    risk_elements.append(_sec_divider())
 
     face_risk = face_status == "mismatch"
     gps_risk  = not time_log.geofence_passed
@@ -1015,8 +826,8 @@ def generate_shift_summary_pdf(time_log):
         ("PADDING",       (0,0), (-1,-1), 14),
         ("ROUNDEDCORNERS", [8]),
     ]))
-    elements.append(risk_header)
-    elements.append(Spacer(1, 8))
+    risk_elements.append(risk_header)
+    risk_elements.append(Spacer(1, 8))
 
     risk_data = [["CHECK", "RESULT", "FLAG"]]
     for chk_name, chk_level, chk_flagged in risk_checks:
@@ -1035,8 +846,9 @@ def generate_shift_summary_pdf(time_log):
         ("PADDING",       (0,0), (-1,-1), 8),
         ("GRID",          (0,0), (-1,-1), 0.4, C["slate2"]),
     ]))
-    elements.append(risk_tbl)
-    elements.append(Spacer(1, 14))
+    risk_elements.append(risk_tbl)
+    risk_elements.append(Spacer(1, 14))
+    elements.append(KeepTogether(risk_elements))
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 13 — Team Performance Ranking
@@ -1088,17 +900,16 @@ def generate_shift_summary_pdf(time_log):
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 14 — QR Verification
     # ══════════════════════════════════════════════════════════════════════
-    elements.append(_sec_hdr("🔗", "QR REPORT VERIFICATION"))
-    elements.append(_sec_divider())
+    qr_elements = []
+    qr_elements.append(_sec_hdr("🔗", "QR REPORT VERIFICATION"))
+    qr_elements.append(_sec_divider())
 
     qr_left_txt = Table([
-        [Paragraph("Scan to Verify Report Authenticity",
+        [Paragraph("Scan to Download Report",
                    _S("qrt", fontSize=11, fontName="Helvetica-Bold",
                       textColor=C["primary"]))],
         [Spacer(1, 6)],
-        [Paragraph("This QR code contains a unique cryptographic payload that "
-                   "managers can use to verify this report was generated by "
-                   "CalTrack and has not been tampered with.",
+        [Paragraph("Scan this QR code with your mobile device to automatically download a copy of this shift summary report.",
                    _S("qrd", fontSize=8, textColor=C["slate5"], leading=12))],
         [Spacer(1, 8)],
         [Paragraph(f"<b>Report ID:</b>  {report_id}",
@@ -1125,8 +936,8 @@ def generate_shift_summary_pdf(time_log):
         ("BOX",           (0,0), (-1,-1), 0.5, C["slate2"]),
         ("ROUNDEDCORNERS", [10]),
     ]))
-    elements.append(qr_row)
-    elements.append(Spacer(1, 20))
+    qr_elements.append(qr_row)
+    qr_elements.append(Spacer(1, 20))
 
     # ══════════════════════════════════════════════════════════════════════
     # SECTION 15 — Footer
@@ -1144,13 +955,14 @@ def generate_shift_summary_pdf(time_log):
         ("BOX",           (0,0), (-1,-1), 0.5, C["slate3"]),
         ("LINEAFTER",     (0,0), (2,-1), 0.5, C["slate3"]),
     ]))
-    elements.append(badge_row)
-    elements.append(Spacer(1, 10))
-    elements.append(HRFlowable(width="100%", thickness=0.5, color=C["slate2"], spaceAfter=8))
-    elements.append(Paragraph(
-        f"AI Workforce Intelligence Report  ·  Generated by CALTRACK  ·  {generated_ts}  ·  Confidential",
+    qr_elements.append(badge_row)
+    qr_elements.append(Spacer(1, 10))
+    qr_elements.append(HRFlowable(width="100%", thickness=0.5, color=C["slate2"], spaceAfter=8))
+    qr_elements.append(Paragraph(
+        f"Shift Summary Report  ·  Generated by CALTRACK  ·  {generated_ts}  ·  Confidential",
         _S("ft", fontSize=7, textColor=C["slate4"], alignment=TA_CENTER)
     ))
+    elements.append(KeepTogether(qr_elements))
 
     # ── Build PDF ──────────────────────────────────────────────────────────
     doc.build(elements)
@@ -1171,13 +983,13 @@ def send_shift_summary_email(time_log):
         employee_name = (
             f"{user.first_name} {user.last_name}".strip() or user.username
         )
-        subject = f"AI Workforce Intelligence Report — {employee_name} ({time_log.work_date})"
+        subject = f"Shift Summary Report — {employee_name} ({time_log.work_date})"
         body = (
             f"Hello,\n\n"
-            f"Please find attached the AI Workforce Intelligence Report for "
+            f"Please find attached the Shift Summary Report for "
             f"{employee_name} on {time_log.work_date}.\n\n"
             f"Total Hours: {format_duration(time_log.worked_seconds())}\n\n"
-            f"Generated by CalTrack  —  AI Workforce Intelligence System.\n"
+            f"Generated by CalTrack.\n"
         )
         recipient_list = [user.email]
         admin_email = getattr(settings, "ADMIN_EMAIL", "admin@caltrack.com")

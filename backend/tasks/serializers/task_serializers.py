@@ -68,6 +68,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "sla_minutes_remaining",
             # Accept / Decline
             "acceptance_status",
+            "accepted_at",
             "decline_reason",
             "declined_at",
             "attachments",
@@ -119,10 +120,16 @@ class TaskSerializer(serializers.ModelSerializer):
             "travel_status",
             "reached_site_at",
             "work_started_at",
+            # Identity / Photos
+            "start_photo",
+            "end_photo",
+            "face_match_percentage",
+            "face_match_status",
+            "submission_time",
         )
         read_only_fields = (
             "id", "assigned_by",
-            "acceptance_status", "decline_reason", "declined_at",
+            "acceptance_status", "accepted_at", "decline_reason", "declined_at",
             "billed_hours",
             "started_at", "completed_at", "created_at", "updated_at",
             "suspended_at", "resume_deadline", "total_active_seconds", "suspend_reason", "gap_job",

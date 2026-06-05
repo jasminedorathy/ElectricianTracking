@@ -10,6 +10,7 @@ import math
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.db import close_old_connections
 from django.utils import timezone
 
 
@@ -162,13 +163,16 @@ class EmployeeLocationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_employee(self):
-        _set_tenant(self.company)
-        from employees.models import Employee
-        return (
-            Employee.objects.select_related("user", "assigned_job_site")
-            .filter(user=self.user)
-            .first()
-        )
+        try:
+            _set_tenant(self.company)
+            from employees.models import Employee
+            return (
+                Employee.objects.select_related("user", "assigned_job_site")
+                .filter(user=self.user)
+                .first()
+            )
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _save_ping_and_check(self, lat: float, lng: float, accuracy: float):
@@ -283,6 +287,8 @@ class EmployeeLocationConsumer(AsyncWebsocketConsumer):
             traceback.print_exc()
             print(f"[WS] save_ping_and_check error: {exc}")
             return None
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _save_sos(self, lat, lng):
@@ -324,6 +330,8 @@ class EmployeeLocationConsumer(AsyncWebsocketConsumer):
         except Exception as exc:
             print(f"[WS] save_sos error: {exc}")
             return None
+        finally:
+            close_old_connections()
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -480,9 +488,12 @@ class AdminMapConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_snapshot(self):
-        _set_tenant(self.company)
-        from .views import build_live_snapshot
-        return build_live_snapshot(self.company)
+        try:
+            _set_tenant(self.company)
+            from .views import build_live_snapshot
+            return build_live_snapshot(self.company)
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _assign_task(self, task_id, employee_id):
@@ -505,17 +516,22 @@ class AdminMapConsumer(AsyncWebsocketConsumer):
         except Exception as exc:
             print(f"[WS] assign_task error: {exc}")
             return None
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _ack_sos(self, sos_id):
-        _set_tenant(self.company)
-        from .models import SOSAlert
+        try:
+            _set_tenant(self.company)
+            from .models import SOSAlert
 
-        SOSAlert.objects.filter(id=sos_id).update(
-            status="acknowledged",
-            acknowledged_by=self.user,
-            acknowledged_at=timezone.now(),
-        )
+            SOSAlert.objects.filter(id=sos_id).update(
+                status="acknowledged",
+                acknowledged_by=self.user,
+                acknowledged_at=timezone.now(),
+            )
+        finally:
+            close_old_connections()
 
 
 class PresenceConsumer(AsyncWebsocketConsumer):
@@ -608,106 +624,115 @@ class PresenceConsumer(AsyncWebsocketConsumer):
     # ── DB Helpers ──
     @database_sync_to_async
     def _set_user_presence(self, is_online):
-        _set_tenant(self.company)
-        from employees.models import Employee, PresenceLog
-        from django.utils import timezone
+        try:
+            _set_tenant(self.company)
+            from employees.models import Employee, PresenceLog
+            from django.utils import timezone
 
-        employee = Employee.objects.filter(user=self.user, company=self.company).first()
-        if not employee:
-            return False, None
+            employee = Employee.objects.filter(user=self.user, company=self.company).first()
+            if not employee:
+                return False, None
 
-        now = timezone.now()
-        employee.is_online = is_online
-        employee.last_activity_at = now
+            now = timezone.now()
+            employee.is_online = is_online
+            employee.last_activity_at = now
 
-        if is_online:
-            employee.last_login_at = now
-            employee.save(update_fields=["is_online", "last_login_at", "last_activity_at"])
+            if is_online:
+                employee.last_login_at = now
+                employee.save(update_fields=["is_online", "last_login_at", "last_activity_at"])
 
-            # Create log entry
-            PresenceLog.objects.create(
-                employee=employee,
-                login_at=now,
-                company=self.company
-            )
-        else:
-            employee.last_logout_at = now
-            employee.save(update_fields=["is_online", "last_logout_at", "last_activity_at"])
+                # Create log entry
+                PresenceLog.objects.create(
+                    employee=employee,
+                    login_at=now,
+                    company=self.company
+                )
+            else:
+                employee.last_logout_at = now
+                employee.save(update_fields=["is_online", "last_logout_at", "last_activity_at"])
 
-            # Close open logs
-            open_logs = PresenceLog.objects.filter(employee=employee, logout_at__isnull=True, company=self.company)
-            for log in open_logs:
-                log.logout_at = now
-                if log.login_at:
-                    log.duration_seconds = int((now - log.login_at).total_seconds())
-                log.save(update_fields=["logout_at", "duration_seconds"])
+                # Close open logs
+                open_logs = PresenceLog.objects.filter(employee=employee, logout_at__isnull=True, company=self.company)
+                for log in open_logs:
+                    log.logout_at = now
+                    if log.login_at:
+                        log.duration_seconds = int((now - log.login_at).total_seconds())
+                    log.save(update_fields=["logout_at", "duration_seconds"])
 
-        emp_name = employee.user.get_full_name() or employee.user.username
-        login_str = employee.last_login_at.isoformat() if employee.last_login_at else None
-        logout_str = employee.last_logout_at.isoformat() if employee.last_logout_at else None
-        activity_str = employee.last_activity_at.isoformat() if employee.last_activity_at else None
+            emp_name = employee.user.get_full_name() or employee.user.username
+            login_str = employee.last_login_at.isoformat() if employee.last_login_at else None
+            logout_str = employee.last_logout_at.isoformat() if employee.last_logout_at else None
+            activity_str = employee.last_activity_at.isoformat() if employee.last_activity_at else None
 
-        event_data = {
-            "employee_id": str(employee.id),
-            "employee_name": emp_name,
-            "is_online": is_online,
-            "last_login_at": login_str,
-            "last_logout_at": logout_str,
-            "last_activity_at": activity_str,
-            "current_availability": employee.current_availability,
-            "role": employee.user.role,
-        }
+            event_data = {
+                "employee_id": str(employee.id),
+                "employee_name": emp_name,
+                "is_online": is_online,
+                "last_login_at": login_str,
+                "last_logout_at": logout_str,
+                "last_activity_at": activity_str,
+                "current_availability": employee.current_availability,
+                "role": employee.user.role,
+            }
 
-        return True, event_data
+            return True, event_data
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _update_activity(self):
-        _set_tenant(self.company)
-        from employees.models import Employee
-        from django.utils import timezone
+        try:
+            _set_tenant(self.company)
+            from employees.models import Employee
+            from django.utils import timezone
 
-        employee = Employee.objects.filter(user=self.user, company=self.company).first()
-        if not employee:
-            return None
+            employee = Employee.objects.filter(user=self.user, company=self.company).first()
+            if not employee:
+                return None
 
-        now = timezone.now()
-        employee.last_activity_at = now
-        employee.save(update_fields=["last_activity_at"])
+            now = timezone.now()
+            employee.last_activity_at = now
+            employee.save(update_fields=["last_activity_at"])
 
-        return {
-            "employee_id": str(employee.id),
-            "employee_name": employee.user.get_full_name() or employee.user.username,
-            "is_online": employee.is_online,
-            "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
-            "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
-            "last_activity_at": now.isoformat(),
-            "current_availability": employee.current_availability,
-            "role": employee.user.role,
-        }
+            return {
+                "employee_id": str(employee.id),
+                "employee_name": employee.user.get_full_name() or employee.user.username,
+                "is_online": employee.is_online,
+                "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
+                "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
+                "last_activity_at": now.isoformat(),
+                "current_availability": employee.current_availability,
+                "role": employee.user.role,
+            }
+        finally:
+            close_old_connections()
 
     @database_sync_to_async
     def _change_availability(self, availability):
-        _set_tenant(self.company)
-        from employees.models import Employee
-        from django.utils import timezone
+        try:
+            _set_tenant(self.company)
+            from employees.models import Employee
+            from django.utils import timezone
 
-        employee = Employee.objects.filter(user=self.user, company=self.company).first()
-        if not employee:
-            return None
+            employee = Employee.objects.filter(user=self.user, company=self.company).first()
+            if not employee:
+                return None
 
-        now = timezone.now()
-        employee.current_availability = availability
-        employee.last_activity_at = now
-        employee.save(update_fields=["current_availability", "last_activity_at"])
+            now = timezone.now()
+            employee.current_availability = availability
+            employee.last_activity_at = now
+            employee.save(update_fields=["current_availability", "last_activity_at"])
 
-        return {
-            "employee_id": str(employee.id),
-            "employee_name": employee.user.get_full_name() or employee.user.username,
-            "is_online": employee.is_online,
-            "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
-            "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
-            "last_activity_at": now.isoformat(),
-            "current_availability": availability,
-            "role": employee.user.role,
-        }
+            return {
+                "employee_id": str(employee.id),
+                "employee_name": employee.user.get_full_name() or employee.user.username,
+                "is_online": employee.is_online,
+                "last_login_at": employee.last_login_at.isoformat() if employee.last_login_at else None,
+                "last_logout_at": employee.last_logout_at.isoformat() if employee.last_logout_at else None,
+                "last_activity_at": now.isoformat(),
+                "current_availability": availability,
+                "role": employee.user.role,
+            }
+        finally:
+            close_old_connections()
 

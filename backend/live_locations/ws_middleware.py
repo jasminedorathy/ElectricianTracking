@@ -21,6 +21,7 @@ def _resolve_user_and_company(token_string: str):
     Validate the JWT and return (user, company) or (None, None) on failure.
     Runs in a thread pool so synchronous ORM calls are safe.
     """
+    from django.db import close_old_connections
     from django.contrib.auth import get_user_model
     from rest_framework_simplejwt.tokens import AccessToken, TokenError
 
@@ -41,6 +42,9 @@ def _resolve_user_and_company(token_string: str):
     except (TokenError, User.DoesNotExist, Exception) as exc:
         print(f"[WS] JWT auth failed: {exc}")
         return None, None
+    finally:
+        close_old_connections()
+
 
 
 def _extract_cookie_token(scope):

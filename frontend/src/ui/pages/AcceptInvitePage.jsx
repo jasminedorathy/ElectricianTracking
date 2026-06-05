@@ -53,6 +53,10 @@ export function AcceptInvitePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const ONBOARDING_DISMISSED_KEY = "caltrack.onboarding.dismissed"
+  const adminRoute = () =>
+    localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "true" ? routes.dashboard : routes.get_started
+
   const handleGoogleSuccess = async (tr) => {
     setLoading(true)
     setError(null)
@@ -60,7 +64,7 @@ export function AcceptInvitePage() {
       const u = await loginWithGoogle(tr.access_token)
       const role = u?.role
       const isAdmin = role === "admin" || role === "manager"
-      navigate(isAdmin ? routes.get_started : routes.dashboard)
+      navigate(isAdmin ? adminRoute() : routes.dashboard)
     } catch (err) {
       setError(err?.body?.detail || "Google authentication failed.")
       setLoading(false)
@@ -90,7 +94,7 @@ export function AcceptInvitePage() {
       const u = await refreshMe()
       const role = u?.role
       const isAdmin = role === "admin" || role === "manager"
-      navigate(isAdmin ? routes.get_started : routes.dashboard)
+      navigate(isAdmin ? adminRoute() : routes.dashboard)
     } catch (err) {
       setError(err?.body?.detail || err?.body?.message || "Failed to join team.")
       setLoading(false)

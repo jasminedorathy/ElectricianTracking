@@ -511,6 +511,20 @@ export function LocationsPage() {
     setShowAddPanel(true)
   }
 
+  const handleOpenAddPanel = () => {
+    if (!selectedPlace) return
+    setFormData({
+      name: selectedPlace.name || "",
+      coordinates: `${selectedPlace.lat},${selectedPlace.lng}`,
+      address: selectedPlace.fullAddress || "",
+      radius: 300,
+    })
+    setSaveError("")
+    setCustomRadius(false)
+    setCustomRadiusValue("")
+    setShowAddPanel(true)
+  }
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       setSaveError("Location name is required.")

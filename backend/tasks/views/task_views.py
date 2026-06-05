@@ -547,7 +547,9 @@ class EmployeeTaskActionView(APIView):
                 return Response({"detail": "Task is already completed."}, status=status.HTTP_400_BAD_REQUEST)
 
             task.travel_status = Task.TravelStatus.ON_THE_WAY
-            task.save(update_fields=["travel_status", "updated_at"])
+            if not task.started_at:
+                task.started_at = timezone.now()
+            task.save(update_fields=["travel_status", "started_at", "updated_at"])
             _write_task_audit(request.user, "task_travel_started", task)
             _broadcast_travel_status(task, request.user, "on_the_way")
 
@@ -637,7 +639,8 @@ class EmployeeTaskActionView(APIView):
                 task.status        = Task.Status.IN_PROGRESS
                 task.travel_status = Task.TravelStatus.WORKING
                 task.work_started_at = timezone.now()
-                task.started_at   = task.work_started_at
+                if not task.started_at:
+                    task.started_at = task.work_started_at
                 task.time_log     = timelog
                 if photo:
                     task.start_photo = photo

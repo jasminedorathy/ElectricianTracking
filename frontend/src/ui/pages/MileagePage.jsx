@@ -585,8 +585,8 @@ export function MileagePage() {
                           {trip.employee_notes && (
                             <span className="text-[10px] text-slate-400 italic font-medium mt-1">"{trip.employee_notes}"</span>
                           )}
-                          {trip.rejection_reason && (
-                            <span className="text-[10px] text-red-500 font-bold mt-1">Rejection reason: "{trip.rejection_reason}"</span>
+                          {trip.admin_notes && (
+                            <span className="text-[10px] text-red-500 font-bold mt-1">Rejection reason: "{trip.admin_notes}"</span>
                           )}
                         </div>
                       </td>

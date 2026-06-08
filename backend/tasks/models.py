@@ -274,6 +274,17 @@ class Task(models.Model):
             raw = actual_seconds / 3600
             return Decimal(str(round(raw, 2)))
 
+    def save(self, *args, **kwargs):
+        if self.status == Task.Status.COMPLETED and self.billed_hours is None:
+            est_hours = self.estimated_hours if self.estimated_hours is not None else 1.00
+            if self.started_at and self.completed_at:
+                actual_seconds = int((self.completed_at - self.started_at).total_seconds())
+                self.billed_hours = self.compute_billed_hours(est_hours, actual_seconds)
+            else:
+                self.billed_hours = est_hours
+        super().save(*args, **kwargs)
+
+
 
 class TaskAttachment(models.Model):
 

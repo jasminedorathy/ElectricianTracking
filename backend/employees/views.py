@@ -145,10 +145,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 status__in=[Task.Status.PENDING, Task.Status.IN_PROGRESS],
                 due_date__lt=today
             ).count(),
-            "total_billed_hours": float(
-                all_tasks.filter(status=Task.Status.COMPLETED)
-                .aggregate(total=Sum("billed_hours"))["total"] or 0
-            ),
+            "total_billed_hours": float(sum(
+                float(t.billed_hours if t.billed_hours is not None else t.estimated_hours)
+                for t in all_tasks.filter(status=Task.Status.COMPLETED)
+            )),
         }
 
         # ── Recent Task History (last 20) ─────────────────────────────────
@@ -165,10 +165,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 "due_date": str(t.due_date),
                 "started_at": t.started_at.isoformat() if t.started_at else None,
                 "completed_at": t.completed_at.isoformat() if t.completed_at else None,
-                "billed_hours": float(t.billed_hours) if t.billed_hours else None,
+                "billed_hours": float(t.billed_hours if t.billed_hours is not None else t.estimated_hours) if t.status == Task.Status.COMPLETED else None,
                 "location": t.location or t.job_address,
                 "client_name": t.client_name,
             })
+
 
         # ── Performance Ratings ────────────────────────────────────────────
         # These are stored in employee.exempt_history (JSON) as performance entries

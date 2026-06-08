@@ -1131,100 +1131,7 @@ export function ActivationJourneyPage() {
     setShowRejectionDialog(false)
   }
 
-  const autoFillEntireJourney = () => {
-    const defaultProfilePic = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23090F1C'/><circle cx='50' cy='35' r='18' fill='%233B82F6' opacity='0.5'/><path d='M20,80 Q50,55 80,80 Z' fill='%2310B981' opacity='0.6'/><path d='M30,40 Q30,20 50,20 Q70,20 70,40 Q70,68 50,78 Q30,68 30,40 Z' fill='none' stroke='%233B82F6' stroke-width='1.5'/></svg>"
-    
-    const newRegForm = {
-      fullName: "Surya Prakash",
-      email: "surya@caltrack.com",
-      phone: "+91 98765 43210",
-      address: "Hyderabad, Telangana, India",
-      profilePic: defaultProfilePic,
-      otpStatus: "verified",
-      otpTimer: 0,
-      emailStatus: "unverified",
-      emailTimer: 0,
-      isBiometricScanning: false,
-      isBiometricCompleted: true,
-      isCompleted: true
-    }
 
-    const newDocForm = {
-      aadhaarId: "3662-8829-1092",
-      panId: "BCHPA8892P",
-      bankAcc: "99821882910",
-      ifscCode: "SBIN0003019",
-      aadhaarFile: "aadhaar_scan.pdf",
-      panFile: "pan_scan.pdf",
-      bankPassbookFile: "bank_ledger.pdf",
-      aadhaarFileFileData: generateAadhaarSVG(newRegForm.fullName, newRegForm.profilePic, "3662-8829-1092"),
-      panFileFileData: generatePanSVG(newRegForm.fullName, newRegForm.profilePic, "BCHPA8892P"),
-      bankPassbookFileFileData: generateBankSVG(newRegForm.fullName, "99821882910", "SBIN0003019"),
-      isValidating: false,
-      validationLog: [
-        "Extracting OCR character mesh from Aadhaar: \"aadhaar_scan.pdf\"...",
-        "Validating Aadhaar ID \"3662-8829-1092\" status... Active",
-        "Matching register name \"Surya Prakash\" against Aadhaar scan record... Match 100%",
-        "Extracting OCR signatures from PAN: \"pan_scan.pdf\"...",
-        "Checking PAN ID \"BCHPA8892P\" validity with NSDL registry... Approved",
-        "Analyzing profile webcam photo coordinates against document avatars... Match 99.8%",
-        "Validating Bank Account \"99821882910\" (IFSC: \"SBIN0003019\") routing active status... Verified",
-        "Running anti-duplicate and multi-identity sybil fraud checks... Clearance Clear",
-        "Generating quantum trust confidence report index..."
-      ],
-      validationProgress: 100,
-      confidenceScore: 99,
-      isCompleted: true
-    }
-
-    const newAcademyState = {
-      modules: [
-        { id: 1, title: "Caltrack Compliance & Operations Overview", duration: 20, completed: true, isPlaying: false, progress: 100 },
-      ],
-      activeModuleId: 1,
-      isVideoPlaying: false,
-      videoDurationElapsed: 0,
-      isCompleted: true
-    }
-
-    const newInterviewState = {
-      status: "Completed",
-      activeQuestionIndex: 0,
-      callDuration: 120,
-      subtitles: "Call completed. Uploading audio-visual audit log to Admin console.",
-      soundWaveActive: false,
-      interviewLogs: [
-        { question: "Interviewer: 'Welcome Surya! Let's start the L1 compliance validation. Can you confirm your previous work duration?'", answer: "Verify 3+ Years of Electrician logs" },
-        { question: "Interviewer: 'Perfect. How do you handle emergency safety outages on-site?'", answer: "Follow Caltrack emergency geofence lock" },
-        { question: "Interviewer: 'Final question. Do you agree to comply with Caltrack's SLA and anti-fraud protocols?'", answer: "Accept all compliance guidelines" }
-      ],
-      isCompleted: true
-    }
-
-    const newAdminClearance = {
-      status: "pending",
-      remarks: ""
-    }
-
-    setRegForm(newRegForm)
-    setDocForm(newDocForm)
-    setAcademyState(newAcademyState)
-    setInterviewState(newInterviewState)
-    setAdminClearance(newAdminClearance)
-    setActiveStep(5)
-    setRegSubStep(3)
- 
-    // Save dossier directly to localStorage and backend
-    const dossier = {
-      regForm: newRegForm,
-      docForm: newDocForm,
-      academyState: newAcademyState,
-      interviewState: newInterviewState,
-      adminClearance: newAdminClearance
-    }
-    localStorage.setItem("caltrack_activation_dossier", JSON.stringify(dossier))
-    apiSaveRegistrationDossier(dossier)
-  }
  
   const resetEntireJourney = () => {
     localStorage.removeItem("caltrack_activation_dossier")
@@ -1400,14 +1307,7 @@ export function ActivationJourneyPage() {
             ↺ RESET DOSSIER
           </button>
 
-          <button 
-            type="button"
-            onClick={autoFillEntireJourney}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-750 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-indigo-600/15"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-            ⚡ AUTO-FILL DOSSIER
-          </button>
+
           
           <button 
             type="button"

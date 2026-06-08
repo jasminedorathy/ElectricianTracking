@@ -182,6 +182,7 @@ export function AppShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [profileOpen, setProfileOpen] = useState(false)
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false)
+  const [localTime, setLocalTime] = useState(new Date())
   const [orgName, setOrgName] = useState(() => localStorage.getItem("quicktims.orgName") || "")
   const [settingsExpanded, setSettingsExpanded] = useState(true)
   const [tooltip, setTooltip] = useState(null)
@@ -294,6 +295,11 @@ export function AppShell() {
   useEffect(() => {
     const t = setInterval(() => setOffline(isOffline()), 1500)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => setLocalTime(new Date()), 1000)
+    return () => clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -415,6 +421,20 @@ export function AppShell() {
               <span>K</span>
             </div>
           </button>
+
+          <div className="hidden sm:flex flex-col items-center justify-center px-4 py-1.5 bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl select-none shadow-sm dark:shadow-md dark:shadow-black/20 min-w-[125px] hover:border-blue-500/30 transition-colors duration-300">
+            <span className="text-xs font-extrabold font-mono tracking-tight text-slate-800 dark:text-slate-200 tabular-nums leading-none">
+              {localTime.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              })}
+            </span>
+            <span className="text-[8px] font-black tracking-widest text-slate-400 dark:text-slate-500 uppercase leading-none mt-1.5 opacity-85">
+              Local Time
+            </span>
+          </div>
 
           <div className="flex items-center gap-3">
             <NotificationCenter />
@@ -656,7 +676,7 @@ export function AppShell() {
                     {notif.timestamp}
                   </span>
                 </div>
-                
+
                 {/* Body info */}
                 <div className="text-xs text-slate-600 dark:text-slate-300 space-y-0.5">
                   <div className="truncate">

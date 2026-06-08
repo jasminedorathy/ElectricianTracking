@@ -611,10 +611,10 @@ export function LoginPage() {
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <div className="relative group">
-                        <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-[#94A3B8] group-focus-within:text-indigo-600 transition-colors" size={18} />
+                        <User className="absolute left-5 top-1/2 -translate-y-1/2 text-[#94A3B8] group-focus-within:text-indigo-600 transition-colors" size={18} />
                         <input
                           className="w-full pl-14 pr-5 py-5 bg-[#F8FAFC] border border-[#F1F5F9] rounded-2xl text-[15px] font-medium focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all placeholder:text-[#94A3B8]"
-                          placeholder="Work Email"
+                          placeholder="Employee ID"
                           value={username}
                           onChange={e => setUsername(e.target.value)}
                         />

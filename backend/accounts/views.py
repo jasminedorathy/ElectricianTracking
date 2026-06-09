@@ -191,7 +191,13 @@ class GoogleLoginView(APIView):
             return Response({"detail": "No email provided by Google"}, status=status.HTTP_400_BAD_REQUEST)
             
         User = get_user_model()
-        user = User.objects.filter(email=email).first()
+        email_clean = email.strip()
+        
+        # Prioritize the account that already has a company assigned
+        user = User.objects.filter(email__iexact=email_clean, company__isnull=False).first()
+        if not user:
+            # Fallback to any account with this email
+            user = User.objects.filter(email__iexact=email_clean).first()
 
         if not user:
             # Auto-create the user if they don't exist yet
@@ -202,14 +208,40 @@ class GoogleLoginView(APIView):
                 username = f"{base_username}{counter}"
                 counter += 1
 
+            from companies.models import Company
+            # Assign to the demo company or first available company as fallback
+            company = Company.objects.filter(schema_name='demo').first() or Company.objects.first()
+
             user = User.objects.create(
                 username=username,
                 email=email,
                 first_name=user_info.get("given_name", ""),
                 last_name=user_info.get("family_name", ""),
+                company=company
             )
             user.set_unusable_password()
             user.save()
+
+            if company:
+                from employees.models import Employee
+                from employees.utils import generate_next_employee_id
+                from django_tenants.utils import schema_context
+                try:
+                    with schema_context(company.schema_name):
+                        Employee.objects.get_or_create(
+                            user=user,
+                            company=company,
+                            defaults={
+                                "employee_id": generate_next_employee_id(company),
+                                "title": "Employee",
+                                "hourly_rate": 0
+                            }
+                        )
+                except Exception as e:
+                    print(f"Failed to create employee profile for Google auto-created user: {e}")
+
+        if not getattr(user, 'is_active', True):
+            return Response({"detail": "This account is deactivated."}, status=status.HTTP_400_BAD_REQUEST)
 
         refresh = CustomTokenObtainPairSerializer.get_token(user)
         response = Response({"success": True, "message": "Google login successful."})

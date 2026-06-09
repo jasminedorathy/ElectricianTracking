@@ -88,6 +88,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     await apiLogout()                                   // server clears cookies
     localStorage.removeItem("quicktims.orgName")
+    localStorage.removeItem("caltrack_activation_dossier")
     setUser(null)
   }, [])
 
@@ -114,6 +115,7 @@ export function AuthProvider({ children }) {
     const handle = async () => {
       await apiLogout()
       localStorage.removeItem("quicktims.orgName")
+      localStorage.removeItem("caltrack_activation_dossier")
       setUser(null)
     }
     window.addEventListener("quicktims:session-expired", handle)

@@ -681,7 +681,7 @@ export function LoginPage() {
 
                   <form onSubmit={handleScanIdentity} className="space-y-5">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-mono uppercase text-slate-500 tracking-wider block ml-1">Employee ID / Email</label>
+                      <label className="text-[10px] font-mono uppercase text-slate-500 tracking-wider block ml-1">Username / Email</label>
                       <div className="relative group">
                         <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300" size={18} />
                         <input
@@ -939,7 +939,14 @@ export function LoginPage() {
                   Sign In
                 </button>
                 <button
-                  onClick={() => navigate(routes.activation_journey)}
+                  onClick={async () => {
+                    localStorage.removeItem("caltrack_activation_dossier")
+                    try {
+                      const { apiDeleteRegistrationDossier } = await import("../../api/authService.js")
+                      await apiDeleteRegistrationDossier()
+                    } catch (e) {}
+                    navigate(routes.activation_journey)
+                  }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-slate-600 hover:text-slate-900"
                 >
                   Create Account
@@ -1003,7 +1010,7 @@ export function LoginPage() {
                         <User className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300" size={18} />
                         <input
                           className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 focus:border-indigo-500/50 rounded-2xl text-[14px] font-medium text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all duration-300 placeholder:text-slate-400"
-                          placeholder="Employee ID"
+                          placeholder="Username"
                           value={username}
                           onChange={e => setUsername(e.target.value)}
                         />

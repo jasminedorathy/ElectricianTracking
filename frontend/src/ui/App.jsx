@@ -8,6 +8,10 @@ import { SessionToast } from "./components/SessionToast.jsx"
 import { LoginPage } from "./pages/LoginPage.jsx"
 
 // Lazy-loaded Pages
+const OrganizationSignupPage = lazy(() =>
+  import("./pages/OrganizationSignupPage.jsx").then(m => ({ default: m.OrganizationSignupPage }))
+)
+
 const AcceptInvitePage = lazy(() =>
   import("./pages/AcceptInvitePage.jsx").then(m => ({ default: m.AcceptInvitePage }))
 )
@@ -211,6 +215,21 @@ export function App() {
                 )
               ) : (
                 <LoginPage />
+              )
+            }
+          />
+
+          <Route
+            path={routes.organization_signup}
+            element={
+              user ? (
+                user.companyId ? (
+                  <Navigate to={isAdmin ? adminDefaultRoute() : routes.dashboard} replace />
+                ) : (
+                  <Navigate to={routes.onboarding} replace />
+                )
+              ) : (
+                <OrganizationSignupPage />
               )
             }
           />

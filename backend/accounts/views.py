@@ -249,6 +249,46 @@ class GoogleLoginView(APIView):
         return response
 
 
+from accounts.services import create_organization_admin_user
+
+class AdminRegistrationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email", "").strip()
+        password = request.data.get("password")
+        first_name = request.data.get("first_name", "").strip()
+        last_name = request.data.get("last_name", "").strip()
+
+        if not email or not password:
+            return Response({"detail": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        User = get_user_model()
+        if User.objects.filter(email__iexact=email).exists() or User.objects.filter(username__iexact=email).exists():
+            return Response({"detail": "Account with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user, created = create_organization_admin_user(
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
+        response = Response({
+            "success": True, 
+            "message": "Registration successful.",
+            "user": {
+                "email": user.email,
+                "role": user.role,
+                "company": None
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+        _set_auth_cookies(response, str(refresh.access_token), str(refresh))
+        return response
+
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 

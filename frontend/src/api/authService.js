@@ -94,6 +94,18 @@ export async function apiRegister(payload) {
 }
 
 /**
+ * Register an initial admin user without an organization.
+ * Server sets auth cookies in the response.
+ * User is automatically routed to onboarding upon successful login.
+ */
+export async function apiRegisterAdmin(payload) {
+  return fetchJSON("/auth/register-admin/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
  * Google OAuth — server exchanges the Google access token, then sets cookies.
  */
 export async function apiGoogleLogin(googleAccessToken) {

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "../../state/auth/useAuth.js"
 import { extractAuthError, apiDeleteRegistrationDossier } from "../../api/authService.js"
@@ -318,7 +318,7 @@ export function LoginPage() {
         if (!u) {
           setError("Login failed. Please check your credentials and try again.")
           setFailedIdentity(username)
-          setFailedReason("Password verification mismatch.")
+          setFailedReason("Unable to retrieve user profile after successful login.")
           setShowFailedLogin(true)
           return
         }
@@ -1133,7 +1133,10 @@ export function LoginPage() {
                 </div>
               </form>
 
-              <div className="mt-8 text-center">
+              <div className="mt-8 text-center space-y-4">
+                <Link to={routes.organization_signup} className="block text-[11px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-500 transition-colors">
+                  Setup New Organization
+                </Link>
                 <button className="text-[10px] font-mono uppercase tracking-widest text-slate-600 hover:text-indigo-600 transition-colors">
                   Need Help? <span className="text-slate-400">Contact Support</span>
                 </button>
